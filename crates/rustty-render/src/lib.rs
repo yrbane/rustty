@@ -29,3 +29,6 @@ pub use frame::{Chrome, ChromeQuad, ChromeText, Frame, PaneFrame, PixelRect};
 pub use grid::{
     CURSOR_BAR_WIDTH, GlyphRequest, GridGeometry, PaneInstances, grid_geometry, pane_instances,
 };
+pub mod renderer;
+
+pub use renderer::Renderer;

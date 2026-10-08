@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.48 — 2026-10-08 · « Renderer »
+
+- `rustty-render` : `Renderer` assemble fonds, glyphes (cache + atlas reconstruit au débordement), décorations et chrome en une passe ; opacité du fond par l'alpha ; images de référence comparées hors écran sur les trois OS.
+
 ## 0.1.0-alpha.47 — 2026-10-08 · « Instances de grille »
 
 - `rustty-render` : `Frame`/`PaneFrame`/`Chrome` décrivent une image à dessiner ; `pane_instances` transforme un `Snapshot` en fonds fusionnés, demandes de glyphes, soulignements, barrés et curseur (bloc plein ou creux, barre, souligné), avec rognage à la zone visible.

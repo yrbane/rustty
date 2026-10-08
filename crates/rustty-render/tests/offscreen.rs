@@ -1,0 +1,209 @@
+//! Rendu complet hors écran, comparé à des images de référence produites
+//! avec la police embarquée : identiques sur les trois OS à l'arrondi près.
+
+mod common;
+
+use std::path::PathBuf;
+
+use rustty_config::Colors;
+use rustty_render::{
+    FontSet, Frame, GpuContext, OFFSCREEN_FORMAT, Offscreen, Palette, PaneFrame, PixelRect,
+    Renderer, Rgba,
+};
+use rustty_vt::Term;
+
+const FONT_PX: f32 = 16.0;
+const PADDING: u32 = 4;
+
+fn renderer(ctx: &GpuContext) -> Renderer {
+    Renderer::new(
+        ctx,
+        OFFSCREEN_FORMAT,
+        FontSet::embedded(FONT_PX),
+        Palette::from_config(&Colors::default(), false),
+        PADDING,
+    )
+}
+
+/// Rend `term` dans un viewport ajusté à sa grille et rend les pixels.
+fn render_term(
+    ctx: &GpuContext,
+    r: &mut Renderer,
+    term: &Term,
+    focused: bool,
+    opacity: f32,
+) -> (Vec<u8>, u32, u32) {
+    let m = r.metrics();
+    let snap = term.snapshot();
+    let width = snap.cols as u32 * m.width + 2 * PADDING;
+    let height = snap.rows as u32 * m.height + 2 * PADDING;
+    let target = Offscreen::new(ctx, width, height);
+    let palette = Palette::from_config(&Colors::default(), false);
+    let frame = Frame {
+        viewport: (width, height),
+        background: palette.background.with_alpha(opacity),
+        panes: vec![PaneFrame {
+            rect: PixelRect::new(0, 0, width, height),
+            snapshot: &snap,
+            focused,
+        }],
+        chrome: Default::default(),
+    };
+    r.render(ctx, target.view(), &frame);
+    (target.read_rgba(ctx).unwrap(), width, height)
+}
+
+fn golden_path(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/golden")
+        .join(format!("{name}.png"))
+}
+
+/// Compare à l'image de référence, ou la crée si elle manque / si UPDATE_GOLDEN=1.
+fn assert_matches_golden(name: &str, px: &[u8], width: u32, height: u32) {
+    let path = golden_path(name);
+    let actual =
+        image::RgbaImage::from_raw(width, height, px.to_vec()).expect("dimensions cohérentes");
+    if std::env::var_os("UPDATE_GOLDEN").is_some() || !path.exists() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        actual.save(&path).unwrap();
+        eprintln!("image de référence écrite : {}", path.display());
+        return;
+    }
+    let expected = image::open(&path).unwrap().to_rgba8();
+    assert_eq!(
+        expected.dimensions(),
+        (width, height),
+        "dimensions de {name}"
+    );
+    let mut total_diff = 0u64;
+    let mut bad_pixels = 0u64;
+    for (a, b) in expected.pixels().zip(actual.pixels()) {
+        let d: [i32; 4] = std::array::from_fn(|i| (i32::from(a.0[i]) - i32::from(b.0[i])).abs());
+        total_diff += d.iter().map(|&v| v as u64).sum::<u64>();
+        if d.iter().any(|&v| v > 8) {
+            bad_pixels += 1;
+        }
+    }
+    let n = u64::from(width) * u64::from(height);
+    let mean = total_diff as f64 / (n * 4) as f64;
+    let bad_ratio = bad_pixels as f64 / n as f64;
+    if mean > 1.0 || bad_ratio > 0.005 {
+        let out = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/golden-actual")
+            .join(format!("{name}.png"));
+        std::fs::create_dir_all(out.parent().unwrap()).unwrap();
+        actual.save(&out).unwrap();
+        panic!(
+            "{name} diffère de la référence : moyenne {mean:.3}, {bad_ratio:.4} de pixels > 8 ; image obtenue : {}",
+            out.display()
+        );
+    }
+}
+
+fn pixel(px: &[u8], width: u32, x: u32, y: u32) -> [u8; 4] {
+    let i = ((y * width + x) * 4) as usize;
+    [px[i], px[i + 1], px[i + 2], px[i + 3]]
+}
+
+#[test]
+fn hello_world_matches_golden() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let mut term = Term::new(14, 2, 0);
+    term.input(b"Hello, \x1b[1;31mworld\x1b[0m!\r\n\x1b[4mrustty\x1b[0m \x1b[44m  \x1b[0m");
+    let (px, w, h) = render_term(&ctx, &mut r, &term, true, 1.0);
+    assert_matches_golden("hello_world", &px, w, h);
+}
+
+#[test]
+fn box_drawing_and_powerline_match_golden() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let mut term = Term::new(8, 3, 0);
+    term.input("┌──┐\u{E0B0}\u{E0B6}\u{E0B4}\r\n│漢│\r\n└──┘░▒▓█\x1b[?25l".as_bytes());
+    let (px, w, h) = render_term(&ctx, &mut r, &term, true, 1.0);
+    assert_matches_golden("box_drawing", &px, w, h);
+}
+
+#[test]
+fn cursor_block_is_visible_and_inverts_the_glyph() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let mut term = Term::new(4, 1, 0);
+    term.input(b"ab\x1b[D");
+    let (px, w, _) = render_term(&ctx, &mut r, &term, true, 1.0);
+    let m = r.metrics();
+    let cursor_px = pixel(&px, w, PADDING + m.width + 1, PADDING + 1);
+    let cursor = Palette::from_config(&Colors::default(), false)
+        .cursor
+        .to_u8();
+    assert_eq!(cursor_px, cursor, "coin du bloc curseur");
+}
+
+#[test]
+fn unknown_characters_render_as_blank() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let mut term = Term::new(3, 1, 0);
+    term.input("\u{E000}\u{10FFFF}\x1b[?25l".as_bytes());
+    let (px, w, h) = render_term(&ctx, &mut r, &term, true, 1.0);
+    let bg = Palette::from_config(&Colors::default(), false)
+        .background
+        .to_u8();
+    let m = r.metrics();
+    for y in PADDING..PADDING + m.height {
+        for x in PADDING..PADDING + 2 * m.width {
+            assert_eq!(pixel(&px, w, x, y), bg, "({x},{y}) doit rester fond");
+        }
+    }
+    let _ = h;
+}
+
+#[test]
+fn background_opacity_is_written_to_alpha() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let mut term = Term::new(2, 1, 0);
+    term.input(b"\x1b[?25l");
+    let (px, w, _) = render_term(&ctx, &mut r, &term, true, 0.5);
+    let a = pixel(&px, w, 0, 0)[3];
+    assert!((127..=128).contains(&a), "alpha du fond : {a}");
+}
+
+#[test]
+fn render_survives_tiny_viewport() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let mut term = Term::new(10, 3, 0);
+    term.input(b"abc");
+    let snap = term.snapshot();
+    for (vw, vh) in [(0, 0), (1, 1), (5, 3)] {
+        let target = Offscreen::new(&ctx, vw, vh);
+        let frame = Frame {
+            viewport: (vw, vh),
+            background: Rgba::new(0.0, 0.0, 0.0, 1.0),
+            panes: vec![PaneFrame {
+                rect: PixelRect::new(0, 0, vw, vh),
+                snapshot: &snap,
+                focused: true,
+            }],
+            chrome: Default::default(),
+        };
+        r.render(&ctx, target.view(), &frame);
+        let px = target.read_rgba(&ctx).unwrap();
+        assert_eq!(px.len() as u32, target.size().0 * target.size().1 * 4);
+    }
+}
