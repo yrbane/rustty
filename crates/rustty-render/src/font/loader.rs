@@ -1,7 +1,7 @@
 //! Chargement des polices : la famille demandée ou un repli à chasse fixe,
 //! en quatre variantes, plus la police embarquée comme dernier recours.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use fontdb::{Database, Family, Query, Stretch, Style, Weight};
@@ -42,6 +42,9 @@ pub struct FontSet {
     fallbacks: Vec<FaceData>,
     /// Slot mémorisé par caractère hors des quatre variantes.
     coverage: HashMap<char, Option<usize>>,
+    /// Blocs Unicode qu'aucune police du système ne couvre : évite de rebalayer
+    /// toutes les polices pour chaque caractère voisin.
+    uncovered_blocks: HashSet<u32>,
     family_name: String,
     size_px: f32,
     metrics: CellMetrics,
@@ -97,6 +100,7 @@ impl FontSet {
             faces: [face.clone(), face.clone(), face.clone(), face],
             fallbacks: Vec::new(),
             coverage: HashMap::new(),
+            uncovered_blocks: HashSet::new(),
             family_name,
             size_px,
             metrics,
@@ -130,6 +134,7 @@ impl FontSet {
             faces,
             fallbacks: Vec::new(),
             coverage: HashMap::new(),
+            uncovered_blocks: HashSet::new(),
             family_name: family.to_string(),
             size_px,
             metrics,
@@ -201,18 +206,16 @@ impl FontSet {
                 });
             }
         }
-        let ids: Vec<fontdb::ID> = self.db.faces().map(|f| f.id).collect();
-        for id in ids {
-            let Ok(face) = load_face(&self.db, id) else {
-                continue;
-            };
-            if let Some(gid) = glyph_in(&face, ch) {
+        let block = coverage_block(ch);
+        if !self.uncovered_blocks.contains(&block) {
+            if let Some((face, gid)) = self.scan_system_fonts(ch) {
                 self.fallbacks.push(face);
                 return Some(GlyphRef {
                     slot: 4 + self.fallbacks.len() - 1,
                     glyph_id: gid,
                 });
             }
+            self.uncovered_blocks.insert(block);
         }
         let embedded = FaceData {
             data: Arc::new(EMBEDDED_FONT.to_vec()),
@@ -224,6 +227,45 @@ impl FontSet {
             slot: 4 + self.fallbacks.len() - 1,
             glyph_id: gid,
         })
+    }
+}
+
+impl FontSet {
+    /// Première police du système qui couvre `ch`, à chasse fixe d'abord. La
+    /// couverture est testée sur les octets empruntés ; seule la police retenue
+    /// est copiée.
+    fn scan_system_fonts(&self, ch: char) -> Option<(FaceData, u16)> {
+        let mut candidates: Vec<(bool, fontdb::ID)> =
+            self.db.faces().map(|f| (!f.monospaced, f.id)).collect();
+        candidates.sort_by_key(|(proportional, _)| *proportional);
+        candidates.into_iter().find_map(|(_, id)| {
+            self.db
+                .with_face_data(id, |bytes, index| {
+                    let font = swash::FontRef::from_index(bytes, index as usize)?;
+                    match font.charmap().map(ch) {
+                        0 => None,
+                        gid => Some((
+                            FaceData {
+                                data: Arc::new(bytes.to_vec()),
+                                index,
+                            },
+                            gid,
+                        )),
+                    }
+                })
+                .flatten()
+        })
+    }
+}
+
+/// Clé de mémorisation des échecs de repli : blocs de 256 caractères, sauf les
+/// zones à usage privé (icônes Nerd Font) traitées chacune d'un seul tenant.
+fn coverage_block(ch: char) -> u32 {
+    match u32::from(ch) {
+        0xE000..=0xF8FF => 0xE000,
+        0xF0000..=0xFFFFD => 0xF0000,
+        0x100000..=0x10FFFF => 0x100000,
+        c => c >> 8,
     }
 }
 
@@ -267,6 +309,35 @@ pub(crate) fn load_face(db: &Database, id: fontdb::ID) -> Result<FaceData, FontE
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn negative_lookups_are_memoized_per_unicode_block() {
+        let mut set = FontSet::load("Police-Inexistante-Rustty", 16.0).unwrap();
+        let first = set.glyph('\u{10FFFF}', Variant::Regular);
+        let t = Instant::now();
+        let second = set.glyph('\u{10FFFE}', Variant::Regular);
+        assert!(
+            t.elapsed() < Duration::from_millis(20),
+            "la seconde recherche dans le même bloc ne doit pas rebalayer le système : {:?}",
+            t.elapsed()
+        );
+        assert_eq!(first.map(|g| g.slot), second.map(|g| g.slot));
+    }
+
+    #[test]
+    fn coverage_blocks_group_private_use_areas() {
+        assert_eq!(coverage_block('\u{E000}'), coverage_block('\u{F8FF}'));
+        assert_eq!(coverage_block('\u{F0000}'), coverage_block('\u{FFFFD}'));
+        assert_eq!(coverage_block('\u{100000}'), coverage_block('\u{10FFFF}'));
+        assert_ne!(coverage_block('a'), coverage_block('\u{100}'));
+        assert_ne!(coverage_block('漢'), coverage_block('😀'));
+        assert_ne!(
+            coverage_block('\u{E0}'),
+            coverage_block('\u{E000}'),
+            "pas de collision entre bloc 0xE0 et la PUA"
+        );
+    }
 
     #[test]
     fn embedded_font_loads_all_variants() {

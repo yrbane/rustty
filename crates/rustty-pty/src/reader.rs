@@ -12,7 +12,9 @@ pub const READ_CHUNK: usize = 64 * 1024;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PtyEvent {
     Data(Vec<u8>),
-    /// Fin du flux : le processus a fermé le terminal (ou lecture impossible).
+    /// Fin du flux : le terminal est fermé (ou lecture impossible). Signal
+    /// fiable sur Unix ; sur Windows il peut n'arriver qu'à la libération du
+    /// `Pty`, la fin du shell se détecte alors par `Pty::try_wait`.
     Eof,
 }
 

@@ -216,3 +216,14 @@ fn large_output_is_delivered_in_order() {
     assert_eq!(expected, 2001, "les 2000 lignes sont arrivées");
     let _ = pty.wait();
 }
+
+#[cfg(unix)]
+#[test]
+fn killed_shell_reports_signaled() {
+    let shell = Shell {
+        program: "sh".into(),
+        args: vec!["-c".into(), "kill -9 $$".into()],
+    };
+    let mut pty = Pty::spawn(&shell, PtySize::new(80, 24), &default_env(), None).unwrap();
+    assert_eq!(pty.wait().unwrap(), ExitStatus::Signaled);
+}

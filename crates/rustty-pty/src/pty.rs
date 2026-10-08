@@ -74,7 +74,13 @@ impl Pty {
     }
 
     /// Un lecteur bloquant indépendant ; `read` rend `Ok(0)` ou une erreur
-    /// quand le processus a fermé le terminal.
+    /// quand le terminal est fermé.
+    ///
+    /// Sur Unix, cela arrive dès que le dernier processus tenant l'esclave se
+    /// termine. Sur Windows (ConPTY), le tube n'est fermé qu'à la libération du
+    /// `Pty` : la fin du shell se détecte donc par `try_wait`, pas par la fin
+    /// du flux, et l'appelant doit sonder `try_wait` (ou réagir à `wait`) au
+    /// lieu d'attendre `Ok(0)`.
     pub fn reader(&self) -> Result<Box<dyn Read + Send>, PtyError> {
         self.master
             .try_clone_reader()
@@ -126,14 +132,11 @@ impl Drop for Pty {
 }
 
 fn convert_status(status: portable_pty::ExitStatus) -> ExitStatus {
-    if status.success() {
-        ExitStatus::Exited(0)
+    // portable-pty rapporte une mort par signal avec `signal()` renseigné et un
+    // code de sortie conventionnel (1) : seul `signal()` fait foi.
+    if status.signal().is_some() {
+        ExitStatus::Signaled
     } else {
-        match status.exit_code() {
-            // portable-pty encode « tué par un signal » avec un code supérieur
-            // à 255 sur Unix (128 + signal) ; on ne distingue pas le signal.
-            code if code > 255 => ExitStatus::Signaled,
-            code => ExitStatus::Exited(code),
-        }
+        ExitStatus::Exited(status.exit_code())
     }
 }

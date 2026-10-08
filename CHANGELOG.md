@@ -4,6 +4,14 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.50 — 2026-10-08 · « Corrections de revue »
+
+- `rustty-render` : le repli par couverture teste les polices du système sans copier leurs octets, à chasse fixe d'abord, et mémorise les échecs par bloc Unicode (plus de gel par icône inconnue).
+- `rustty-render` : après une reconstruction d'atlas en cours d'image, les instances sont recréées en une seconde passe (plus de glyphes corrompus pendant une image).
+- `rustty-pty` : un shell tué par un signal est rapporté `Signaled` (et non `Exited(1)`).
+- `rustty-pty` : contrat de fin de flux documenté pour Windows (ConPTY ne ferme le tube qu'à la libération du `Pty` : sonder `try_wait`).
+- Écart assumé avec la spec pour l'alpha : atlas RGBA8 unique, cache par `(char, variante)`, reconstruction totale au débordement (R8, clé par glyphe et éviction LRU viendront plus tard).
+
 ## 0.1.0-alpha.49 — 2026-10-08 · « Barre d'onglets »
 
 - `rustty-render` : disposition de la barre d'onglets, boutons de fermeture ✕ sur pastille arrondie avec couleurs de survol, bouton « + », test de clic ; image de référence.
