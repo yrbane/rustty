@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.25 — 2026-10-08 · « Voisinage »
+
+- `rustty-layout` : `neighbor` choisit la fenêtre adjacente partageant le plus long bord, pour les déplacements de focus au clavier.
+
 ## 0.1.0-alpha.24 — 2026-10-08 · « Redimensionnement et rotation »
 
 - `rustty-layout` : `resize` sur la division la plus proche de l'axe demandé, ratio borné à 10–90 % ; `rotate` inverse l'orientation d'une division.

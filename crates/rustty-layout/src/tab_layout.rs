@@ -1,6 +1,6 @@
 //! Façade d'un onglet : l'arbre de divisions, la fenêtre focalisée et le zoom.
 
-use crate::geometry::{Axis, Rect, WindowId};
+use crate::geometry::{Axis, Direction, Rect, WindowId};
 use crate::node::Node;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -74,6 +74,34 @@ impl TabLayout {
         out
     }
 
+    /// Côté de la grille virtuelle utilisée pour les calculs de voisinage.
+    const VIRTUAL_SIDE: u32 = 10_000;
+
+    /// Fenêtre adjacente à `id` dans `direction`, celle qui partage le plus
+    /// long bord ; à égalité la plus haute ou la plus à gauche.
+    pub fn neighbor(&self, id: WindowId, direction: Direction) -> Option<WindowId> {
+        let rects = self.rects(Rect::new(0, 0, Self::VIRTUAL_SIDE, Self::VIRTUAL_SIDE), 0);
+        let (_, from) = *rects.iter().find(|(w, _)| *w == id)?;
+        rects
+            .iter()
+            .filter(|(w, _)| *w != id)
+            .filter_map(|(w, r)| {
+                let adjacent = match direction {
+                    Direction::Left => r.right() == from.x,
+                    Direction::Right => r.x == from.right(),
+                    Direction::Up => r.bottom() == from.y,
+                    Direction::Down => r.y == from.bottom(),
+                };
+                let overlap = match direction.axis() {
+                    Axis::Vertical => overlap_1d(from.y, from.bottom(), r.y, r.bottom()),
+                    Axis::Horizontal => overlap_1d(from.x, from.right(), r.x, r.right()),
+                };
+                (adjacent && overlap > 0).then_some((overlap, std::cmp::Reverse((r.y, r.x)), *w))
+            })
+            .max_by_key(|(overlap, pos, _)| (*overlap, *pos))
+            .map(|(_, _, w)| w)
+    }
+
     /// Agrandit (`delta > 0`) ou réduit le panneau de `id` le long de `axis`.
     pub fn resize(&mut self, id: WindowId, axis: Axis, delta: f32) -> bool {
         self.root
@@ -121,10 +149,16 @@ impl TabLayout {
     }
 }
 
+/// Longueur du recouvrement de `[a0, a1)` et `[b0, b1)`.
+fn overlap_1d(a0: u32, a1: u32, b0: u32, b1: u32) -> u32 {
+    a1.min(b1).saturating_sub(a0.max(b0))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::geometry::Axis;
+    use crate::geometry::Direction;
 
     #[test]
     fn new_layout_has_one_focused_window() {
@@ -375,5 +409,61 @@ mod tests {
         );
         let (mut single, s) = TabLayout::new();
         assert!(!single.rotate(s));
+    }
+
+    #[test]
+    fn neighbor_in_a_simple_split() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        assert_eq!(layout.neighbor(a, Direction::Right), Some(b));
+        assert_eq!(layout.neighbor(b, Direction::Left), Some(a));
+        assert_eq!(layout.neighbor(a, Direction::Left), None);
+        assert_eq!(layout.neighbor(a, Direction::Up), None);
+        assert_eq!(layout.neighbor(a, Direction::Down), None);
+    }
+
+    #[test]
+    fn neighbor_picks_the_pane_sharing_the_longest_edge() {
+        // a | b   avec b découpé en b (haut, 70 %) et c (bas, 30 %), puis a
+        //   | c   découpé en a (haut) et d (bas) à 50 % : d touche b et c.
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        let c = layout.split(b, Axis::Horizontal).unwrap();
+        layout.resize(b, Axis::Horizontal, 0.2);
+        let d = layout.split(a, Axis::Horizontal).unwrap();
+        assert_eq!(layout.neighbor(a, Direction::Right), Some(b));
+        assert_eq!(
+            layout.neighbor(d, Direction::Right),
+            Some(c),
+            "d (50-100 %) recouvre c (70-100 %) sur 30 % et b sur 20 %"
+        );
+        assert_eq!(layout.neighbor(c, Direction::Left), Some(d));
+        assert_eq!(
+            layout.neighbor(b, Direction::Left),
+            Some(a),
+            "b (0-70 %) recouvre a sur 50 % et d sur 20 %"
+        );
+        assert_eq!(layout.neighbor(b, Direction::Down), Some(c));
+        assert_eq!(layout.neighbor(c, Direction::Up), Some(b));
+    }
+
+    #[test]
+    fn neighbor_ties_go_to_the_topmost_or_leftmost() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        let c = layout.split(b, Axis::Horizontal).unwrap();
+        assert_eq!(
+            layout.neighbor(a, Direction::Right),
+            Some(b),
+            "b et c partagent 50 % chacun : le plus haut gagne"
+        );
+        let _ = c;
+    }
+
+    #[test]
+    fn neighbor_of_unknown_or_single_window_is_none() {
+        let (layout, a) = TabLayout::new();
+        assert_eq!(layout.neighbor(a, Direction::Right), None);
+        assert_eq!(layout.neighbor(WindowId(5), Direction::Right), None);
     }
 }
