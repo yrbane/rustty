@@ -43,7 +43,7 @@ fn spawn(shell: &Shell) -> Pty {
 fn echo_output_is_readable() {
     let mut pty = spawn(&echo_then_exit("bonjour", 0));
     let out = pump(pty.reader().unwrap());
-    out.expect("bonjour", TIMEOUT);
+    out.expect(&mut pty, "bonjour", TIMEOUT);
     assert_eq!(wait_bounded(&mut pty, &out, TIMEOUT), ExitStatus::Exited(0));
 }
 
@@ -51,7 +51,7 @@ fn echo_output_is_readable() {
 fn exit_code_is_reported() {
     let mut pty = spawn(&echo_then_exit("x", 3));
     let out = pump(pty.reader().unwrap());
-    out.expect("x", TIMEOUT);
+    out.expect(&mut pty, "x", TIMEOUT);
     assert_eq!(wait_bounded(&mut pty, &out, TIMEOUT), ExitStatus::Exited(3));
     assert_eq!(
         pty.try_wait().unwrap(),
@@ -88,7 +88,7 @@ fn written_input_is_echoed_back_by_an_interactive_shell() {
     let mut pty = spawn(&interactive_shell());
     let out = pump(pty.reader().unwrap());
     pty.write(b"echo marqueur-rustty\r\n").unwrap();
-    out.expect("marqueur-rustty", TIMEOUT);
+    out.expect(&mut pty, "marqueur-rustty", TIMEOUT);
     pty.write(b"exit\r\n").unwrap();
     assert_eq!(wait_bounded(&mut pty, &out, TIMEOUT), ExitStatus::Exited(0));
 }
@@ -117,7 +117,7 @@ fn env_is_passed_to_the_child() {
     env.push(("RUSTTY_PROBE".into(), "valeur-sonde".into()));
     let mut pty = Pty::spawn(&shell, PtySize::new(80, 24), &env, None).unwrap();
     let out = pump(pty.reader().unwrap());
-    out.expect("valeur-sonde", TIMEOUT);
+    out.expect(&mut pty, "valeur-sonde", TIMEOUT);
     wait_bounded(&mut pty, &out, TIMEOUT);
 }
 
@@ -158,7 +158,7 @@ fn large_output_is_delivered_in_order() {
     let mut pty = Pty::spawn(&shell, PtySize::new(200, 50), &default_env(), None).unwrap();
     let out = pump(pty.reader().unwrap());
     wait_bounded(&mut pty, &out, TIMEOUT);
-    let text = out.expect("ligne-2000", TIMEOUT);
+    let text = out.expect(&mut pty, "ligne-2000", TIMEOUT);
     let mut expected = 1;
     for line in text
         .lines()

@@ -2,6 +2,7 @@
 //! (jamais de tube plein, jamais de lecture bloquante dans le test) et chaque
 //! attente est bornée, pour qu'un blocage devienne un échec qui s'explique.
 
+use std::cell::Cell;
 use std::io::{ErrorKind, Read};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -11,9 +12,15 @@ use rustty_pty::{ExitStatus, Pty};
 
 const POLL: Duration = Duration::from_millis(10);
 
+/// Demande de position du curseur (DSR 6) : ConPTY l'envoie au démarrage et
+/// n'émet rien tant qu'un terminal n'y a pas répondu.
+const CURSOR_POSITION_REQUEST: &str = "\x1b[6n";
+const CURSOR_POSITION_REPLY: &[u8] = b"\x1b[1;1R";
+
 pub struct Output {
     buf: Arc<Mutex<Vec<u8>>>,
     closed: Arc<AtomicBool>,
+    requests_answered: Cell<usize>,
 }
 
 /// Lit `reader` jusqu'à la fin du flux dans un thread dédié.
@@ -33,7 +40,11 @@ pub fn pump(mut reader: Box<dyn Read + Send>) -> Output {
         }
         c.store(true, Ordering::SeqCst);
     });
-    Output { buf, closed }
+    Output {
+        buf,
+        closed,
+        requests_answered: Cell::new(0),
+    }
 }
 
 impl Output {
@@ -45,10 +56,22 @@ impl Output {
         self.closed.load(Ordering::SeqCst)
     }
 
-    /// Attend que la sortie contienne `needle` ; échoue en montrant ce qui a été lu.
-    pub fn expect(&self, needle: &str, timeout: Duration) -> String {
+    /// Joue le rôle du terminal : répond à chaque demande de position du
+    /// curseur apparue dans la sortie, comme le fera `rustty-vt`.
+    pub fn answer_requests(&self, pty: &mut Pty) {
+        let seen = self.text().matches(CURSOR_POSITION_REQUEST).count();
+        while self.requests_answered.get() < seen {
+            pty.write(CURSOR_POSITION_REPLY).unwrap();
+            self.requests_answered.set(self.requests_answered.get() + 1);
+        }
+    }
+
+    /// Attend que la sortie contienne `needle` en répondant aux requêtes du
+    /// programme ; échoue en montrant ce qui a été lu.
+    pub fn expect(&self, pty: &mut Pty, needle: &str, timeout: Duration) -> String {
         let start = Instant::now();
         loop {
+            self.answer_requests(pty);
             let text = self.text();
             if text.contains(needle) {
                 return text;
@@ -83,6 +106,7 @@ impl Output {
 pub fn wait_bounded(pty: &mut Pty, out: &Output, timeout: Duration) -> ExitStatus {
     let start = Instant::now();
     loop {
+        out.answer_requests(pty);
         if let Some(status) = pty.try_wait().unwrap() {
             return status;
         }

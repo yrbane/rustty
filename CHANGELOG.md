@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.53 — 2026-10-08 · « ConPTY répondu »
+
+- `rustty-pty` : le harnais de tests répond aux demandes de position du curseur (`ESC[6n`) comme un vrai terminal ; ConPTY n'émet rien tant qu'il n'a pas cette réponse, ce qui bloquait tous les tests Windows. Sur macOS, la sortie pompée en continu a levé le blocage.
+
 ## 0.1.0-alpha.52 — 2026-10-08 · « Tests pty bornés »
 
 - `rustty-pty` : les tests d'intégration pompent la sortie dans un thread et bornent chaque attente (`try_wait` sondé) ; un blocage devient un échec qui montre la sortie lue, au lieu de suspendre la CI (macOS et Windows restaient coincés sur une lecture bloquante).
