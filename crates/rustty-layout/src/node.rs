@@ -71,6 +71,57 @@ impl Node {
             }
         }
     }
+
+    pub(crate) fn first_leaf(&self) -> WindowId {
+        match self {
+            Self::Leaf(id) => *id,
+            Self::Split { first, .. } => first.first_leaf(),
+        }
+    }
+
+    /// Retire la feuille `id`. Rend l'arbre restant, ou `None` si ce nœud
+    /// était cette feuille. Un nœud qui ne contient pas `id` est rendu intact.
+    pub(crate) fn remove(self, id: WindowId) -> Option<Node> {
+        match self {
+            Self::Leaf(leaf) if leaf == id => None,
+            Self::Leaf(_) => Some(self),
+            Self::Split {
+                axis,
+                ratio,
+                first,
+                second,
+            } => {
+                if first.contains(id) {
+                    match first.remove(id) {
+                        None => Some(*second),
+                        Some(kept) => Some(Self::Split {
+                            axis,
+                            ratio,
+                            first: Box::new(kept),
+                            second,
+                        }),
+                    }
+                } else if second.contains(id) {
+                    match second.remove(id) {
+                        None => Some(*first),
+                        Some(kept) => Some(Self::Split {
+                            axis,
+                            ratio,
+                            first,
+                            second: Box::new(kept),
+                        }),
+                    }
+                } else {
+                    Some(Self::Split {
+                        axis,
+                        ratio,
+                        first,
+                        second,
+                    })
+                }
+            }
+        }
+    }
 }
 
 /// Coupe `bounds` en deux selon `axis` : le premier panneau reçoit `ratio` de

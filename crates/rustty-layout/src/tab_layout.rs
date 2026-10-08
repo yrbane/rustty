@@ -73,6 +73,40 @@ impl TabLayout {
         }
         out
     }
+
+    /// Ferme `id` ; son panneau frère reprend l'espace. Si `id` avait le focus,
+    /// la première feuille du frère promu le reçoit. Vrai si `id` existait.
+    pub fn close(&mut self, id: WindowId) -> bool {
+        if !self.contains(id) {
+            return false;
+        }
+        let root = self.root.take().expect("contains(id) garantit une racine");
+        let sibling_focus = Self::promoted_sibling_first_leaf(&root, id);
+        self.root = root.remove(id);
+        if self.focused == Some(id) {
+            self.focused = sibling_focus;
+        }
+        true
+    }
+
+    /// Première feuille du panneau frère de `id`, c'est-à-dire ce qui prendra
+    /// sa place à l'écran. `None` si `id` est la racine.
+    fn promoted_sibling_first_leaf(node: &Node, id: WindowId) -> Option<WindowId> {
+        match node {
+            Node::Leaf(_) => None,
+            Node::Split { first, second, .. } => {
+                if **first == Node::Leaf(id) {
+                    Some(second.first_leaf())
+                } else if **second == Node::Leaf(id) {
+                    Some(first.first_leaf())
+                } else if first.contains(id) {
+                    Self::promoted_sibling_first_leaf(first, id)
+                } else {
+                    Self::promoted_sibling_first_leaf(second, id)
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -193,5 +227,60 @@ mod tests {
         assert!(!layout.focus(WindowId(42)));
         assert_eq!(layout.focused(), Some(first));
         assert!(layout.focus(first));
+    }
+
+    #[test]
+    fn closing_a_pane_gives_its_space_to_the_sibling() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        assert!(layout.close(b));
+        assert_eq!(layout.windows(), vec![a]);
+        assert_eq!(layout.focused(), Some(a));
+        let bounds = Rect::new(0, 0, 100, 50);
+        assert_eq!(layout.rects(bounds, 0), vec![(a, bounds)]);
+    }
+
+    #[test]
+    fn closing_a_nested_pane_promotes_the_sibling_subtree() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        let c = layout.split(b, Axis::Horizontal).unwrap();
+        assert!(layout.close(a));
+        assert_eq!(layout.windows(), vec![b, c]);
+        let bounds = Rect::new(0, 0, 100, 100);
+        assert_eq!(rect_of(&layout, b, bounds, 0), Rect::new(0, 0, 100, 50));
+        assert_eq!(rect_of(&layout, c, bounds, 0), Rect::new(0, 50, 100, 50));
+    }
+
+    #[test]
+    fn closing_the_focused_pane_moves_focus_to_the_promoted_sibling() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        let c = layout.split(b, Axis::Horizontal).unwrap();
+        layout.focus(a);
+        assert!(layout.close(a));
+        assert_eq!(layout.focused(), Some(b), "première feuille du frère promu");
+        assert!(layout.close(b));
+        assert_eq!(layout.focused(), Some(c));
+    }
+
+    #[test]
+    fn closing_an_unfocused_pane_keeps_focus() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        assert!(layout.close(a));
+        assert_eq!(layout.focused(), Some(b));
+    }
+
+    #[test]
+    fn closing_the_last_window_empties_the_tab() {
+        let (mut layout, a) = TabLayout::new();
+        assert!(layout.close(a));
+        assert!(layout.is_empty());
+        assert_eq!(layout.focused(), None);
+        assert!(layout.windows().is_empty());
+        assert!(layout.rects(Rect::new(0, 0, 10, 10), 0).is_empty());
+        assert!(!layout.close(a), "déjà fermée");
+        assert_eq!(layout.split(a, Axis::Vertical), None);
     }
 }

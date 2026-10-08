@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.23 — 2026-10-08 · « Fermeture de fenêtre »
+
+- `rustty-layout` : `TabLayout::close` promeut le panneau frère et transfère le focus ; fermer la dernière fenêtre vide l'onglet.
+
 ## 0.1.0-alpha.22 — 2026-10-08 · « Divisions »
 
 - `rustty-layout` : `TabLayout::split` horizontal et vertical, rectangles avec ratio et espace entre panneaux, bornes dégénérées sans panique.
