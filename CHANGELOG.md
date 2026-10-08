@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.6 — 2026-10-08 · « Objets-valeur du terminal »
+
+- `rustty-vt` : `Cursor`, `CursorShape`, `SavedCursor`, `Modes`, `Charset`/`Charsets` (table graphique DEC), `TabStops`, `ScrollRegion`, `Outbox`, chacun testé isolément.
+
 ## 0.1.0-alpha.5 — 2026-10-08 · « Scrollback »
 
 - `rustty-vt` : `Scrollback` borné, indexé depuis la ligne la plus récente.

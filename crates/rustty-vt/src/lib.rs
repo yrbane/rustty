@@ -21,3 +21,17 @@ pub use grid::Grid;
 pub mod scrollback;
 
 pub use scrollback::Scrollback;
+
+pub mod charset;
+pub mod cursor;
+pub mod modes;
+pub mod outbox;
+pub mod region;
+pub mod tabs;
+
+pub use charset::{Charset, Charsets};
+pub use cursor::{Cursor, CursorShape, SavedCursor};
+pub use modes::{Modes, MouseMode};
+pub use outbox::{Outbox, TermEvent};
+pub use region::ScrollRegion;
+pub use tabs::TabStops;
