@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.39 — 2026-10-08 · « Crate render et palette »
+
+- `rustty-render` : `Rgba` et `Palette` (16 couleurs ANSI, cube 6×6×6, gris, vraies couleurs ; gras vif, inversion, atténuation, texte caché).
+
 ## 0.1.0-alpha.38 — 2026-10-08 · « Thread lecteur »
 
 - `rustty-pty` : `spawn_reader` lit le pseudo-terminal par blocs de 64 Kio et pousse `PtyEvent::Data` puis `Eof` dans un canal ou un rappel ; 2 000 lignes livrées dans l'ordre sans perte.

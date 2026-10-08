@@ -1,0 +1,18 @@
+[package]
+name = "rustty-render"
+description = "Rendu wgpu de la grille de terminal et du chrome de l'interface"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rustty-config = { path = "../rustty-config" }
+rustty-vt = { path = "../rustty-vt" }
+thiserror.workspace = true
+
+[dev-dependencies]
+
+[lints]
+workspace = true
