@@ -5,6 +5,7 @@ use vte::{Params, Perform};
 
 use super::Term;
 use crate::outbox::TermEvent;
+use crate::params::{arg_or, args, raw};
 
 impl Perform for Term {
     fn print(&mut self, c: char) {
@@ -24,16 +25,42 @@ impl Perform for Term {
         }
     }
 
-    fn csi_dispatch(
-        &mut self,
-        _params: &Params,
-        _intermediates: &[u8],
-        _ignore: bool,
-        _action: char,
-    ) {
+    fn csi_dispatch(&mut self, params: &Params, intermediates: &[u8], _ignore: bool, action: char) {
+        let p = args(params);
+        let n = |i: usize| usize::from(arg_or(&p, i, 1));
+        match (intermediates, action) {
+            ([], 'A') => self.cursor_up(n(0)),
+            ([], 'B' | 'e') => self.cursor_down(n(0)),
+            ([], 'C' | 'a') => self.cursor_forward(n(0)),
+            ([], 'D') => self.cursor_back(n(0)),
+            ([], 'E') => {
+                self.cursor_down(n(0));
+                self.cursor_to_col(0);
+            }
+            ([], 'F') => {
+                self.cursor_up(n(0));
+                self.cursor_to_col(0);
+            }
+            ([], 'G' | '`') => self.cursor_to_col(n(0) - 1),
+            ([], 'H' | 'f') => self.cursor_to(n(1) - 1, n(0) - 1),
+            ([], 'd') => {
+                let col = self.cursor.col;
+                self.cursor_to(col, n(0) - 1);
+            }
+            ([], 'r') => self.set_scroll_region(raw(&p, 0), raw(&p, 1)),
+            ([], 's') => self.save_cursor(),
+            ([], 'u') => self.restore_cursor(),
+            _ => {}
+        }
     }
 
-    fn esc_dispatch(&mut self, _intermediates: &[u8], _ignore: bool, _byte: u8) {}
+    fn esc_dispatch(&mut self, intermediates: &[u8], _ignore: bool, byte: u8) {
+        match (intermediates, byte) {
+            ([], b'7') => self.save_cursor(),
+            ([], b'8') => self.restore_cursor(),
+            _ => {}
+        }
+    }
 
     fn osc_dispatch(&mut self, _params: &[&[u8]], _bell_terminated: bool) {}
 

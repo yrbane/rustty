@@ -39,3 +39,5 @@ pub use tabs::TabStops;
 pub mod term;
 
 pub use term::Term;
+
+mod params;

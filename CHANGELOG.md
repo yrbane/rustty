@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.8 — 2026-10-08 · « Déplacements du curseur »
+
+- `rustty-vt` : lecture des paramètres CSI ; CUU/CUD/CUF/CUB/CNL/CPL/CHA/VPA/CUP/HVP, DECSTBM, mode origine, DECSC/DECRC et CSI s/u.
+
 ## 0.1.0-alpha.7 — 2026-10-08 · « Cœur du terminal »
 
 - `rustty-vt` : façade `Term` pilotée par `vte` avec dispatch séparé de la logique ; impression de texte, retour à la ligne différé, mode insertion, combinants, contrôles C0, défilement vers l'historique.

@@ -11,7 +11,7 @@ use vte::Parser;
 
 use crate::cell::Cell;
 use crate::charset::Charsets;
-use crate::cursor::{Cursor, CursorShape};
+use crate::cursor::{Cursor, CursorShape, SavedCursor};
 use crate::grid::Grid;
 use crate::modes::Modes;
 use crate::outbox::{Outbox, TermEvent};
@@ -24,6 +24,8 @@ pub struct Term {
     pub(crate) alt_grid: Grid,
     pub(crate) scrollback: Scrollback,
     pub(crate) cursor: Cursor,
+    pub(crate) saved_cursor: SavedCursor,
+    pub(crate) saved_cursor_alt: SavedCursor,
     pub(crate) modes: Modes,
     pub(crate) cursor_shape: CursorShape,
     pub(crate) region: ScrollRegion,
@@ -43,6 +45,8 @@ impl Term {
             alt_grid: Grid::new(cols, rows),
             scrollback: Scrollback::new(scrollback_lines),
             cursor: Cursor::default(),
+            saved_cursor: SavedCursor::default(),
+            saved_cursor_alt: SavedCursor::default(),
             modes: Modes::default(),
             cursor_shape: CursorShape::default(),
             region: ScrollRegion::full(rows),
