@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.33 — 2026-10-08 · « Portabilité Windows »
+
+- Fins de ligne forcées en LF par `.gitattributes` (le fichier d'exemple est comparé octet à octet) ; le test du chemin de configuration par défaut accepte la disposition Windows (`rustty\config\rustty.toml`).
+
 ## 0.1.0-alpha.32 — 2026-10-08 · « Fichier d'exemple »
 
 - `rustty-config` : `DEFAULT_TOML`, fichier d'exemple commenté publié dans `docs/rustty.example.toml`, garanti égal aux défauts par les tests.

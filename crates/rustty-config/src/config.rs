@@ -298,12 +298,14 @@ mod tests {
     }
 
     #[test]
-    fn default_path_ends_with_rustty_toml() {
+    fn default_path_is_rustty_toml_inside_a_rustty_directory() {
         if let Some(p) = Config::default_path() {
-            assert!(
-                p.ends_with("rustty/rustty.toml") || p.ends_with("rustty\\rustty.toml"),
+            assert_eq!(
+                p.file_name().and_then(|n| n.to_str()),
+                Some("rustty.toml"),
                 "{p:?}"
             );
+            assert!(p.components().any(|c| c.as_os_str() == "rustty"), "{p:?}");
         }
     }
 }
