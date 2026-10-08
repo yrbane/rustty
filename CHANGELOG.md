@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.19 — 2026-10-08 · « Icône carrée »
+
+- `assets/icon.svg` : viewBox carré 840 × 840, dessin d'origine centré verticalement, prêt pour la génération des icônes ICO, ICNS et PNG.
+
 ## 0.1.0-alpha.18 — 2026-10-08 · « Mascotte et icône »
 
 - Identité visuelle : mascotte crabe en tête du README (`assets/logo.png`, version 512 px ; original 1254 px dans `assets/logo-1254.png`) et icône vectorielle de l'application (`assets/icon.svg`), utilisée par le futur binaire.

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 700" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 840" role="img" aria-labelledby="title desc">
   <title id="title">Rustty — crab terminal icon</title>
   <desc id="desc">Dark rounded terminal window with three traffic light buttons and a friendly orange Rust crab.</desc>
   <defs>
@@ -8,6 +8,8 @@
     <linearGradient id="crab" x1="0" y1="0" x2=".85" y2="1"><stop stop-color="#ff641c"/><stop offset=".52" stop-color="#ff4f10"/><stop offset="1" stop-color="#ff5a1a"/></linearGradient>
     <linearGradient id="legs" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f73e0c"/><stop offset="1" stop-color="#ff6419"/></linearGradient>
   </defs>
+  <!-- Dessin original 840×700, centré verticalement dans un carré 840×840 -->
+  <g transform="translate(0 70)">
   <rect x="2" y="5" width="836" height="694" rx="88" fill="url(#frame)"/>
   <rect x="28" y="123" width="784" height="548" rx="49" fill="url(#terminal)"/>
   <circle cx="104" cy="71" r="28" fill="#ff5b1d"/>
@@ -39,4 +41,5 @@
   <circle cx="333" cy="442" r="12" fill="white"/>
   <circle cx="509" cy="442" r="12" fill="white"/>
   <path d="M387 495q33 38 67 0" stroke="#141c1f" stroke-width="19" stroke-linecap="round" fill="none"/>
+  </g>
 </svg>
