@@ -13,3 +13,7 @@ pub use color::Color;
 pub mod line;
 
 pub use line::Line;
+
+pub mod grid;
+
+pub use grid::Grid;
