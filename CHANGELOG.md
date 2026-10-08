@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.54 — 2026-10-08 · « Lignes sous ConPTY »
+
+- `rustty-pty` : le test des 2 000 lignes extrait les numéros indépendamment des séquences de contrôle que ConPTY intercale sur la même ligne ; vérifie toujours l'ordre strict, sans perte ni doublon.
+
 ## 0.1.0-alpha.53 — 2026-10-08 · « ConPTY répondu »
 
 - `rustty-pty` : le harnais de tests répond aux demandes de position du curseur (`ESC[6n`) comme un vrai terminal ; ConPTY n'émet rien tant qu'il n'a pas cette réponse, ce qui bloquait tous les tests Windows. Sur macOS, la sortie pompée en continu a levé le blocage.

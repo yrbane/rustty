@@ -159,20 +159,25 @@ fn large_output_is_delivered_in_order() {
     let out = pump(pty.reader().unwrap());
     wait_bounded(&mut pty, &out, TIMEOUT);
     let text = out.expect(&mut pty, "ligne-2000", TIMEOUT);
-    let mut expected = 1;
-    for line in text
-        .lines()
-        .map(str::trim)
-        .filter(|l| l.starts_with("ligne-"))
-    {
-        assert_eq!(
-            line,
-            format!("ligne-{expected}"),
-            "ordre ou perte de lignes"
-        );
-        expected += 1;
-    }
-    assert_eq!(expected, 2001, "les 2000 lignes sont arrivées");
+    // ConPTY entoure le texte de séquences de contrôle (jusque sur la même
+    // ligne) : on ne retient que les numéros, dans l'ordre d'apparition.
+    let numbers: Vec<u32> = text
+        .split("ligne-")
+        .skip(1)
+        .filter_map(|rest| {
+            let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+            digits.parse().ok()
+        })
+        .collect();
+    assert_eq!(
+        numbers.len(),
+        2000,
+        "les 2000 lignes sont arrivées, sans doublon ni perte : {numbers:?}"
+    );
+    assert!(
+        numbers.iter().copied().eq(1..=2000),
+        "ordre des lignes : {numbers:?}"
+    );
 }
 
 #[cfg(unix)]

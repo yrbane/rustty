@@ -1155,7 +1155,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-config"
-version = "0.1.0-alpha.53"
+version = "0.1.0-alpha.54"
 dependencies = [
  "bitflags 2.13.2",
  "directories",
@@ -1166,14 +1166,14 @@ dependencies = [
 
 [[package]]
 name = "rustty-layout"
-version = "0.1.0-alpha.53"
+version = "0.1.0-alpha.54"
 dependencies = [
  "proptest",
 ]
 
 [[package]]
 name = "rustty-pty"
-version = "0.1.0-alpha.53"
+version = "0.1.0-alpha.54"
 dependencies = [
  "portable-pty",
  "thiserror 2.0.21",
@@ -1181,7 +1181,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-render"
-version = "0.1.0-alpha.53"
+version = "0.1.0-alpha.54"
 dependencies = [
  "bytemuck",
  "fontdb",
@@ -1197,7 +1197,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-vt"
-version = "0.1.0-alpha.53"
+version = "0.1.0-alpha.54"
 dependencies = [
  "base64",
  "bitflags 2.13.2",
