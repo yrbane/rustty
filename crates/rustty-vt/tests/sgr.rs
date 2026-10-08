@@ -81,3 +81,15 @@ fn underline_styles_via_subparams() {
             .contains(Attrs::UNDERLINE)
     );
 }
+
+#[test]
+fn truncated_extended_color_does_not_leak_attributes() {
+    assert!(
+        style_after("\x1b[38;5m").attrs.is_empty(),
+        "5 ne doit pas devenir BLINK"
+    );
+    assert!(
+        style_after("\x1b[38;2;255m").attrs.is_empty(),
+        "2 ne doit pas devenir DIM"
+    );
+}

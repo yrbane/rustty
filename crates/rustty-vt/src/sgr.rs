@@ -52,10 +52,9 @@ pub(crate) fn apply_sgr(style: &mut Style, params: &Params) {
                         .iter()
                         .map(|s| s.first().copied().unwrap_or(0))
                         .collect();
-                    match extended_color(&rest, false) {
-                        Some(c) => (Some(c), extended_len(&rest)),
-                        None => (None, 0),
-                    }
+                    // Même tronquée, la séquence consomme ses sous-paramètres :
+                    // ils ne doivent pas être relus comme des codes SGR.
+                    (extended_color(&rest, false), extended_len(&rest))
                 };
                 if let Some(c) = color {
                     if code == 38 {

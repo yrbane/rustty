@@ -10,7 +10,12 @@ impl Term {
         let keep_history = top == 0 && !self.modes.alt_screen;
         let evicted = self.active_grid_mut().scroll_up(top, bottom, n, template);
         if keep_history {
+            let pushed = evicted.len();
             self.scrollback.extend(evicted);
+            // L'utilisateur remonté dans l'historique continue de lire la même chose.
+            if self.display_offset > 0 {
+                self.display_offset = (self.display_offset + pushed).min(self.scrollback.len());
+            }
         }
     }
 
@@ -95,5 +100,27 @@ mod tests {
         let mut t = term(5, 2);
         feed(&mut t, "abc\x1bEx");
         assert_eq!(t.text(), vec!["abc", "x"]);
+    }
+
+    #[test]
+    fn output_while_scrolled_back_keeps_the_view_stable() {
+        let mut t = term(5, 2);
+        feed(&mut t, "a\r\nb\r\nc\r\nd");
+        t.scroll_display(1);
+        let view = |t: &crate::term::Term| {
+            t.snapshot()
+                .lines
+                .iter()
+                .map(|l| l.text().trim_end().to_string())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(view(&t), vec!["b", "c"]);
+        feed(&mut t, "\r\ne\r\nf");
+        assert_eq!(
+            view(&t),
+            vec!["b", "c"],
+            "ce que l'utilisateur lit ne bouge pas"
+        );
+        assert_eq!(t.display_offset(), 3);
     }
 }

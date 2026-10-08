@@ -42,6 +42,19 @@ pub struct Modes {
     pub mouse_sgr: bool,
 }
 
+impl Modes {
+    /// Vrai si un mode qui change le travail de l'hôte diffère : encodage des
+    /// entrées (souris, touches application, collage, focus) ou écran affiché.
+    pub fn differs_for_host(&self, other: &Modes) -> bool {
+        self.mouse != other.mouse
+            || self.mouse_sgr != other.mouse_sgr
+            || self.alt_screen != other.alt_screen
+            || self.bracketed_paste != other.bracketed_paste
+            || self.focus_events != other.focus_events
+            || self.app_cursor_keys != other.app_cursor_keys
+    }
+}
+
 impl Default for Modes {
     fn default() -> Self {
         Self {
@@ -80,5 +93,26 @@ mod tests {
                 && !m.mouse_sgr
         );
         assert_eq!(m.mouse, MouseMode::None);
+    }
+
+    #[test]
+    fn host_relevant_modes_are_the_ones_that_change_input_encoding_or_screen() {
+        let a = Modes::default();
+        let mut b = a;
+        b.cursor_visible = false;
+        b.insert = true;
+        assert!(!a.differs_for_host(&b), "curseur et insertion : interne");
+        for f in [
+            |m: &mut Modes| m.mouse = MouseMode::X10,
+            |m: &mut Modes| m.mouse_sgr = true,
+            |m: &mut Modes| m.alt_screen = true,
+            |m: &mut Modes| m.bracketed_paste = true,
+            |m: &mut Modes| m.focus_events = true,
+            |m: &mut Modes| m.app_cursor_keys = true,
+        ] {
+            let mut c = a;
+            f(&mut c);
+            assert!(a.differs_for_host(&c));
+        }
     }
 }

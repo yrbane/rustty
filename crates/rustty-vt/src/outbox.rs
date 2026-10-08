@@ -1,10 +1,15 @@
 //! Ce que le terminal produit vers l'extérieur : événements pour l'interface
 //! et octets de réponse à renvoyer à l'application.
 
+use crate::modes::Modes;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TermEvent {
     Title(String),
     Bell,
+    /// Un mode qui change ce que l'hôte doit envoyer ou afficher (souris,
+    /// collage encadré, focus, touches application, écran alternatif) a changé.
+    ModeChanged(Modes),
     /// OSC 52 : l'application demande à écrire dans le presse-papiers.
     SetClipboard(String),
 }

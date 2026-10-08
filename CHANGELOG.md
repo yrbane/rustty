@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.17 — 2026-10-08 · « Corrections de revue »
+
+- `rustty-vt` : le resize des rangées garde la ligne du curseur visible en échangeant des lignes avec l'historique ; la vue reste stable quand de la sortie arrive pendant la relecture de l'historique ; nouvel événement `TermEvent::ModeChanged` pour les modes qui concernent l'hôte ; une couleur SGR étendue tronquée ne pose plus d'attributs parasites ; les titres OSC gardent leurs points-virgules ; RIS rafraîchit le titre et ED 3 remet le décalage d'affichage à zéro.
+
 ## 0.1.0-alpha.16 — 2026-10-08 · « Instantané et défilement de l'affichage »
 
 - `rustty-vt` : `Snapshot` pour le renderer, défilement de l'affichage dans l'historique, scénarios de bout en bout figés par insta, test de robustesse sur du bruit.

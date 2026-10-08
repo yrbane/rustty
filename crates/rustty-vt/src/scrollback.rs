@@ -61,6 +61,11 @@ impl Scrollback {
         self.lines.clear();
     }
 
+    /// Retire et rend la ligne la plus récente (celle juste au-dessus de l'écran).
+    pub fn pop_newest(&mut self) -> Option<Line> {
+        self.lines.pop_back()
+    }
+
     pub fn resize_lines(&mut self, cols: usize, template: Cell) {
         for line in &mut self.lines {
             line.resize(cols, template);
@@ -119,5 +124,14 @@ mod tests {
         sb.push(line('a'));
         sb.clear();
         assert!(sb.is_empty());
+    }
+
+    #[test]
+    fn pop_newest_returns_lines_from_the_bottom_of_history() {
+        let mut sb = Scrollback::new(5);
+        sb.extend(vec![line('a'), line('b')]);
+        assert_eq!(sb.pop_newest().unwrap().text(), "b ");
+        assert_eq!(sb.pop_newest().unwrap().text(), "a ");
+        assert!(sb.pop_newest().is_none());
     }
 }

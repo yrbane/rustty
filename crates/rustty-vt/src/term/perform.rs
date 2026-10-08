@@ -118,13 +118,7 @@ impl Perform for Term {
     fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
         let Some(code) = params.first() else { return };
         match *code {
-            b"0" | b"2" => {
-                let title = params
-                    .get(1)
-                    .map(|t| String::from_utf8_lossy(t).into_owned())
-                    .unwrap_or_default();
-                self.set_title(title);
-            }
+            b"0" | b"2" => self.set_title_from_params(&params[1..]),
             b"52" => {
                 if let Some(data) = params.get(2) {
                     self.set_clipboard_from_base64(data);

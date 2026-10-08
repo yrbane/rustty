@@ -6,6 +6,16 @@ use super::Term;
 use crate::outbox::TermEvent;
 
 impl Term {
+    /// OSC 0/2 : vte découpe sur `;`, on recolle tout ce qui suit le code.
+    pub(crate) fn set_title_from_params(&mut self, params: &[&[u8]]) {
+        let title = params
+            .iter()
+            .map(|p| String::from_utf8_lossy(p))
+            .collect::<Vec<_>>()
+            .join(";");
+        self.set_title(title);
+    }
+
     pub(crate) fn set_title(&mut self, title: String) {
         self.title.clone_from(&title);
         self.outbox.event(TermEvent::Title(title));
@@ -73,5 +83,12 @@ mod tests {
             t.drain_responses().is_empty(),
             "ne jamais divulguer le presse-papiers"
         );
+    }
+
+    #[test]
+    fn title_keeps_its_semicolons() {
+        let mut t = term(5, 1);
+        feed(&mut t, "\x1b]2;vim; a;b\x07");
+        assert_eq!(t.title(), "vim; a;b");
     }
 }

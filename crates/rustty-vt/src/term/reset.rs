@@ -14,6 +14,7 @@ impl Term {
     /// RIS : état initial, taille et historique conservés.
     pub(crate) fn reset(&mut self) {
         let (cols, rows) = (self.cols(), self.rows());
+        let before = self.modes;
         self.grid = Grid::new(cols, rows);
         self.alt_grid = Grid::new(cols, rows);
         self.cursor = Cursor::default();
@@ -24,8 +25,9 @@ impl Term {
         self.region = ScrollRegion::full(rows);
         self.tabs = TabStops::new(cols);
         self.charsets = Charsets::default();
-        self.title.clear();
         self.display_offset = 0;
+        self.set_title(String::new());
+        self.notify_if_host_modes_changed(before);
     }
 
     /// Nouvelle taille en cellules. Les lignes sont tronquées ou complétées,
@@ -34,15 +36,54 @@ impl Term {
         let cols = cols.max(1);
         let rows = rows.max(1);
         let template = Cell::default();
+        let old_rows = self.rows();
+        self.scrollback.resize_lines(cols, template);
+        if !self.modes.alt_screen && rows < old_rows {
+            self.shrink_rows_into_history(rows, template);
+        }
         self.grid.resize(cols, rows, template);
         self.alt_grid.resize(cols, rows, template);
-        self.scrollback.resize_lines(cols, template);
+        if !self.modes.alt_screen && rows > old_rows {
+            self.grow_rows_from_history(rows - old_rows, template);
+        }
         self.region = ScrollRegion::full(rows);
         self.tabs = TabStops::new(cols);
         self.display_offset = 0;
         self.cursor.clamp(cols, rows);
         self.saved_cursor.cursor.clamp(cols, rows);
         self.saved_cursor_alt.cursor.clamp(cols, rows);
+    }
+
+    /// Avant de tronquer le bas de l'écran, pousse assez de lignes du haut dans
+    /// l'historique pour que la ligne du curseur reste visible.
+    fn shrink_rows_into_history(&mut self, rows: usize, template: Cell) {
+        if self.cursor.row < rows {
+            return;
+        }
+        let k = self.cursor.row + 1 - rows;
+        let old_bottom = self.rows() - 1;
+        let evicted = self.grid.scroll_up(0, old_bottom, k, template);
+        self.scrollback.extend(evicted);
+        self.cursor.row -= k;
+        self.saved_cursor.cursor.row = self.saved_cursor.cursor.row.saturating_sub(k);
+    }
+
+    /// Après agrandissement, rapatrie depuis l'historique autant de lignes que
+    /// de rangées gagnées, au-dessus du contenu existant.
+    fn grow_rows_from_history(&mut self, gained: usize, template: Cell) {
+        let k = gained.min(self.scrollback.len());
+        if k == 0 {
+            return;
+        }
+        let bottom = self.rows() - 1;
+        self.grid.scroll_down(0, bottom, k, template);
+        for row in (0..k).rev() {
+            if let Some(line) = self.scrollback.pop_newest() {
+                *self.grid.line_mut(row) = line;
+            }
+        }
+        self.cursor.row += k;
+        self.saved_cursor.cursor.row += k;
     }
 }
 
@@ -129,5 +170,48 @@ mod tests {
         let mut t = term(3, 1);
         t.resize(0, 0);
         assert_eq!((t.grid().cols(), t.grid().rows()), (1, 1));
+    }
+
+    #[test]
+    fn resize_shrink_rows_keeps_cursor_line_by_scrolling_into_history() {
+        let mut t = term(10, 4);
+        feed(&mut t, "line1\r\nline2\r\nline3\r\n$ ");
+        t.resize(10, 2);
+        assert_eq!(t.text(), vec!["line3", "$"]);
+        assert_eq!((t.cursor().col, t.cursor().row), (2, 1));
+        assert_eq!(t.scrollback().len(), 2);
+        assert_eq!(t.scrollback().get(0).unwrap().text().trim_end(), "line2");
+    }
+
+    #[test]
+    fn resize_grow_rows_pulls_lines_back_from_history() {
+        let mut t = term(10, 4);
+        feed(&mut t, "line1\r\nline2\r\nline3\r\n$ ");
+        t.resize(10, 2);
+        t.resize(10, 4);
+        assert_eq!(t.text(), vec!["line1", "line2", "line3", "$"]);
+        assert_eq!((t.cursor().col, t.cursor().row), (2, 3));
+        assert!(t.scrollback().is_empty());
+    }
+
+    #[test]
+    fn resize_shrink_rows_on_alt_screen_never_touches_history() {
+        let mut t = term(10, 3);
+        feed(&mut t, "\x1b[?1049ha\r\nb\r\nc");
+        t.resize(10, 1);
+        assert!(t.scrollback().is_empty());
+        assert_eq!(t.cursor().row, 0);
+    }
+
+    #[test]
+    fn ris_emits_an_empty_title_event() {
+        let mut t = term(5, 1);
+        feed(&mut t, "\x1b]0;T\x07");
+        t.drain_events();
+        feed(&mut t, "\x1bc");
+        assert!(
+            t.drain_events()
+                .contains(&crate::outbox::TermEvent::Title(String::new()))
+        );
     }
 }

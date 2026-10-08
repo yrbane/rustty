@@ -3,9 +3,17 @@
 
 use super::Term;
 use crate::cursor::CursorShape;
-use crate::modes::MouseMode;
+use crate::modes::{Modes, MouseMode};
+use crate::outbox::TermEvent;
 
 impl Term {
+    /// Signale à l'hôte un changement de mode qui le concerne, une seule fois.
+    pub(crate) fn notify_if_host_modes_changed(&mut self, before: Modes) {
+        if before.differs_for_host(&self.modes) {
+            self.outbox.event(TermEvent::ModeChanged(self.modes));
+        }
+    }
+
     pub(crate) fn enter_alt_screen(&mut self, save_cursor: bool, clear: bool) {
         if self.modes.alt_screen {
             return;
@@ -31,6 +39,7 @@ impl Term {
     }
 
     pub(crate) fn set_dec_mode(&mut self, mode: u16, on: bool) {
+        let before = self.modes;
         let mouse = |m: MouseMode| if on { m } else { MouseMode::None };
         match mode {
             1 => self.modes.app_cursor_keys = on,
@@ -73,6 +82,7 @@ impl Term {
             2004 => self.modes.bracketed_paste = on,
             _ => {}
         }
+        self.notify_if_host_modes_changed(before);
     }
 
     pub(crate) fn set_ansi_mode(&mut self, mode: u16, on: bool) {
@@ -212,5 +222,42 @@ mod tests {
             feed(&mut t, seq);
             assert_eq!(t.cursor_shape(), shape, "{seq:?}");
         }
+    }
+
+    #[test]
+    fn host_relevant_mode_changes_emit_an_event_once() {
+        use crate::outbox::TermEvent;
+        let mut t = term(5, 1);
+        feed(&mut t, "\x1b[?1000h");
+        let evs = t.drain_events();
+        assert_eq!(evs.len(), 1);
+        assert!(matches!(&evs[0], TermEvent::ModeChanged(m) if m.mouse == MouseMode::Normal));
+        feed(&mut t, "\x1b[?1000h");
+        assert!(
+            t.drain_events().is_empty(),
+            "pas de changement, pas d'événement"
+        );
+        feed(&mut t, "\x1b[?25l\x1b[4h");
+        assert!(
+            t.drain_events().is_empty(),
+            "curseur et insertion n'intéressent pas l'hôte"
+        );
+        for seq in [
+            "\x1b[?1049h",
+            "\x1b[?2004h",
+            "\x1b[?1004h",
+            "\x1b[?1006h",
+            "\x1b[?1h",
+        ] {
+            feed(&mut t, seq);
+            assert_eq!(t.drain_events().len(), 1, "{seq:?}");
+        }
+        feed(&mut t, "\x1bc");
+        assert!(
+            t.drain_events()
+                .iter()
+                .any(|e| matches!(e, TermEvent::ModeChanged(_))),
+            "RIS rétablit les modes"
+        );
     }
 }

@@ -34,7 +34,10 @@ impl Term {
                 self.erase_in_line(1);
             }
             2 => self.active_grid_mut().clear(template),
-            3 => self.scrollback.clear(),
+            3 => {
+                self.scrollback.clear();
+                self.display_offset = 0;
+            }
             _ => {}
         }
     }
@@ -178,5 +181,14 @@ mod tests {
         );
         feed(&mut t, "\x1b[2T");
         assert_eq!(t.text(), vec!["", "", "b"]);
+    }
+
+    #[test]
+    fn erase_in_display_3_resets_display_offset() {
+        let mut t = term(3, 1);
+        feed(&mut t, "a\r\nb\r\nc");
+        t.scroll_display(2);
+        feed(&mut t, "\x1b[3J");
+        assert_eq!(t.display_offset(), 0);
     }
 }
