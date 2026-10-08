@@ -2,6 +2,7 @@
 //! logique d'interprétation vit dans les sous-modules par famille d'opérations ;
 //! `perform.rs` ne fait que du dispatch.
 
+mod edit;
 mod movement;
 mod perform;
 mod print;

@@ -14,6 +14,12 @@ impl Term {
         }
     }
 
+    pub(crate) fn scroll_down_region(&mut self, n: usize) {
+        let template = self.erase_template();
+        let (top, bottom) = (self.region.top, self.region.bottom);
+        self.active_grid_mut().scroll_down(top, bottom, n, template);
+    }
+
     /// LF / VT / FF / IND : descend d'une ligne, fait défiler en bas de région.
     pub(crate) fn linefeed(&mut self) {
         self.cursor.pending_wrap = false;

@@ -50,6 +50,15 @@ impl Perform for Term {
             ([], 'r') => self.set_scroll_region(raw(&p, 0), raw(&p, 1)),
             ([], 's') => self.save_cursor(),
             ([], 'u') => self.restore_cursor(),
+            ([], 'K') => self.erase_in_line(raw(&p, 0)),
+            ([], 'J') => self.erase_in_display(raw(&p, 0)),
+            ([], 'X') => self.erase_chars(n(0)),
+            ([], '@') => self.insert_blank_chars(n(0)),
+            ([], 'P') => self.delete_chars(n(0)),
+            ([], 'L') => self.insert_lines(n(0)),
+            ([], 'M') => self.delete_lines(n(0)),
+            ([], 'S') => self.scroll_up_region(n(0)),
+            ([], 'T') => self.scroll_down_region(n(0)),
             _ => {}
         }
     }
