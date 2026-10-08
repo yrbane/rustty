@@ -60,6 +60,27 @@ impl Perform for Term {
             ([], 'S') => self.scroll_up_region(n(0)),
             ([], 'T') => self.scroll_down_region(n(0)),
             ([], 'm') => crate::sgr::apply_sgr(&mut self.cursor.style, params),
+            ([b'?'], 'h') => {
+                for &m in &p {
+                    self.set_dec_mode(m, true);
+                }
+            }
+            ([b'?'], 'l') => {
+                for &m in &p {
+                    self.set_dec_mode(m, false);
+                }
+            }
+            ([], 'h') => {
+                for &m in &p {
+                    self.set_ansi_mode(m, true);
+                }
+            }
+            ([], 'l') => {
+                for &m in &p {
+                    self.set_ansi_mode(m, false);
+                }
+            }
+            ([b' '], 'q') => self.set_cursor_shape(raw(&p, 0)),
             _ => {}
         }
     }

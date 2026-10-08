@@ -3,6 +3,7 @@
 //! `perform.rs` ne fait que du dispatch.
 
 mod edit;
+mod mode_ops;
 mod movement;
 mod perform;
 mod print;
