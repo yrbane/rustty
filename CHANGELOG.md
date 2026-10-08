@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.36 — 2026-10-08 · « Crate pty »
+
+- `rustty-pty` : `Shell` (défaut `$SHELL`, `/bin/sh` ou `powershell.exe`), environnement `TERM`/`COLORTERM`, `PtySize` bornée à une cellule, `PtyError`.
+
 ## 0.1.0-alpha.35 — 2026-10-08 · « Plan pty et render »
 
 - Plan d'implémentation des crates `rustty-pty` (shell dans un pseudo-terminal, thread lecteur) et `rustty-render` (palette, polices avec repli et police embarquée, glyphes procéduraux, atlas, pipelines wgpu, renderer testé hors écran contre des images de référence, barre d'onglets), quatorze tâches.
