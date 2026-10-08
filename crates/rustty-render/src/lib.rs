@@ -12,3 +12,6 @@ pub use font::{
 pub mod builtin;
 
 pub use builtin::{builtin_glyph, is_builtin};
+pub mod atlas;
+
+pub use atlas::{AtlasPacker, AtlasRegion, DEFAULT_ATLAS_SIZE};

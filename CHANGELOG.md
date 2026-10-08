@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.43 — 2026-10-08 · « Atlas de glyphes »
+
+- `rustty-render` : `AtlasPacker` place les bitmaps par étagères avec une marge d'un pixel ; coordonnées de texture normalisées.
+
 ## 0.1.0-alpha.42 — 2026-10-08 · « Glyphes procéduraux »
 
 - `rustty-render` : lignes de boîte, blocs, trames et symboles powerline dessinés par le renderer, nets quelle que soit la police.
