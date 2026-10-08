@@ -8,6 +8,7 @@ pub struct TabLayout {
     root: Option<Node>,
     focused: Option<WindowId>,
     next_id: u64,
+    zoomed: Option<WindowId>,
 }
 
 impl TabLayout {
@@ -19,6 +20,7 @@ impl TabLayout {
                 root: Some(Node::Leaf(first)),
                 focused: Some(first),
                 next_id: 2,
+                zoomed: None,
             },
             first,
         )
@@ -63,10 +65,31 @@ impl TabLayout {
         }
         self.next_id += 1;
         self.focused = Some(new_id);
+        self.zoomed = None;
         Some(new_id)
     }
 
+    pub fn zoomed(&self) -> Option<WindowId> {
+        self.zoomed
+    }
+
+    /// Zoome `id` sur tout l'onglet, ou rétablit le layout si `id` l'était déjà.
+    pub fn toggle_zoom(&mut self, id: WindowId) -> bool {
+        if !self.contains(id) {
+            return false;
+        }
+        self.zoomed = if self.zoomed == Some(id) {
+            None
+        } else {
+            Some(id)
+        };
+        true
+    }
+
     pub fn rects(&self, bounds: Rect, gap: u32) -> Vec<(WindowId, Rect)> {
+        if let Some(z) = self.zoomed {
+            return vec![(z, bounds)];
+        }
         let mut out = Vec::new();
         if let Some(root) = &self.root {
             root.rects(bounds, gap, &mut out);
@@ -119,6 +142,9 @@ impl TabLayout {
     pub fn close(&mut self, id: WindowId) -> bool {
         if !self.contains(id) {
             return false;
+        }
+        if self.zoomed == Some(id) {
+            self.zoomed = None;
         }
         let root = self.root.take().expect("contains(id) garantit une racine");
         let sibling_focus = Self::promoted_sibling_first_leaf(&root, id);
@@ -465,5 +491,56 @@ mod tests {
         let (layout, a) = TabLayout::new();
         assert_eq!(layout.neighbor(a, Direction::Right), None);
         assert_eq!(layout.neighbor(WindowId(5), Direction::Right), None);
+    }
+
+    #[test]
+    fn zoom_shows_only_one_window_full_size_and_toggles_back() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        let bounds = Rect::new(0, 0, 100, 50);
+        assert!(layout.toggle_zoom(a));
+        assert_eq!(layout.zoomed(), Some(a));
+        assert_eq!(layout.rects(bounds, 4), vec![(a, bounds)]);
+        assert_eq!(
+            layout.windows(),
+            vec![a, b],
+            "les fenêtres existent toujours"
+        );
+        assert!(layout.toggle_zoom(a));
+        assert_eq!(layout.zoomed(), None);
+        assert_eq!(layout.rects(bounds, 4).len(), 2);
+    }
+
+    #[test]
+    fn zooming_another_window_moves_the_zoom() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        layout.toggle_zoom(a);
+        assert!(layout.toggle_zoom(b));
+        assert_eq!(layout.zoomed(), Some(b));
+        assert!(!layout.toggle_zoom(WindowId(9)));
+    }
+
+    #[test]
+    fn split_and_close_cancel_the_zoom() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        layout.toggle_zoom(a);
+        let _ = layout.split(a, Axis::Horizontal).unwrap();
+        assert_eq!(layout.zoomed(), None, "diviser rompt le zoom");
+        layout.toggle_zoom(b);
+        layout.close(b);
+        assert_eq!(
+            layout.zoomed(),
+            None,
+            "fermer la fenêtre zoomée rompt le zoom"
+        );
+        layout.toggle_zoom(a);
+        layout.close(layout.windows()[1]);
+        assert_eq!(
+            layout.zoomed(),
+            Some(a),
+            "fermer une autre fenêtre conserve le zoom"
+        );
     }
 }
