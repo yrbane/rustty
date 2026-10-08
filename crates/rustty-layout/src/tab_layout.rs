@@ -127,6 +127,10 @@ impl TabLayout {
 
     /// Agrandit (`delta > 0`) ou réduit le panneau de `id` le long de `axis`.
     pub fn resize(&mut self, id: WindowId, axis: Axis, delta: f32) -> bool {
+        // Un delta NaN ou infini corromprait le ratio pour de bon.
+        if !delta.is_finite() {
+            return false;
+        }
         self.root
             .as_mut()
             .is_some_and(|r| r.resize(id, axis, delta))
@@ -386,6 +390,17 @@ mod tests {
         assert!(layout.resize(c, Axis::Horizontal, 0.2));
         assert_eq!(rect_of(&layout, c, bounds, 0).height, 70);
         assert_eq!(rect_of(&layout, b, bounds, 0).height, 30);
+    }
+
+    #[test]
+    fn resize_ignores_non_finite_delta() {
+        let (mut layout, a) = TabLayout::new();
+        let _ = layout.split(a, Axis::Vertical).unwrap();
+        let bounds = Rect::new(0, 0, 100, 10);
+        assert!(!layout.resize(a, Axis::Vertical, f32::NAN));
+        assert_eq!(rect_of(&layout, a, bounds, 0).width, 50);
+        assert!(layout.resize(a, Axis::Vertical, 0.1));
+        assert_eq!(rect_of(&layout, a, bounds, 0).width, 60);
     }
 
     #[test]

@@ -111,7 +111,18 @@ pub struct Colors {
     pub cursor: Rgb,
     pub selection_background: Rgb,
     /// Les 16 couleurs ANSI : 0–7 normales, 8–15 vives.
+    #[serde(deserialize_with = "palette_of_16")]
     pub palette: [Rgb; 16],
+}
+
+/// `toml` ignore les éléments en trop d'un tableau de taille fixe : on lit
+/// donc une liste et on exige exactement 16 couleurs.
+fn palette_of_16<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<[Rgb; 16], D::Error> {
+    let colors = Vec::<Rgb>::deserialize(deserializer)?;
+    let len = colors.len();
+    colors
+        .try_into()
+        .map_err(|_| serde::de::Error::invalid_length(len, &"16 couleurs"))
 }
 
 impl Default for Colors {

@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.34 — 2026-10-08 · « Corrections de revue »
+
+- `rustty-config` : palette strictement de 16 couleurs ; deux graphies d'un même raccourci dans `[keys]` sont une erreur ; variation d'opacité bornée à ±1 et acceptée en nombre ou en chaîne (`+0.05` ou `"+0.05"`) ; les messages d'erreur d'action conservent le détail (variante inconnue, valeur hors plage).
+- `rustty-layout` : un `resize` avec un delta non fini est ignoré au lieu de corrompre le ratio.
+
 ## 0.1.0-alpha.33 — 2026-10-08 · « Portabilité Windows »
 
 - Fins de ligne forcées en LF par `.gitattributes` (le fichier d'exemple est comparé octet à octet) ; le test du chemin de configuration par défaut accepte la disposition Windows (`rustty\config\rustty.toml`).

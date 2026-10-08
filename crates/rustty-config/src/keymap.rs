@@ -95,13 +95,17 @@ impl<'de> Deserialize<'de> for KeyMap {
     /// raccourci concerné, puis appliquée par-dessus les défauts.
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         use serde::de::Error as _;
-        let raw: Vec<(String, toml::Value)> =
-            HashMap::<String, toml::Value>::deserialize(deserializer)?
-                .into_iter()
-                .collect();
+        let raw = toml::Table::deserialize(deserializer)?;
         let mut km = Self::defaults();
+        // Graphie utilisée pour chaque combinaison déjà vue dans cette table.
+        let mut seen: HashMap<KeyCombo, String> = HashMap::new();
         for (text, value) in raw {
             let combo: KeyCombo = text.parse().map_err(D::Error::custom)?;
+            if let Some(previous) = seen.insert(combo, text.clone()) {
+                return Err(D::Error::custom(format!(
+                    "raccourci « {text} » déjà défini sous la graphie « {previous} »"
+                )));
+            }
             let shown = value.to_string();
             let action: Action = value.try_into().map_err(|e: toml::de::Error| {
                 D::Error::custom(format!("raccourci « {text} » = {shown} : {}", e.message()))
@@ -171,6 +175,17 @@ mod tests {
     fn same_combo_written_differently_is_one_binding() {
         let km: KeyMap = toml::from_str("\"Shift+Ctrl+T\" = \"close_tab\"\n").unwrap();
         assert_eq!(km.resolve(combo("ctrl+shift+t")), Some(Action::CloseTab));
+    }
+
+    #[test]
+    fn two_spellings_of_the_same_combo_are_an_error() {
+        let err = toml::from_str::<KeyMap>(
+            "\"ctrl+shift+t\" = \"close_tab\"\n\"shift+ctrl+t\" = \"new_tab\"\n",
+        )
+        .unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("ctrl+shift+t"), "{msg}");
+        assert!(msg.contains("shift+ctrl+t"), "{msg}");
     }
 
     #[test]

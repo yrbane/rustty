@@ -73,51 +73,83 @@ enum Simple {
 }
 
 /// Les actions à paramètre : une table avec exactement une clé.
-#[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Parametrized {
     split: Option<SplitAxis>,
     focus: Option<FocusDirection>,
     resize: Option<ResizeDir>,
-    opacity: Option<f32>,
+    opacity: Option<Delta>,
     go_to_tab: Option<u8>,
     scroll_lines: Option<i32>,
     scroll_pages: Option<i32>,
 }
 
-#[derive(Deserialize)]
+/// Variation d'opacité : nombre TOML (`+0.05`) ou chaîne (`"+0.05"`).
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
-enum Spec {
-    Simple(Simple),
-    Parametrized(Parametrized),
+enum Delta {
+    Number(f32),
+    Text(String),
+}
+
+impl Delta {
+    /// Valeur finie comprise entre -1.0 et 1.0.
+    fn into_opacity(self) -> Result<f32, String> {
+        let value = match self {
+            Self::Number(n) => n,
+            Self::Text(t) => t
+                .trim()
+                .parse::<f32>()
+                .map_err(|_| format!("opacity : « {t} » n'est pas un nombre"))?,
+        };
+        if value.is_finite() && value.abs() <= 1.0 {
+            Ok(value)
+        } else {
+            Err("opacity : variation attendue entre -1.0 et 1.0".to_owned())
+        }
+    }
+}
+
+impl From<Simple> for Action {
+    fn from(simple: Simple) -> Self {
+        match simple {
+            Simple::NewTab => Self::NewTab,
+            Simple::CloseTab => Self::CloseTab,
+            Simple::NextTab => Self::NextTab,
+            Simple::PrevTab => Self::PrevTab,
+            Simple::CloseWindow => Self::CloseWindow,
+            Simple::ToggleZoom => Self::ToggleZoom,
+            Simple::Rotate => Self::Rotate,
+            Simple::Copy => Self::Copy,
+            Simple::Paste => Self::Paste,
+            Simple::ScrollToBottom => Self::ScrollToBottom,
+            Simple::ReloadConfig => Self::ReloadConfig,
+            Simple::None => Self::Unbind,
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for Action {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         use serde::de::Error as _;
-        match Spec::deserialize(deserializer).map_err(|_| {
-            D::Error::custom("action inconnue : attendu un nom comme \"new_tab\" ou une table comme { split = \"horizontal\" }")
-        })? {
-            Spec::Simple(s) => Ok(match s {
-                Simple::NewTab => Self::NewTab,
-                Simple::CloseTab => Self::CloseTab,
-                Simple::NextTab => Self::NextTab,
-                Simple::PrevTab => Self::PrevTab,
-                Simple::CloseWindow => Self::CloseWindow,
-                Simple::ToggleZoom => Self::ToggleZoom,
-                Simple::Rotate => Self::Rotate,
-                Simple::Copy => Self::Copy,
-                Simple::Paste => Self::Paste,
-                Simple::ScrollToBottom => Self::ScrollToBottom,
-                Simple::ReloadConfig => Self::ReloadConfig,
-                Simple::None => Self::Unbind,
-            }),
-            Spec::Parametrized(p) => {
+        use toml::Value;
+        let value = Value::deserialize(deserializer)?;
+        let custom = |e: toml::de::Error| D::Error::custom(e.message());
+        match value {
+            Value::String(_) => Simple::deserialize(value).map(Self::from).map_err(custom),
+            Value::Table(_) => {
+                let p = Parametrized::deserialize(value).map_err(custom)?;
+                let opacity = p
+                    .opacity
+                    .map(|d| d.into_opacity().map(Self::Opacity))
+                    .transpose()
+                    .map_err(D::Error::custom)?;
                 let candidates = [
                     p.split.map(Self::Split),
                     p.focus.map(Self::Focus),
                     p.resize.map(Self::Resize),
-                    p.opacity.map(Self::Opacity),
+                    opacity,
                     p.go_to_tab.map(Self::GoToTab),
                     p.scroll_lines.map(Self::ScrollLines),
                     p.scroll_pages.map(Self::ScrollPages),
@@ -125,9 +157,14 @@ impl<'de> Deserialize<'de> for Action {
                 let mut found = candidates.into_iter().flatten();
                 match (found.next(), found.next()) {
                     (Some(action), None) => Ok(action),
-                    _ => Err(D::Error::custom("une action paramétrée a exactement une clé")),
+                    _ => Err(D::Error::custom(
+                        "une action paramétrée a exactement une clé",
+                    )),
                 }
             }
+            _ => Err(D::Error::custom(
+                "action inconnue : attendu un nom comme \"new_tab\" ou une table comme { split = \"horizontal\" }",
+            )),
         }
     }
 }
@@ -181,6 +218,38 @@ mod tests {
             parse("{ scroll_pages = 1 }").unwrap(),
             Action::ScrollPages(1)
         );
+    }
+
+    #[test]
+    fn opacity_is_bounded_and_finite() {
+        for bad in ["nan", "inf", "5.0", "-5.0"] {
+            assert!(parse(&format!("{{ opacity = {bad} }}")).is_err(), "{bad}");
+        }
+        assert_eq!(parse("{ opacity = -0.1 }").unwrap(), Action::Opacity(-0.1));
+    }
+
+    #[test]
+    fn opacity_accepts_a_string() {
+        assert_eq!(
+            parse("{ opacity = \"+0.05\" }").unwrap(),
+            Action::Opacity(0.05)
+        );
+        assert_eq!(
+            parse("{ opacity = \"-0.1\" }").unwrap(),
+            Action::Opacity(-0.1)
+        );
+        let err = parse("{ opacity = \"abc\" }").unwrap_err();
+        assert!(err.to_string().contains("abc"), "{err}");
+        assert!(parse("{ opacity = \"nan\" }").is_err());
+    }
+
+    #[test]
+    fn inner_messages_are_kept() {
+        let err = parse("{ split = \"diagonal\" }").unwrap_err();
+        assert!(err.to_string().contains("diagonal"), "{err}");
+        assert!(err.to_string().contains("horizontal"), "{err}");
+        let err = parse("\"new_tabz\"").unwrap_err();
+        assert!(err.to_string().contains("new_tabz"), "{err}");
     }
 
     #[test]

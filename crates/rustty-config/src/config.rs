@@ -177,6 +177,13 @@ mod tests {
     fn wrong_palette_length_is_an_error() {
         let err = Config::from_str("[colors]\npalette = [\"#000000\"]\n").unwrap_err();
         assert!(matches!(err, ConfigError::Parse { .. }), "{err}");
+        for n in [15, 17] {
+            let list = vec!["\"#000000\""; n].join(", ");
+            let err = Config::from_str(&format!("[colors]\npalette = [{list}]\n")).unwrap_err();
+            assert!(matches!(err, ConfigError::Parse { .. }), "{n} : {err}");
+        }
+        let list = vec!["\"#000000\""; 16].join(", ");
+        assert!(Config::from_str(&format!("[colors]\npalette = [{list}]\n")).is_ok());
     }
 
     #[test]
