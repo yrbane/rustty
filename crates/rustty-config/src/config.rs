@@ -3,6 +3,7 @@
 use serde::Deserialize;
 
 use crate::error::ConfigError;
+use crate::keymap::KeyMap;
 use crate::sections::{Colors, Font, Tabs, Window};
 
 /// Plafond de lignes d'historique par fenêtre : au-delà, la mémoire explose
@@ -16,6 +17,7 @@ pub struct Config {
     pub window: Window,
     pub tabs: Tabs,
     pub colors: Colors,
+    pub keys: KeyMap,
 }
 
 impl Config {
@@ -175,5 +177,38 @@ mod tests {
         assert!(err.to_string().contains("window.opacity"), "{err}");
         let err = Config::from_str("x = \n").unwrap_err();
         assert!(err.to_string().starts_with("ligne 1"), "{err}");
+    }
+
+    #[test]
+    fn keys_section_overrides_defaults_and_is_optional() {
+        let c = Config::from_str("[keys]\n\"ctrl+shift+n\" = \"new_tab\"\n").unwrap();
+        assert_eq!(
+            c.keys.resolve("ctrl+shift+n".parse().unwrap()),
+            Some(crate::action::Action::NewTab)
+        );
+        assert_eq!(
+            c.keys.resolve("ctrl+shift+t".parse().unwrap()),
+            Some(crate::action::Action::NewTab)
+        );
+        assert_eq!(
+            Config::from_str("").unwrap().keys.len(),
+            crate::keymap::KeyMap::defaults().len()
+        );
+    }
+
+    #[test]
+    fn bad_binding_in_keys_section_is_a_positioned_parse_error() {
+        let err = Config::from_str("[font]\nsize = 12\n\n[keys]\n\"ctlr+t\" = \"new_tab\"\n")
+            .unwrap_err();
+        match err {
+            ConfigError::Parse { line, message, .. } => {
+                assert!(message.contains("ctlr+t"), "{message}");
+                assert!(
+                    line >= 4,
+                    "au moins la ligne de la table [keys], obtenu {line}"
+                );
+            }
+            other => panic!("attendu Parse, obtenu {other:?}"),
+        }
     }
 }

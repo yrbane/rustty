@@ -299,7 +299,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-config"
-version = "0.1.0-alpha.29"
+version = "0.1.0-alpha.30"
 dependencies = [
  "bitflags",
  "serde",
@@ -309,14 +309,14 @@ dependencies = [
 
 [[package]]
 name = "rustty-layout"
-version = "0.1.0-alpha.29"
+version = "0.1.0-alpha.30"
 dependencies = [
  "proptest",
 ]
 
 [[package]]
 name = "rustty-vt"
-version = "0.1.0-alpha.29"
+version = "0.1.0-alpha.30"
 dependencies = [
  "base64",
  "bitflags",

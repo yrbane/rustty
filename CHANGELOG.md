@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.30 — 2026-10-08 · « Actions et raccourcis »
+
+- `rustty-config` : actions (onglets, divisions, focus, redimensionnement, zoom, rotation, opacité, presse-papiers, défilement, rechargement), table de raccourcis par défaut surchargeable dans `[keys]`, `"none"` pour délier, erreurs nommant le raccourci fautif.
+
 ## 0.1.0-alpha.29 — 2026-10-08 · « Combinaisons de touches »
 
 - `rustty-config` : `KeyCombo` analysé depuis `ctrl+shift+t`, alias des modificateurs et des touches nommées, forme canonique, erreurs nommant le raccourci fautif.
