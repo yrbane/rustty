@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 840" role="img" aria-labelledby="title desc">
+  <title id="title">Rustty — crab terminal icon</title>
+  <desc id="desc">Dark rounded terminal window with three traffic light buttons and a friendly orange Rust crab.</desc>
+  <defs>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#202b31"/><stop offset=".55" stop-color="#303840"/><stop offset="1" stop-color="#232c32"/></linearGradient>
+    <linearGradient id="terminal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10171a"/><stop offset="1" stop-color="#151c1f"/></linearGradient>
+    <linearGradient id="crab" x1="0" y1="0" x2=".85" y2="1"><stop stop-color="#ff641c"/><stop offset=".52" stop-color="#ff4f10"/><stop offset="1" stop-color="#ff5a1a"/></linearGradient>
+    <linearGradient id="legs" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f73e0c"/><stop offset="1" stop-color="#ff6419"/></linearGradient>
+  </defs>
+  <!-- Dessin original 840×700, centré verticalement dans un carré 840×840 -->
+  <g transform="translate(0 70)">
+  <rect x="2" y="5" width="836" height="694" rx="88" fill="url(#frame)"/>
+  <rect x="28" y="123" width="784" height="548" rx="49" fill="url(#terminal)"/>
+  <circle cx="104" cy="71" r="28" fill="#ff5b1d"/>
+  <circle cx="190" cy="71" r="28" fill="#ffd51b"/>
+  <circle cx="276" cy="71" r="28" fill="#32cf57"/>
+  <path d="M81 171 127 200 81 230" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M173 244h54" stroke="#fff" stroke-width="22" stroke-linecap="round"/>
+  <!-- Legs behind the central shell -->
+  <g fill="url(#legs)">
+    <path d="M242 477C191 453 159 433 143 398c-9-20-3-34 11-28 8 35 35 52 83 67z"/>
+    <path d="M245 500c-62-7-91 2-99 36-6 24 1 57 11 64 13 8 11-18 20-42 10-26 34-24 73-23z"/>
+    <path d="M272 530c-49 9-72 28-74 58-2 22 13 46 26 48 12 1 3-28 5-47 2-21 23-30 63-35z"/>
+    <path d="M308 543c-43 9-56 27-52 53 3 19 18 40 31 44 16 4 2-27 0-42-2-16 10-24 42-31z"/>
+    <path d="M599 477c51-24 83-44 99-79 9-20 3-34-11-28-8 35-35 52-83 67z"/>
+    <path d="M597 500c62-7 91 2 99 36 6 24-1 57-11 64-13 8-11-18-20-42-10-26-34-24-73-23z"/>
+    <path d="M570 530c49 9 72 28 74 58 2 22-13 46-26 48-12 1-3-28-5-47-2-21-23-30-63-35z"/>
+    <path d="M534 543c43 9 56 27 52 53-3 19-18 40-31 44-16 4-2-27 0-42 2-16-10-24-42-31z"/>
+  </g>
+  <!-- Left claw -->
+  <path d="M146 373c-10-6-20-13-24-28l-11-32c-4-12-10-5-17 5-25 39-19 79 8 106 24 26 55 35 79 21 24-14 32-39 27-68-6-38-35-67-70-82-12-5-9 4-4 17l16 43z" fill="url(#crab)"/>
+  <path d="m122 346 24 27 5-18-18-53" fill="#11191b"/>
+  <!-- Right claw -->
+  <path d="M695 373c10-6 20-13 24-28l11-32c4-12 10-5 17 5 25 39 19 79-8 106-24 26-55 35-79 21-24-14-32-39-27-68 6-38 35-67 70-82 12-5 9 4 4 17l-16 43z" fill="url(#crab)"/>
+  <path d="m719 346-24 27-5-18 18-53" fill="#11191b"/>
+  <!-- Main shell: scalloped upper rim and round lower body -->
+  <path d="M421 276c12 0 19 31 30 31 9 0 26-23 32-21 14 3 13 38 25 36 13-1 31-17 37-11 7 7 0 35 10 39 10 4 31-8 35-1 5 8-5 35 1 39 8 5 28 0 30 11 2 10-11 24-6 34 4 8 27 10 22 23-6 15-12 26-26 40 2 7 22 20 10 30-13 10-32 8-51 20-31 21-87 38-149 39-63 0-119-17-152-39-19-12-39-10-51-20-12-10 8-23 10-30-14-14-20-25-26-40-5-13 18-15 22-23 5-10-8-24-6-34 2-11 22-6 30-11 6-4-4-31 1-39 4-7 25 5 35 1 10-4 3-32 10-39 6-6 24 10 37 11 12 2 11-33 25-36 6-2 23 21 32 21 11 0 18-31 30-31z" fill="url(#crab)"/>
+  <ellipse cx="332" cy="459" rx="32" ry="40" fill="#141c1f"/>
+  <ellipse cx="508" cy="459" rx="32" ry="40" fill="#141c1f"/>
+  <circle cx="333" cy="442" r="12" fill="white"/>
+  <circle cx="509" cy="442" r="12" fill="white"/>
+  <path d="M387 495q33 38 67 0" stroke="#141c1f" stroke-width="19" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>
