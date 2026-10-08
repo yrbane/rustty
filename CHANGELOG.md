@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.0.3 — 2026-10-08 · « Plan modulaire »
+
+- Plan des fondations restructuré en seize tâches : objets-valeur isolés (`Cursor`, `Modes`, `Charsets`, `TabStops`, `ScrollRegion`, `Outbox`), façade `Term` composée, dispatch `vte::Perform` séparé de la logique, un module par famille d'opérations.
+
 ## 0.0.2 — 2026-10-08 · « Plan des fondations »
 
 - Plan d'implémentation détaillé du workspace, de la CI et de la crate `rustty-vt` en quinze tâches, tests avant code.

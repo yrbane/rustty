@@ -4,7 +4,42 @@
 
 **Goal:** Mettre en place le workspace Cargo, la CI trois OS, et livrer la crate `rustty-vt` : une émulation de terminal pure (grille, scrollback, curseur, modes, SGR, OSC, jeux de caractères, caractères larges, resize, instantané) pilotée par `vte`, sans aucune dépendance système.
 
-**Architecture:** `rustty-vt` expose `Term`, qui consomme des octets via `Term::input(&[u8])` et expose son état via `Term::snapshot()`. Le parseur `vte::Parser` est sorti de `Term` le temps d'un `advance` pour que `Term` implémente `vte::Perform` directement. La grille est un `Vec<Line>`, le scrollback un anneau borné de `Line`, les graphèmes à largeur nulle vivent dans une table annexe par ligne.
+**Architecture:** `rustty-vt` expose `Term`, qui consomme des octets via `Term::input(&[u8])` et expose son état via `Term::snapshot()`. `Term` est une façade : son état est composé de petits objets-valeur à responsabilité unique (`Grid`, `Scrollback`, `Cursor`, `Modes`, `Charsets`, `TabStops`, `ScrollRegion`, `Outbox`), chacun testé isolément. La logique d'interprétation est répartie en modules par famille d'opérations (`print`, `scroll`, `movement`, `edit`, `mode_ops`, `osc`, `reports`, `reset`, `view`), et `perform.rs` est une couche de **dispatch pure** : elle traduit une séquence en appel de méthode, sans logique. Ajouter une séquence = ajouter un arm dans le dispatch et une méthode dans le module propriétaire, rien d'autre ne change (ouvert/fermé).
+
+## Structure des modules
+
+```
+crates/rustty-vt/src/
+├── lib.rs           # réexports publics
+├── color.rs         # Color
+├── cell.rs          # Attrs, Style, Cell
+├── line.rs          # Line (cellules + combinants)
+├── grid.rs          # Grid (défilement par région)
+├── scrollback.rs    # Scrollback (anneau borné)
+├── cursor.rs        # Cursor, CursorShape, SavedCursor
+├── modes.rs         # Modes, MouseMode
+├── charset.rs       # Charset (table DEC) et Charsets (G0/G1, actif)
+├── tabs.rs          # TabStops
+├── region.rs        # ScrollRegion
+├── outbox.rs        # TermEvent et Outbox (événements + réponses)
+├── params.rs        # lecture des paramètres CSI
+├── sgr.rs           # apply_sgr
+├── snapshot.rs      # Snapshot
+└── term/
+    ├── mod.rs       # struct Term (façade), new, input, accesseurs, test_support
+    ├── perform.rs   # impl vte::Perform : dispatch pur
+    ├── print.rs     # put_char, put_zerowidth, wrap_line
+    ├── scroll.rs    # linefeed, reverse_index, scroll_*_region
+    ├── movement.rs  # cursor_*, cursor_to, save/restore_cursor
+    ├── edit.rs      # erase_*, insert/delete chars/lines
+    ├── mode_ops.rs  # set_dec_mode, set_ansi_mode, écran alternatif, forme du curseur
+    ├── osc.rs       # titre, presse-papiers
+    ├── reports.rs   # DA, DSR
+    ├── reset.rs     # reset (RIS), resize
+    └── view.rs      # snapshot, display_offset
+```
+
+Règle : un fichier de `term/` ne contient qu'un `impl Term` dédié à sa famille, plus ses tests. Aucun fichier au-delà de ~300 lignes hors tests.
 
 **Tech Stack:** Rust 1.96 (edition 2024), `vte`, `unicode-width`, `bitflags`, `base64`; tests avec `cargo test`, `insta` pour les snapshots de grille.
 
@@ -24,11 +59,11 @@
 
 Entrées que la spec implique sans les nommer, et le comportement attendu. Chaque ligne a son test dans la tâche indiquée.
 
-1. **Paramètres CSI absurdes** (`CSI 0 A`, `CSI 99999 C`, `CSI ; ; H`) : 0 vaut 1 pour les mouvements, les déplacements sont bornés à la grille, les paramètres vides valent défaut. Test dans la tâche 7 (`csi_zero_and_huge_params_are_clamped`).
-2. **Caractère large en dernière colonne** : il passe à la ligne suivante, la dernière cellule de la ligne devient un blanc, jamais une moitié orpheline. Test dans la tâche 13 (`wide_char_at_last_column_wraps`) ; grille d'une seule colonne couverte par `garbage_input_does_not_panic` (tâche 15) et le garde-fou de `put_char`.
-3. **Resize vers une grille plus petite que la position du curseur** : le curseur est ramené dans la grille, la région de scroll est réinitialisée, aucun index hors borne. Test dans la tâche 14 (`resize_shrink_clamps_cursor_and_region`).
-4. **Région de scroll inversée ou hors borne** (`CSI 10;5 r`, `CSI 1;999 r`) : ignorée ou bornée, jamais de panique. Test dans la tâche 7 (`decstbm_invalid_region_is_ignored`).
-5. **OSC 52 avec base64 invalide** : l'événement presse-papiers n'est pas émis, le reste du flux continue d'être interprété. Test dans la tâche 11 (`osc52_invalid_base64_is_ignored`).
+1. **Paramètres CSI absurdes** (`CSI 0 A`, `CSI 99999 C`, `CSI ; ; H`) : 0 vaut 1 pour les mouvements, les déplacements sont bornés à la grille, les paramètres vides valent défaut. Test dans la tâche 8 (`csi_zero_and_huge_params_are_clamped`).
+2. **Caractère large en dernière colonne** : il passe à la ligne suivante, la dernière cellule de la ligne devient un blanc, jamais une moitié orpheline. Test dans la tâche 14 (`wide_char_at_last_column_wraps`) ; grille d'une seule colonne couverte par `garbage_input_does_not_panic` (tâche 16) et le garde-fou de `put_char`.
+3. **Resize vers une grille plus petite que la position du curseur** : le curseur est ramené dans la grille, la région de scroll est réinitialisée, aucun index hors borne. Test dans la tâche 15 (`resize_shrink_clamps_cursor_and_region`).
+4. **Région de scroll inversée ou hors borne** (`CSI 10;5 r`, `CSI 1;999 r`) : ignorée ou bornée, jamais de panique. Tests dans la tâche 6 (`ScrollRegion`) et la tâche 8 (`decstbm_invalid_region_is_ignored`).
+5. **OSC 52 avec base64 invalide** : l'événement presse-papiers n'est pas émis, le reste du flux continue d'être interprété. Test dans la tâche 12 (`osc52_invalid_base64_is_ignored`).
 
 ---
 
@@ -1075,129 +1110,213 @@ git commit -m "rustty-vt : scrollback borné (0.1.0-alpha.5)"
 
 ---
 
-### Task 6 : `Term` — squelette, impression de texte et contrôles C0
+### Task 6 : Objets-valeur de l'état du terminal
 
 **Files:**
 - Create: `crates/rustty-vt/src/cursor.rs`
 - Create: `crates/rustty-vt/src/modes.rs`
 - Create: `crates/rustty-vt/src/charset.rs`
-- Create: `crates/rustty-vt/src/term.rs`
+- Create: `crates/rustty-vt/src/tabs.rs`
+- Create: `crates/rustty-vt/src/region.rs`
+- Create: `crates/rustty-vt/src/outbox.rs`
 - Modify: `crates/rustty-vt/src/lib.rs`
-- Modify: `crates/rustty-vt/Cargo.toml` (dépendances `vte`, `unicode-width`)
 
 **Interfaces:**
-- Consumes: `Grid`, `Scrollback`, `Line`, `Cell`, `Style`.
-- Produces:
-  - `pub struct Cursor { pub col: usize, pub row: usize, pub style: Style, pub pending_wrap: bool }`
-  - `pub enum CursorShape { Block, Underline, Beam }` (Default = Block)
-  - `pub enum MouseMode { None, X10, Normal, ButtonEvent, AnyEvent }`
-  - `pub struct Modes { pub app_cursor_keys, pub autowrap, pub cursor_visible, pub cursor_blink, pub origin, pub insert, pub bracketed_paste, pub alt_screen, pub focus_events, pub line_feed_new_line: bool, pub mouse: MouseMode, pub mouse_sgr: bool }` (Default : `autowrap`, `cursor_visible`, `cursor_blink` à `true`, le reste `false`/`None`)
-  - `pub enum Charset { Ascii, DecSpecialGraphics }` (Default = Ascii) ; `Charset::map(self, c: char) -> char` (identité pour l'instant, table en tâche 12)
-  - `pub enum TermEvent { Title(String), Bell, SetClipboard(String) }`
-  - `pub struct Term` avec : `Term::new(cols, rows, scrollback_lines) -> Term`, `input(&mut self, bytes: &[u8])`, `grid() -> &Grid`, `cursor() -> Cursor`, `modes() -> &Modes`, `title() -> &str`, `scrollback() -> &Scrollback`, `drain_events(&mut self) -> Vec<TermEvent>`, `drain_responses(&mut self) -> Vec<u8>`, `text(&self) -> Vec<String>`.
-  - En interne : `erase_template(&self) -> Cell`, `linefeed(&mut self)`, `carriage_return`, `backspace`, `horizontal_tab`, `scroll_up_region(n)`, `scroll_down_region(n)`, `active_grid()/active_grid_mut()`.
+- Consumes: `Style`.
+- Produces (chaque type est indépendant des autres, sauf `SavedCursor` qui compose `Cursor` et `Charsets`) :
+  - `pub struct Cursor { pub col: usize, pub row: usize, pub style: Style, pub pending_wrap: bool }` ; `Cursor::clamp(&mut self, cols, rows)`.
+  - `pub enum CursorShape { Block, Underline, Beam }` (Default = Block) ; `CursorShape::from_decscusr(param: u16) -> CursorShape`.
+  - `pub struct SavedCursor { pub cursor: Cursor, pub origin: bool, pub charsets: Charsets }` (Default).
+  - `pub enum MouseMode { None, X10, Normal, ButtonEvent, AnyEvent }` ; `pub struct Modes { … }` (voir code) ; `Modes::default()`.
+  - `pub enum Charset { Ascii, DecSpecialGraphics }` ; `Charset::map(self, c) -> char`.
+  - `pub struct Charsets` : `designate(slot: usize, cs: Charset)`, `shift_in()` (G0), `shift_out()` (G1), `map(&self, c) -> char`.
+  - `pub struct TabStops` : `new(cols)`, `next_after(col) -> Option<usize>`, `set(col)`, `clear(col)`, `clear_all()`, `len()`.
+  - `pub struct ScrollRegion { pub top: usize, pub bottom: usize }` (0-indexé, bornes incluses) : `full(rows)`, `try_set(top1: u16, bottom1: u16, rows) -> bool` (paramètres DECSTBM 1-indexés, 0 = défaut ; `false` si invalide), `contains(row)`, `height()`, `is_full(rows)`.
+  - `pub enum TermEvent { Title(String), Bell, SetClipboard(String) }` ; `pub struct Outbox` : `event(ev)`, `respond(bytes: &[u8])`, `drain_events() -> Vec<TermEvent>`, `drain_responses() -> Vec<u8>`.
 
 - [ ] **Step 1: Écrire les tests**
 
-Bas de `crates/rustty-vt/src/term.rs` :
+`cursor.rs`, bas de fichier :
 
 ```rust
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    pub(crate) fn term(cols: usize, rows: usize) -> Term {
-        Term::new(cols, rows, 100)
-    }
-
-    pub(crate) fn feed(t: &mut Term, s: &str) {
-        t.input(s.as_bytes());
+    #[test]
+    fn clamp_brings_cursor_inside_grid_and_cancels_wrap() {
+        let mut c = Cursor { col: 9, row: 7, pending_wrap: true, ..Cursor::default() };
+        c.clamp(4, 2);
+        assert_eq!((c.col, c.row), (3, 1));
+        assert!(!c.pending_wrap);
     }
 
     #[test]
-    fn prints_text_and_advances_cursor() {
-        let mut t = term(10, 2);
-        feed(&mut t, "hello");
-        assert_eq!(t.text(), vec!["hello", ""]);
-        assert_eq!((t.cursor().col, t.cursor().row), (5, 0));
+    fn decscusr_mapping() {
+        assert_eq!(CursorShape::from_decscusr(0), CursorShape::Block);
+        assert_eq!(CursorShape::from_decscusr(1), CursorShape::Block);
+        assert_eq!(CursorShape::from_decscusr(2), CursorShape::Block);
+        assert_eq!(CursorShape::from_decscusr(3), CursorShape::Underline);
+        assert_eq!(CursorShape::from_decscusr(4), CursorShape::Underline);
+        assert_eq!(CursorShape::from_decscusr(5), CursorShape::Beam);
+        assert_eq!(CursorShape::from_decscusr(6), CursorShape::Beam);
+        assert_eq!(CursorShape::from_decscusr(99), CursorShape::Block);
+    }
+}
+```
+
+`modes.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn defaults_match_a_fresh_xterm() {
+        let m = Modes::default();
+        assert!(m.autowrap && m.cursor_visible && m.cursor_blink);
+        assert!(!m.app_cursor_keys && !m.origin && !m.insert && !m.bracketed_paste && !m.alt_screen && !m.focus_events && !m.line_feed_new_line && !m.mouse_sgr);
+        assert_eq!(m.mouse, MouseMode::None);
+    }
+}
+```
+
+`charset.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ascii_is_identity() {
+        assert_eq!(Charset::Ascii.map('q'), 'q');
     }
 
     #[test]
-    fn carriage_return_and_line_feed() {
-        let mut t = term(10, 3);
-        feed(&mut t, "ab\r\ncd\n");
-        assert_eq!(t.text(), vec!["ab", "cd", ""]);
-        assert_eq!((t.cursor().col, t.cursor().row), (2, 2), "LF seul garde la colonne");
+    fn dec_special_graphics_maps_line_drawing() {
+        let g = Charset::DecSpecialGraphics;
+        assert_eq!(g.map('q'), '─');
+        assert_eq!(g.map('x'), '│');
+        assert_eq!(g.map('l'), '┌');
+        assert_eq!(g.map('k'), '┐');
+        assert_eq!(g.map('m'), '└');
+        assert_eq!(g.map('j'), '┘');
+        assert_eq!(g.map('n'), '┼');
+        assert_eq!(g.map('a'), '▒');
+        assert_eq!(g.map('A'), 'A', "les lettres hors table sont inchangées");
     }
 
     #[test]
-    fn autowrap_marks_line_and_continues_on_next_row() {
-        let mut t = term(5, 2);
-        feed(&mut t, "abcde");
-        assert_eq!((t.cursor().col, t.cursor().row), (4, 0));
-        assert!(t.cursor().pending_wrap);
-        feed(&mut t, "f");
-        assert_eq!(t.text(), vec!["abcde", "f"]);
-        assert!(t.grid().line(0).wrapped);
-        assert!(!t.cursor().pending_wrap);
+    fn charsets_default_to_ascii_g0() {
+        let cs = Charsets::default();
+        assert_eq!(cs.map('q'), 'q');
     }
 
     #[test]
-    fn carriage_return_cancels_pending_wrap() {
-        let mut t = term(5, 2);
-        feed(&mut t, "abcde\r\nx");
-        assert_eq!(t.text(), vec!["abcde", "x"]);
-        assert!(!t.grid().line(0).wrapped);
+    fn designate_and_shift_between_g0_and_g1() {
+        let mut cs = Charsets::default();
+        cs.designate(1, Charset::DecSpecialGraphics);
+        assert_eq!(cs.map('q'), 'q', "G1 désigné mais G0 actif");
+        cs.shift_out();
+        assert_eq!(cs.map('q'), '─');
+        cs.shift_in();
+        assert_eq!(cs.map('q'), 'q');
+        cs.designate(0, Charset::DecSpecialGraphics);
+        assert_eq!(cs.map('x'), '│');
+        cs.designate(7, Charset::Ascii);
+        assert_eq!(cs.map('x'), '│', "un slot inconnu est ignoré");
+    }
+}
+```
+
+`tabs.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_stops_every_eight_columns() {
+        let t = TabStops::new(20);
+        assert_eq!(t.next_after(0), Some(8));
+        assert_eq!(t.next_after(8), Some(16));
+        assert_eq!(t.next_after(16), None);
+        assert_eq!(t.len(), 20);
     }
 
     #[test]
-    fn line_feed_at_bottom_scrolls_into_scrollback() {
-        let mut t = term(3, 2);
-        feed(&mut t, "a\r\nb\r\nc");
-        assert_eq!(t.text(), vec!["b", "c"]);
-        assert_eq!(t.scrollback().len(), 1);
-        assert_eq!(t.scrollback().get(0).unwrap().text(), "a  ");
+    fn set_clear_and_clear_all() {
+        let mut t = TabStops::new(20);
+        t.set(3);
+        assert_eq!(t.next_after(0), Some(3));
+        t.clear(3);
+        assert_eq!(t.next_after(0), Some(8));
+        t.clear_all();
+        assert_eq!(t.next_after(0), None);
+        t.set(99);
+        assert_eq!(t.next_after(0), None, "hors grille : ignoré");
+    }
+}
+```
+
+`region.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn full_region_covers_screen() {
+        let r = ScrollRegion::full(5);
+        assert_eq!((r.top, r.bottom), (0, 4));
+        assert!(r.is_full(5));
+        assert_eq!(r.height(), 5);
+        assert!(r.contains(0) && r.contains(4) && !r.contains(5));
     }
 
     #[test]
-    fn backspace_stops_at_first_column() {
-        let mut t = term(5, 1);
-        feed(&mut t, "ab\x08\x08\x08x");
-        assert_eq!(t.text(), vec!["xb"]);
+    fn try_set_accepts_valid_one_indexed_bounds() {
+        let mut r = ScrollRegion::full(6);
+        assert!(r.try_set(2, 5, 6));
+        assert_eq!((r.top, r.bottom), (1, 4));
+        assert!(r.try_set(0, 0, 6), "0;0 = tout l'écran");
+        assert!(r.is_full(6));
     }
 
     #[test]
-    fn horizontal_tab_goes_to_next_stop_and_stays_at_edge() {
-        let mut t = term(20, 1);
-        feed(&mut t, "\t");
-        assert_eq!(t.cursor().col, 8);
-        feed(&mut t, "\t\t\t");
-        assert_eq!(t.cursor().col, 19);
+    fn try_set_rejects_inverted_or_degenerate_and_clamps_bottom() {
+        let mut r = ScrollRegion::full(4);
+        assert!(!r.try_set(10, 5, 4));
+        assert!(!r.try_set(3, 3, 4), "une ligne : refusé");
+        assert!(r.is_full(4), "inchangée après refus");
+        assert!(r.try_set(1, 999, 4));
+        assert_eq!((r.top, r.bottom), (0, 3), "bas borné à l'écran");
     }
+}
+```
+
+`outbox.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
 
     #[test]
-    fn bell_emits_an_event() {
-        let mut t = term(5, 1);
-        feed(&mut t, "\x07");
-        assert_eq!(t.drain_events(), vec![TermEvent::Bell]);
-        assert!(t.drain_events().is_empty(), "drain vide la file");
-    }
-
-    #[test]
-    fn autowrap_off_overwrites_last_column() {
-        let mut t = term(3, 1);
-        t.modes.autowrap = false;
-        feed(&mut t, "abcdef");
-        assert_eq!(t.text(), vec!["abf"]);
-        assert_eq!(t.cursor().col, 2);
-    }
-
-    #[test]
-    fn combining_char_attaches_to_previous_cell() {
-        let mut t = term(5, 1);
-        feed(&mut t, "e\u{301}x");
-        assert_eq!(t.grid().line(0).zerowidth(0), Some("\u{301}"));
-        assert_eq!(t.text(), vec!["e\u{301}x"]);
+    fn events_and_responses_are_drained_in_order_and_once() {
+        let mut o = Outbox::default();
+        o.event(TermEvent::Bell);
+        o.event(TermEvent::Title("t".into()));
+        o.respond(b"\x1b[0n");
+        o.respond(b"x");
+        assert_eq!(o.drain_events(), vec![TermEvent::Bell, TermEvent::Title("t".into())]);
+        assert!(o.drain_events().is_empty());
+        assert_eq!(o.drain_responses(), b"\x1b[0nx".to_vec());
+        assert!(o.drain_responses().is_empty());
     }
 }
 ```
@@ -1205,24 +1324,17 @@ mod tests {
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `cargo test -p rustty-vt`
-Expected: module `term` introuvable.
+Expected: modules introuvables.
 
 - [ ] **Step 3: Implémenter**
 
-`crates/rustty-vt/Cargo.toml`, `[dependencies]` :
-
-```toml
-bitflags.workspace = true
-unicode-width.workspace = true
-vte.workspace = true
-```
-
-`crates/rustty-vt/src/cursor.rs` :
+`cursor.rs` :
 
 ```rust
-//! Position et style du curseur d'écriture.
+//! Position et style du curseur d'écriture, et sa forme de sauvegarde.
 
 use crate::cell::Style;
+use crate::charset::Charsets;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Cursor {
@@ -1235,6 +1347,15 @@ pub struct Cursor {
     pub pending_wrap: bool,
 }
 
+impl Cursor {
+    /// Ramène le curseur dans une grille `cols × rows` et annule le retour différé.
+    pub fn clamp(&mut self, cols: usize, rows: usize) {
+        self.col = self.col.min(cols.saturating_sub(1));
+        self.row = self.row.min(rows.saturating_sub(1));
+        self.pending_wrap = false;
+    }
+}
+
 /// Forme demandée par DECSCUSR ; le renderer décide de l'apparence exacte.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum CursorShape {
@@ -1243,9 +1364,27 @@ pub enum CursorShape {
     Underline,
     Beam,
 }
+
+impl CursorShape {
+    pub fn from_decscusr(param: u16) -> Self {
+        match param {
+            3 | 4 => Self::Underline,
+            5 | 6 => Self::Beam,
+            _ => Self::Block,
+        }
+    }
+}
+
+/// Curseur sauvegardé par DECSC / CSI s, avec le contexte qui l'accompagne.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SavedCursor {
+    pub cursor: Cursor,
+    pub origin: bool,
+    pub charsets: Charsets,
+}
 ```
 
-`crates/rustty-vt/src/modes.rs` :
+`modes.rs` :
 
 ```rust
 //! Modes DEC privés et ANSI qui changent l'interprétation du flux ou ce que
@@ -1312,7 +1451,7 @@ impl Default for Modes {
 }
 ```
 
-`crates/rustty-vt/src/charset.rs` :
+`charset.rs` :
 
 ```rust
 //! Jeux de caractères G0/G1. Seul le jeu graphique DEC (lignes de boîte) est
@@ -1326,33 +1465,172 @@ pub enum Charset {
 }
 
 impl Charset {
-    /// Traduit un caractère selon le jeu. Table remplie en tâche 12.
     pub fn map(self, c: char) -> char {
         match self {
-            Self::Ascii | Self::DecSpecialGraphics => c,
+            Self::Ascii => c,
+            Self::DecSpecialGraphics => match c {
+                '`' => '◆',
+                'a' => '▒',
+                'b' => '␉',
+                'c' => '␌',
+                'd' => '␍',
+                'e' => '␊',
+                'f' => '°',
+                'g' => '±',
+                'h' => '␤',
+                'i' => '␋',
+                'j' => '┘',
+                'k' => '┐',
+                'l' => '┌',
+                'm' => '└',
+                'n' => '┼',
+                'o' => '⎺',
+                'p' => '⎻',
+                'q' => '─',
+                'r' => '⎼',
+                's' => '⎽',
+                't' => '├',
+                'u' => '┤',
+                'v' => '┴',
+                'w' => '┬',
+                'x' => '│',
+                'y' => '≤',
+                'z' => '≥',
+                '{' => 'π',
+                '|' => '≠',
+                '}' => '£',
+                '~' => '·',
+                _ => c,
+            },
         }
+    }
+}
+
+/// Les deux slots G0/G1 et celui qui est actif (SI = G0, SO = G1).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Charsets {
+    slots: [Charset; 2],
+    active: usize,
+}
+
+impl Charsets {
+    /// `ESC ( x` désigne le slot 0, `ESC ) x` le slot 1. Autre slot : ignoré.
+    pub fn designate(&mut self, slot: usize, cs: Charset) {
+        if let Some(s) = self.slots.get_mut(slot) {
+            *s = cs;
+        }
+    }
+
+    pub fn shift_in(&mut self) {
+        self.active = 0;
+    }
+
+    pub fn shift_out(&mut self) {
+        self.active = 1;
+    }
+
+    pub fn map(&self, c: char) -> char {
+        self.slots[self.active].map(c)
     }
 }
 ```
 
-`crates/rustty-vt/src/term.rs` :
+`tabs.rs` :
 
 ```rust
-//! L'état complet d'un terminal et l'interprétation du flux d'octets.
-//! `Term` implémente `vte::Perform` ; le parseur est sorti de la structure
-//! pendant `input` pour satisfaire l'emprunteur.
+//! Taquets de tabulation horizontaux.
 
-use unicode_width::UnicodeWidthChar;
-use vte::{Params, Parser, Perform};
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TabStops {
+    stops: Vec<bool>,
+}
 
-use crate::cell::Cell;
-use crate::charset::Charset;
-use crate::cursor::{Cursor, CursorShape};
-use crate::grid::Grid;
-use crate::modes::Modes;
-use crate::scrollback::Scrollback;
+impl TabStops {
+    /// Taquets par défaut : toutes les 8 colonnes.
+    pub fn new(cols: usize) -> Self {
+        Self { stops: (0..cols).map(|c| c % 8 == 0).collect() }
+    }
 
-/// Ce que l'interface doit savoir et que l'état seul ne dit pas.
+    pub fn len(&self) -> usize {
+        self.stops.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.stops.is_empty()
+    }
+
+    /// Premier taquet strictement après `col`.
+    pub fn next_after(&self, col: usize) -> Option<usize> {
+        (col + 1..self.stops.len()).find(|&c| self.stops[c])
+    }
+
+    pub fn set(&mut self, col: usize) {
+        if let Some(s) = self.stops.get_mut(col) {
+            *s = true;
+        }
+    }
+
+    pub fn clear(&mut self, col: usize) {
+        if let Some(s) = self.stops.get_mut(col) {
+            *s = false;
+        }
+    }
+
+    pub fn clear_all(&mut self) {
+        self.stops.fill(false);
+    }
+}
+```
+
+`region.rs` :
+
+```rust
+//! Région de défilement DECSTBM, bornes incluses, indexée à 0.
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ScrollRegion {
+    pub top: usize,
+    pub bottom: usize,
+}
+
+impl ScrollRegion {
+    pub fn full(rows: usize) -> Self {
+        Self { top: 0, bottom: rows.saturating_sub(1) }
+    }
+
+    pub fn is_full(&self, rows: usize) -> bool {
+        *self == Self::full(rows)
+    }
+
+    pub fn height(&self) -> usize {
+        self.bottom - self.top + 1
+    }
+
+    pub fn contains(&self, row: usize) -> bool {
+        (self.top..=self.bottom).contains(&row)
+    }
+
+    /// Applique des paramètres DECSTBM 1-indexés (0 = défaut). Le bas est
+    /// borné à l'écran ; une région inversée ou d'une seule ligne est refusée.
+    pub fn try_set(&mut self, top1: u16, bottom1: u16, rows: usize) -> bool {
+        let top = if top1 == 0 { 1 } else { usize::from(top1) };
+        let bottom = if bottom1 == 0 { rows } else { usize::from(bottom1).min(rows) };
+        if top >= bottom {
+            return false;
+        }
+        self.top = top - 1;
+        self.bottom = bottom - 1;
+        true
+    }
+}
+```
+
+`outbox.rs` :
+
+```rust
+//! Ce que le terminal produit vers l'extérieur : événements pour l'interface
+//! et octets de réponse à renvoyer à l'application.
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TermEvent {
     Title(String),
@@ -1361,14 +1639,284 @@ pub enum TermEvent {
     SetClipboard(String),
 }
 
-/// Curseur sauvegardé par DECSC / CSI s, avec le contexte qui l'accompagne.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct SavedCursor {
-    pub cursor: Cursor,
-    pub origin: bool,
-    pub charsets: [Charset; 2],
-    pub active_charset: usize,
+#[derive(Debug, Default)]
+pub struct Outbox {
+    events: Vec<TermEvent>,
+    responses: Vec<u8>,
 }
+
+impl Outbox {
+    pub fn event(&mut self, ev: TermEvent) {
+        self.events.push(ev);
+    }
+
+    pub fn respond(&mut self, bytes: &[u8]) {
+        self.responses.extend_from_slice(bytes);
+    }
+
+    pub fn drain_events(&mut self) -> Vec<TermEvent> {
+        std::mem::take(&mut self.events)
+    }
+
+    pub fn drain_responses(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.responses)
+    }
+}
+```
+
+`lib.rs`, ajouter :
+
+```rust
+pub mod charset;
+pub mod cursor;
+pub mod modes;
+pub mod outbox;
+pub mod region;
+pub mod tabs;
+
+pub use charset::{Charset, Charsets};
+pub use cursor::{Cursor, CursorShape, SavedCursor};
+pub use modes::{Modes, MouseMode};
+pub use outbox::{Outbox, TermEvent};
+pub use region::ScrollRegion;
+pub use tabs::TabStops;
+```
+
+- [ ] **Step 4: Vérifier que tout passe**
+
+Run: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace`
+Expected: tous `ok`.
+
+- [ ] **Step 5: Version, CHANGELOG, commit**
+
+`version = "0.1.0-alpha.6"` ; CHANGELOG :
+
+```markdown
+## 0.1.0-alpha.6 — 2026-10-08 · « Objets-valeur du terminal »
+
+- `rustty-vt` : `Cursor`, `CursorShape`, `SavedCursor`, `Modes`, `Charset`/`Charsets` (table graphique DEC), `TabStops`, `ScrollRegion`, `Outbox`, chacun testé isolément.
+```
+
+```bash
+git add Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/cursor.rs crates/rustty-vt/src/modes.rs crates/rustty-vt/src/charset.rs crates/rustty-vt/src/tabs.rs crates/rustty-vt/src/region.rs crates/rustty-vt/src/outbox.rs CHANGELOG.md
+git commit -m "rustty-vt : objets-valeur de l'état du terminal (0.1.0-alpha.6)"
+```
+
+---
+
+### Task 7 : Façade `Term`, dispatch `Perform`, impression et défilement
+
+**Files:**
+- Create: `crates/rustty-vt/src/term/mod.rs`
+- Create: `crates/rustty-vt/src/term/perform.rs`
+- Create: `crates/rustty-vt/src/term/print.rs`
+- Create: `crates/rustty-vt/src/term/scroll.rs`
+- Create: `crates/rustty-vt/src/term/movement.rs` (mouvements C0 seulement ; les CSI arrivent en tâche 8)
+- Modify: `crates/rustty-vt/src/lib.rs`
+- Modify: `crates/rustty-vt/Cargo.toml` (`vte`, `unicode-width`)
+
+**Interfaces:**
+- Consumes: tous les objets-valeur de la tâche 6, `Grid`, `Scrollback`, `Cell`.
+- Produces:
+  - `pub struct Term` : `new(cols, rows, scrollback_lines)`, `input(&[u8])`, `grid()`, `cursor()`, `cursor_shape()`, `modes()`, `title()`, `scrollback()`, `drain_events()`, `drain_responses()`, `text()`.
+  - Internes (`pub(crate)`) dans `mod.rs` : `active_grid()`, `active_grid_mut()`, `cols()`, `rows()`, `erase_template()`.
+  - `print.rs` : `print_char(c)`, `put_char(c, width)`, `put_zerowidth(c)`, `wrap_line()`.
+  - `scroll.rs` : `linefeed()`, `scroll_up_region(n)`, `scroll_down_region(n)`.
+  - `movement.rs` : `carriage_return()`, `backspace()`, `horizontal_tab()`.
+  - `perform.rs` : `impl vte::Perform for Term` avec `print`, `execute` ; `csi_dispatch`, `esc_dispatch`, `osc_dispatch` vides pour l'instant.
+  - `mod.rs` sous `#[cfg(test)]` : `pub(crate) mod test_support { pub fn term(cols, rows) -> Term; pub fn feed(t: &mut Term, s: &str); }`.
+
+- [ ] **Step 1: Écrire les tests**
+
+`term/print.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::term::test_support::{feed, term};
+
+    #[test]
+    fn prints_text_and_advances_cursor() {
+        let mut t = term(10, 2);
+        feed(&mut t, "hello");
+        assert_eq!(t.text(), vec!["hello", ""]);
+        assert_eq!((t.cursor().col, t.cursor().row), (5, 0));
+    }
+
+    #[test]
+    fn autowrap_marks_line_and_continues_on_next_row() {
+        let mut t = term(5, 2);
+        feed(&mut t, "abcde");
+        assert_eq!((t.cursor().col, t.cursor().row), (4, 0));
+        assert!(t.cursor().pending_wrap);
+        feed(&mut t, "f");
+        assert_eq!(t.text(), vec!["abcde", "f"]);
+        assert!(t.grid().line(0).wrapped);
+        assert!(!t.cursor().pending_wrap);
+    }
+
+    #[test]
+    fn autowrap_off_overwrites_last_column() {
+        let mut t = term(3, 1);
+        t.modes.autowrap = false;
+        feed(&mut t, "abcdef");
+        assert_eq!(t.text(), vec!["abf"]);
+        assert_eq!(t.cursor().col, 2);
+    }
+
+    #[test]
+    fn combining_char_attaches_to_previous_cell() {
+        let mut t = term(5, 1);
+        feed(&mut t, "e\u{301}x");
+        assert_eq!(t.grid().line(0).zerowidth(0), Some("\u{301}"));
+        assert_eq!(t.text(), vec!["e\u{301}x"]);
+    }
+
+    #[test]
+    fn insert_mode_shifts_existing_text() {
+        let mut t = term(5, 1);
+        feed(&mut t, "abc");
+        t.modes.insert = true;
+        t.cursor.col = 0;
+        feed(&mut t, "X");
+        assert_eq!(t.text(), vec!["Xabc"]);
+    }
+}
+```
+
+`term/scroll.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::term::test_support::{feed, term};
+
+    #[test]
+    fn line_feed_keeps_column_and_moves_down() {
+        let mut t = term(10, 3);
+        feed(&mut t, "ab\n");
+        assert_eq!((t.cursor().col, t.cursor().row), (2, 1));
+    }
+
+    #[test]
+    fn line_feed_at_bottom_scrolls_into_scrollback() {
+        let mut t = term(3, 2);
+        feed(&mut t, "a\r\nb\r\nc");
+        assert_eq!(t.text(), vec!["b", "c"]);
+        assert_eq!(t.scrollback().len(), 1);
+        assert_eq!(t.scrollback().get(0).unwrap().text(), "a  ");
+    }
+
+    #[test]
+    fn line_feed_new_line_mode_also_returns_carriage() {
+        let mut t = term(10, 2);
+        t.modes.line_feed_new_line = true;
+        feed(&mut t, "ab\n");
+        assert_eq!((t.cursor().col, t.cursor().row), (0, 1));
+    }
+
+    #[test]
+    fn scrolling_a_partial_region_does_not_feed_history() {
+        let mut t = term(1, 3);
+        t.region.try_set(2, 3, 3);
+        t.cursor.row = 2;
+        feed(&mut t, "\n\n");
+        assert!(t.scrollback().is_empty());
+    }
+}
+```
+
+`term/movement.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::term::test_support::{feed, term};
+
+    #[test]
+    fn carriage_return_cancels_pending_wrap() {
+        let mut t = term(5, 2);
+        feed(&mut t, "abcde\r\nx");
+        assert_eq!(t.text(), vec!["abcde", "x"]);
+        assert!(!t.grid().line(0).wrapped);
+    }
+
+    #[test]
+    fn backspace_stops_at_first_column() {
+        let mut t = term(5, 1);
+        feed(&mut t, "ab\x08\x08\x08x");
+        assert_eq!(t.text(), vec!["xb"]);
+    }
+
+    #[test]
+    fn horizontal_tab_goes_to_next_stop_and_stays_at_edge() {
+        let mut t = term(20, 1);
+        feed(&mut t, "\t");
+        assert_eq!(t.cursor().col, 8);
+        feed(&mut t, "\t\t\t");
+        assert_eq!(t.cursor().col, 19);
+    }
+}
+```
+
+`term/perform.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::outbox::TermEvent;
+    use crate::term::test_support::{feed, term};
+
+    #[test]
+    fn bell_emits_an_event() {
+        let mut t = term(5, 1);
+        feed(&mut t, "\x07");
+        assert_eq!(t.drain_events(), vec![TermEvent::Bell]);
+        assert!(t.drain_events().is_empty(), "drain vide la file");
+    }
+
+    #[test]
+    fn shift_out_and_in_select_g1_then_g0() {
+        let mut t = term(5, 1);
+        t.charsets.designate(1, crate::charset::Charset::DecSpecialGraphics);
+        feed(&mut t, "q\x0eq\x0fq");
+        assert_eq!(t.text(), vec!["q─q"]);
+    }
+}
+```
+
+- [ ] **Step 2: Vérifier l'échec**
+
+Run: `cargo test -p rustty-vt`
+Expected: module `term` introuvable.
+
+- [ ] **Step 3: Implémenter**
+
+`crates/rustty-vt/Cargo.toml`, `[dependencies]` : ajouter `unicode-width.workspace = true` et `vte.workspace = true`.
+
+`term/mod.rs` :
+
+```rust
+//! Façade du terminal : compose l'état et expose l'API publique. Toute la
+//! logique d'interprétation vit dans les sous-modules par famille d'opérations ;
+//! `perform.rs` ne fait que du dispatch.
+
+mod movement;
+mod perform;
+mod print;
+mod scroll;
+
+use vte::Parser;
+
+use crate::cell::Cell;
+use crate::charset::Charsets;
+use crate::cursor::{Cursor, CursorShape, SavedCursor};
+use crate::grid::Grid;
+use crate::modes::Modes;
+use crate::outbox::{Outbox, TermEvent};
+use crate::region::ScrollRegion;
+use crate::scrollback::Scrollback;
+use crate::tabs::TabStops;
 
 pub struct Term {
     pub(crate) grid: Grid,
@@ -1379,18 +1927,14 @@ pub struct Term {
     pub(crate) saved_cursor_alt: SavedCursor,
     pub(crate) modes: Modes,
     pub(crate) cursor_shape: CursorShape,
-    /// Région de défilement, bornes incluses, indexée à 0.
-    pub(crate) scroll_top: usize,
-    pub(crate) scroll_bottom: usize,
-    pub(crate) tabs: Vec<bool>,
-    pub(crate) charsets: [Charset; 2],
-    pub(crate) active_charset: usize,
+    pub(crate) region: ScrollRegion,
+    pub(crate) tabs: TabStops,
+    pub(crate) charsets: Charsets,
     pub(crate) title: String,
     /// Décalage d'affichage dans le scrollback : 0 = écran vivant.
     pub(crate) display_offset: usize,
+    pub(crate) outbox: Outbox,
     parser: Parser,
-    responses: Vec<u8>,
-    events: Vec<TermEvent>,
 }
 
 impl Term {
@@ -1406,16 +1950,13 @@ impl Term {
             saved_cursor_alt: SavedCursor::default(),
             modes: Modes::default(),
             cursor_shape: CursorShape::default(),
-            scroll_top: 0,
-            scroll_bottom: rows - 1,
-            tabs: Self::default_tabs(cols),
-            charsets: [Charset::Ascii; 2],
-            active_charset: 0,
+            region: ScrollRegion::full(rows),
+            tabs: TabStops::new(cols),
+            charsets: Charsets::default(),
             title: String::new(),
             display_offset: 0,
+            outbox: Outbox::default(),
             parser: Parser::new(),
-            responses: Vec::new(),
-            events: Vec::new(),
         }
     }
 
@@ -1451,23 +1992,17 @@ impl Term {
     }
 
     pub fn drain_events(&mut self) -> Vec<TermEvent> {
-        std::mem::take(&mut self.events)
+        self.outbox.drain_events()
     }
 
     /// Octets à renvoyer à l'application (réponses aux requêtes).
     pub fn drain_responses(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.responses)
+        self.outbox.drain_responses()
     }
 
     /// Texte de l'écran actif, pour les tests.
     pub fn text(&self) -> Vec<String> {
         self.active_grid().text()
-    }
-
-    // ----- internes -----
-
-    pub(crate) fn default_tabs(cols: usize) -> Vec<bool> {
-        (0..cols).map(|c| c % 8 == 0).collect()
     }
 
     pub(crate) fn active_grid(&self) -> &Grid {
@@ -1490,115 +2025,49 @@ impl Term {
     pub(crate) fn erase_template(&self) -> Cell {
         Cell::erased(self.cursor.style)
     }
+}
 
-    pub(crate) fn push_event(&mut self, ev: TermEvent) {
-        self.events.push(ev);
+#[cfg(test)]
+pub(crate) mod test_support {
+    use super::Term;
+
+    pub fn term(cols: usize, rows: usize) -> Term {
+        Term::new(cols, rows, 100)
     }
 
-    pub(crate) fn scroll_up_region(&mut self, n: usize) {
-        let template = self.erase_template();
-        let (top, bottom) = (self.scroll_top, self.scroll_bottom);
-        let keep_history = top == 0 && !self.modes.alt_screen;
-        let evicted = self.active_grid_mut().scroll_up(top, bottom, n, template);
-        if keep_history {
-            self.scrollback.extend(evicted);
-        }
-    }
-
-    pub(crate) fn scroll_down_region(&mut self, n: usize) {
-        let template = self.erase_template();
-        let (top, bottom) = (self.scroll_top, self.scroll_bottom);
-        self.active_grid_mut().scroll_down(top, bottom, n, template);
-    }
-
-    pub(crate) fn linefeed(&mut self) {
-        self.cursor.pending_wrap = false;
-        if self.cursor.row == self.scroll_bottom {
-            self.scroll_up_region(1);
-        } else if self.cursor.row + 1 < self.rows() {
-            self.cursor.row += 1;
-        }
-        if self.modes.line_feed_new_line {
-            self.cursor.col = 0;
-        }
-    }
-
-    pub(crate) fn carriage_return(&mut self) {
-        self.cursor.col = 0;
-        self.cursor.pending_wrap = false;
-    }
-
-    pub(crate) fn backspace(&mut self) {
-        self.cursor.pending_wrap = false;
-        self.cursor.col = self.cursor.col.saturating_sub(1);
-    }
-
-    pub(crate) fn horizontal_tab(&mut self) {
-        self.cursor.pending_wrap = false;
-        let cols = self.cols();
-        let next = (self.cursor.col + 1..cols).find(|&c| self.tabs[c]);
-        self.cursor.col = next.unwrap_or(cols - 1);
-    }
-
-    /// Écrit un caractère de largeur 1 à la position du curseur, en gérant
-    /// le retour à la ligne différé et le mode insertion.
-    fn put_char(&mut self, c: char) {
-        let cols = self.cols();
-        if self.cursor.pending_wrap {
-            if self.modes.autowrap {
-                let row = self.cursor.row;
-                self.active_grid_mut().line_mut(row).wrapped = true;
-                self.carriage_return();
-                self.linefeed();
-            } else {
-                self.cursor.pending_wrap = false;
-            }
-        }
-        let (col, row) = (self.cursor.col, self.cursor.row);
-        let cell = Cell::new(c, self.cursor.style);
-        let template = self.erase_template();
-        let line = self.active_grid_mut().line_mut(row);
-        if self.modes.insert {
-            line.insert_blank(col, 1, template);
-        }
-        line.set(col, cell);
-        if col + 1 < cols {
-            self.cursor.col += 1;
-        } else {
-            self.cursor.pending_wrap = true;
-        }
-    }
-
-    /// Attache un caractère combinant à la dernière cellule écrite.
-    fn put_zerowidth(&mut self, c: char) {
-        let (col, row) = (self.cursor.col, self.cursor.row);
-        // Après un caractère en dernière colonne le curseur n'a pas avancé :
-        // la cible est la cellule sous le curseur, sinon celle juste avant.
-        let target = if self.cursor.pending_wrap || col == 0 { col } else { col - 1 };
-        let line = self.active_grid_mut().line_mut(row);
-        let target = if line.get(target).is_wide_continuation() { target.saturating_sub(1) } else { target };
-        line.push_zerowidth(target, c);
+    pub fn feed(t: &mut Term, s: &str) {
+        t.input(s.as_bytes());
     }
 }
+```
+
+Si `vte::Parser` n'implémente pas `Default`, remplacer le champ par `parser: Option<Parser>`, `take().unwrap_or_default()` dans `input`, puis `self.parser = Some(parser)`.
+
+`term/perform.rs` :
+
+```rust
+//! Dispatch pur : chaque méthode de `vte::Perform` traduit la séquence reçue en
+//! appel vers le module propriétaire. Aucune logique ici.
+
+use vte::{Params, Perform};
+
+use super::Term;
+use crate::outbox::TermEvent;
 
 impl Perform for Term {
     fn print(&mut self, c: char) {
-        let c = self.charsets[self.active_charset].map(c);
-        match c.width().unwrap_or(1) {
-            0 => self.put_zerowidth(c),
-            _ => self.put_char(c),
-        }
+        self.print_char(c);
     }
 
     fn execute(&mut self, byte: u8) {
         match byte {
-            0x07 => self.push_event(TermEvent::Bell),
+            0x07 => self.outbox.event(TermEvent::Bell),
             0x08 => self.backspace(),
             0x09 => self.horizontal_tab(),
             0x0A..=0x0C => self.linefeed(),
             0x0D => self.carriage_return(),
-            0x0E => self.active_charset = 1,
-            0x0F => self.active_charset = 0,
+            0x0E => self.charsets.shift_out(),
+            0x0F => self.charsets.shift_in(),
             _ => {}
         }
     }
@@ -1617,59 +2086,208 @@ impl Perform for Term {
 }
 ```
 
-Les tests du module utilisent `Style` et `Attrs` à partir de la tâche 9 : les importer alors dans `mod tests` (`use crate::cell::{Attrs, Style};`). Si `Parser` n'implémente pas `Default` dans la version de `vte` résolue, remplacer le champ par `parser: Option<Parser>` et faire `self.parser.take().unwrap_or_default()` puis `self.parser = Some(parser)`.
-
-`lib.rs` : ajouter
+`term/print.rs` :
 
 ```rust
-pub mod charset;
-pub mod cursor;
-pub mod modes;
-pub mod term;
+//! Écriture des caractères imprimables : largeur, retour à la ligne différé,
+//! mode insertion, caractères combinants. Les caractères larges arrivent en
+//! tâche 14.
 
-pub use charset::Charset;
-pub use cursor::{Cursor, CursorShape};
-pub use modes::{Modes, MouseMode};
-pub use term::{Term, TermEvent};
+use unicode_width::UnicodeWidthChar;
+
+use super::Term;
+use crate::cell::Cell;
+
+impl Term {
+    /// Point d'entrée depuis `Perform::print`.
+    pub(crate) fn print_char(&mut self, c: char) {
+        let c = self.charsets.map(c);
+        match c.width().unwrap_or(1) {
+            0 => self.put_zerowidth(c),
+            _ => self.put_char(c, 1),
+        }
+    }
+
+    /// Écrit un caractère de largeur `width` sous le curseur.
+    pub(crate) fn put_char(&mut self, c: char, width: usize) {
+        let cols = self.cols();
+        if self.cursor.pending_wrap {
+            if self.modes.autowrap {
+                self.wrap_line();
+            } else {
+                self.cursor.pending_wrap = false;
+            }
+        }
+        let (col, row) = (self.cursor.col, self.cursor.row);
+        let cell = Cell::new(c, self.cursor.style);
+        let template = self.erase_template();
+        let insert = self.modes.insert;
+        let line = self.active_grid_mut().line_mut(row);
+        if insert {
+            line.insert_blank(col, width, template);
+        }
+        line.set(col, cell);
+        if col + width < cols {
+            self.cursor.col += width;
+        } else {
+            self.cursor.col = cols - 1;
+            self.cursor.pending_wrap = true;
+        }
+    }
+
+    /// Attache un caractère combinant à la dernière cellule écrite.
+    pub(crate) fn put_zerowidth(&mut self, c: char) {
+        let (col, row) = (self.cursor.col, self.cursor.row);
+        // Après un caractère en dernière colonne le curseur n'a pas avancé :
+        // la cible est la cellule sous le curseur, sinon celle juste avant.
+        let target = if self.cursor.pending_wrap || col == 0 { col } else { col - 1 };
+        let line = self.active_grid_mut().line_mut(row);
+        let target = if line.get(target).is_wide_continuation() { target.saturating_sub(1) } else { target };
+        line.push_zerowidth(target, c);
+    }
+
+    /// Retour à la ligne implicite : marque la ligne et descend.
+    pub(crate) fn wrap_line(&mut self) {
+        let row = self.cursor.row;
+        self.active_grid_mut().line_mut(row).wrapped = true;
+        self.carriage_return();
+        self.linefeed();
+    }
+}
 ```
+
+`term/scroll.rs` :
+
+```rust
+//! Défilement vertical : saut de ligne, et déplacement de la région dans les
+//! deux sens avec alimentation de l'historique quand la région touche le haut.
+
+use super::Term;
+
+impl Term {
+    pub(crate) fn scroll_up_region(&mut self, n: usize) {
+        let template = self.erase_template();
+        let (top, bottom) = (self.region.top, self.region.bottom);
+        let keep_history = top == 0 && !self.modes.alt_screen;
+        let evicted = self.active_grid_mut().scroll_up(top, bottom, n, template);
+        if keep_history {
+            self.scrollback.extend(evicted);
+        }
+    }
+
+    pub(crate) fn scroll_down_region(&mut self, n: usize) {
+        let template = self.erase_template();
+        let (top, bottom) = (self.region.top, self.region.bottom);
+        self.active_grid_mut().scroll_down(top, bottom, n, template);
+    }
+
+    /// LF / VT / FF / IND : descend d'une ligne, fait défiler en bas de région.
+    pub(crate) fn linefeed(&mut self) {
+        self.cursor.pending_wrap = false;
+        if self.cursor.row == self.region.bottom {
+            self.scroll_up_region(1);
+        } else if self.cursor.row + 1 < self.rows() {
+            self.cursor.row += 1;
+        }
+        if self.modes.line_feed_new_line {
+            self.cursor.col = 0;
+        }
+    }
+}
+```
+
+`term/movement.rs` (version initiale, étendue en tâche 8) :
+
+```rust
+//! Positionnement du curseur : contrôles C0 (CR, BS, HT) puis séquences CSI.
+
+use super::Term;
+
+impl Term {
+    pub(crate) fn carriage_return(&mut self) {
+        self.cursor.col = 0;
+        self.cursor.pending_wrap = false;
+    }
+
+    pub(crate) fn backspace(&mut self) {
+        self.cursor.pending_wrap = false;
+        self.cursor.col = self.cursor.col.saturating_sub(1);
+    }
+
+    pub(crate) fn horizontal_tab(&mut self) {
+        self.cursor.pending_wrap = false;
+        let last = self.cols() - 1;
+        self.cursor.col = self.tabs.next_after(self.cursor.col).unwrap_or(last);
+    }
+}
+```
+
+`lib.rs` : `pub mod term;` et `pub use term::Term;`.
 
 - [ ] **Step 4: Vérifier que tout passe**
 
 Run: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace`
-Expected: tous `ok`. Si clippy se plaint de `new_without_default`, c'est normal : `Term::new` a des paramètres, pas d'impl `Default` attendue.
+Expected: tous `ok`.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.6"` ; CHANGELOG :
+`version = "0.1.0-alpha.7"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.6 — 2026-10-08 · « Cœur du terminal »
+## 0.1.0-alpha.7 — 2026-10-08 · « Cœur du terminal »
 
-- `rustty-vt` : `Term` piloté par `vte`, impression de texte avec retour à la ligne différé, contrôles C0 (BEL, BS, HT, LF, CR, SO, SI), défilement vers le scrollback, caractères combinants.
+- `rustty-vt` : façade `Term` pilotée par `vte` avec dispatch séparé de la logique ; impression de texte, retour à la ligne différé, mode insertion, combinants, contrôles C0, défilement vers l'historique.
 ```
 
 ```bash
-git add Cargo.toml Cargo.lock crates/rustty-vt/Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/cursor.rs crates/rustty-vt/src/modes.rs crates/rustty-vt/src/charset.rs crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : cœur du terminal, impression et contrôles C0 (0.1.0-alpha.6)"
+git add Cargo.toml Cargo.lock crates/rustty-vt/Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/term CHANGELOG.md
+git commit -m "rustty-vt : façade Term, dispatch, impression et défilement (0.1.0-alpha.7)"
 ```
 
 ---
 
-### Task 7 : Déplacements du curseur, région de défilement, sauvegarde du curseur
+### Task 8 : Paramètres CSI et déplacements du curseur
 
 **Files:**
-- Create: `crates/rustty-vt/src/csi.rs` (helpers de paramètres)
-- Modify: `crates/rustty-vt/src/term.rs` (`csi_dispatch`, `esc_dispatch`, nouvelles méthodes)
+- Create: `crates/rustty-vt/src/params.rs`
+- Modify: `crates/rustty-vt/src/term/movement.rs`
+- Modify: `crates/rustty-vt/src/term/perform.rs` (`csi_dispatch`, `esc_dispatch`)
+- Modify: `crates/rustty-vt/src/lib.rs`
 
 **Interfaces:**
 - Produces:
-  - `pub(crate) fn args(params: &Params) -> Vec<u16>` ; `pub(crate) fn arg_or(p: &[u16], i: usize, default: u16) -> u16` (absent **ou 0** ⇒ `default`) ; `pub(crate) fn raw(p: &[u16], i: usize) -> u16` (absent ⇒ 0).
-  - Méthodes `Term` : `cursor_up(n)`, `cursor_down(n)`, `cursor_forward(n)`, `cursor_back(n)`, `cursor_to(col, row)` (absolu, 0-indexé, origin-aware), `set_scroll_region(top, bottom)` (1-indexés, 0 = défaut), `save_cursor()`, `restore_cursor()`.
-  - Le `match` de `csi_dispatch` et `esc_dispatch` que les tâches suivantes étendent.
+  - `params.rs` : `pub(crate) fn args(params: &Params) -> Vec<u16>`, `pub(crate) fn arg_or(p: &[u16], i, default: u16) -> u16` (absent **ou 0** ⇒ défaut), `pub(crate) fn raw(p: &[u16], i) -> u16` (absent ⇒ 0).
+  - `movement.rs` : `cursor_up(n)`, `cursor_down(n)`, `cursor_forward(n)`, `cursor_back(n)`, `cursor_to_col(col)`, `cursor_to(col, row)` (0-indexé, origin-aware), `set_scroll_region(top1, bottom1)`, `save_cursor()`, `restore_cursor()`.
+  - `perform.rs` : le `match` de `csi_dispatch` (avec la fermeture `n(i)`) et `esc_dispatch` (`7`, `8`) que les tâches suivantes étendent arm par arm.
 
 - [ ] **Step 1: Écrire les tests**
 
-Ajouter dans `mod tests` de `term.rs` :
+`params.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn arg_or_treats_missing_and_zero_as_default() {
+        let p = [0u16, 5];
+        assert_eq!(arg_or(&p, 0, 1), 1);
+        assert_eq!(arg_or(&p, 1, 1), 5);
+        assert_eq!(arg_or(&p, 7, 3), 3);
+    }
+
+    #[test]
+    fn raw_keeps_zero_and_defaults_missing_to_zero() {
+        let p = [0u16, 5];
+        assert_eq!(raw(&p, 0), 0);
+        assert_eq!(raw(&p, 1), 5);
+        assert_eq!(raw(&p, 9), 0);
+    }
+}
+```
+
+Ajouter dans `mod tests` de `term/movement.rs` :
 
 ```rust
     #[test]
@@ -1706,12 +2324,12 @@ Ajouter dans `mod tests` de `term.rs` :
     }
 
     #[test]
-    fn cursor_up_stops_at_scroll_region_top_when_inside() {
+    fn vertical_moves_stop_at_region_edges_like_xterm() {
         let mut t = term(10, 6);
         feed(&mut t, "\x1b[2;5r\x1b[3;1H\x1b[9A");
-        assert_eq!(t.cursor().row, 1);
+        assert_eq!(t.cursor().row, 1, "dans la région, on s'arrête à son haut");
         feed(&mut t, "\x1b[1;1H\x1b[9B");
-        assert_eq!(t.cursor().row, 4, "depuis le dessus de la région, on s'arrête à son bas (xterm)");
+        assert_eq!(t.cursor().row, 4, "depuis le dessus de la région, on s'arrête à son bas");
         feed(&mut t, "\x1b[6;1H\x1b[9A");
         assert_eq!(t.cursor().row, 1, "depuis le dessous, on s'arrête à son haut");
     }
@@ -1730,13 +2348,13 @@ Ajouter dans `mod tests` de `term.rs` :
     fn decstbm_invalid_region_is_ignored() {
         let mut t = term(3, 4);
         feed(&mut t, "\x1b[10;5r");
-        assert_eq!((t.scroll_top, t.scroll_bottom), (0, 3));
+        assert_eq!((t.region.top, t.region.bottom), (0, 3));
         feed(&mut t, "\x1b[1;999r");
-        assert_eq!((t.scroll_top, t.scroll_bottom), (0, 3), "bas hors écran : borné à l'écran");
+        assert_eq!((t.region.top, t.region.bottom), (0, 3), "bas hors écran : borné à l'écran");
         feed(&mut t, "\x1b[3;3r");
-        assert_eq!((t.scroll_top, t.scroll_bottom), (0, 3), "région d'une ligne : ignorée");
+        assert_eq!((t.region.top, t.region.bottom), (0, 3), "région d'une ligne : ignorée");
         feed(&mut t, "\x1b[r");
-        assert_eq!((t.scroll_top, t.scroll_bottom), (0, 3));
+        assert_eq!((t.region.top, t.region.bottom), (0, 3));
     }
 
     #[test]
@@ -1769,11 +2387,11 @@ Ajouter dans `mod tests` de `term.rs` :
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `cargo test -p rustty-vt`
-Expected: les nouveaux tests échouent (le curseur ne bouge pas) ; `scroll_top` est accessible car `pub(crate)`.
+Expected: `params` introuvable ; les tests de mouvement échouent.
 
 - [ ] **Step 3: Implémenter**
 
-`crates/rustty-vt/src/csi.rs` :
+`params.rs` :
 
 ```rust
 //! Lecture des paramètres CSI. Les séquences sont indexées à 1 et « 0 » vaut
@@ -1799,16 +2417,19 @@ pub(crate) fn raw(p: &[u16], i: usize) -> u16 {
 }
 ```
 
-Dans `term.rs`, ajouter `use crate::csi::{arg_or, args, raw};` puis les méthodes dans `impl Term` :
+`lib.rs` : `mod params;`.
+
+Ajouter dans `impl Term` de `term/movement.rs` (après `horizontal_tab`), avec `use crate::cursor::SavedCursor;` en tête :
 
 ```rust
-    /// Borne haute pour un déplacement vertical : la région si le curseur y est.
+    /// Borne haute pour un déplacement vertical : la région si le curseur y est
+    /// ou en dessous, l'écran s'il est au-dessus (comportement xterm).
     fn upper_bound(&self) -> usize {
-        if self.cursor.row >= self.scroll_top { self.scroll_top } else { 0 }
+        if self.cursor.row >= self.region.top { self.region.top } else { 0 }
     }
 
     fn lower_bound(&self) -> usize {
-        if self.cursor.row <= self.scroll_bottom { self.scroll_bottom } else { self.rows() - 1 }
+        if self.cursor.row <= self.region.bottom { self.region.bottom } else { self.rows() - 1 }
     }
 
     pub(crate) fn cursor_up(&mut self, n: usize) {
@@ -1833,52 +2454,46 @@ Dans `term.rs`, ajouter `use crate::csi::{arg_or, args, raw};` puis les méthode
         self.cursor.col = self.cursor.col.saturating_sub(n);
     }
 
+    /// CHA / HPA : colonne absolue 0-indexée.
+    pub(crate) fn cursor_to_col(&mut self, col: usize) {
+        self.cursor.pending_wrap = false;
+        self.cursor.col = col.min(self.cols() - 1);
+    }
+
     /// Position absolue 0-indexée ; en mode origine, `row` est relatif à la
     /// région et y reste borné.
     pub(crate) fn cursor_to(&mut self, col: usize, row: usize) {
         self.cursor.pending_wrap = false;
         let (min_row, max_row) =
-            if self.modes.origin { (self.scroll_top, self.scroll_bottom) } else { (0, self.rows() - 1) };
+            if self.modes.origin { (self.region.top, self.region.bottom) } else { (0, self.rows() - 1) };
         self.cursor.row = (min_row + row).min(max_row);
         self.cursor.col = col.min(self.cols() - 1);
     }
 
-    /// DECSTBM, paramètres 1-indexés, 0 = défaut. Région invalide : ignorée.
-    pub(crate) fn set_scroll_region(&mut self, top: u16, bottom: u16) {
+    /// DECSTBM : paramètres 1-indexés, 0 = défaut ; région invalide ignorée.
+    pub(crate) fn set_scroll_region(&mut self, top1: u16, bottom1: u16) {
         let rows = self.rows();
-        let top = if top == 0 { 1 } else { usize::from(top) };
-        let bottom = if bottom == 0 { rows } else { usize::from(bottom).min(rows) };
-        if top >= bottom {
-            return;
+        if self.region.try_set(top1, bottom1, rows) {
+            self.cursor_to(0, 0);
         }
-        self.scroll_top = top - 1;
-        self.scroll_bottom = bottom - 1;
-        self.cursor_to(0, 0);
     }
 
     pub(crate) fn save_cursor(&mut self) {
-        let saved = SavedCursor {
-            cursor: self.cursor,
-            origin: self.modes.origin,
-            charsets: self.charsets,
-            active_charset: self.active_charset,
-        };
+        let saved = SavedCursor { cursor: self.cursor, origin: self.modes.origin, charsets: self.charsets };
         if self.modes.alt_screen { self.saved_cursor_alt = saved } else { self.saved_cursor = saved }
     }
 
     pub(crate) fn restore_cursor(&mut self) {
         let saved = if self.modes.alt_screen { self.saved_cursor_alt } else { self.saved_cursor };
         self.cursor = saved.cursor;
-        self.cursor.pending_wrap = false;
         self.modes.origin = saved.origin;
         self.charsets = saved.charsets;
-        self.active_charset = saved.active_charset;
-        self.cursor.row = self.cursor.row.min(self.rows() - 1);
-        self.cursor.col = self.cursor.col.min(self.cols() - 1);
+        let (cols, rows) = (self.cols(), self.rows());
+        self.cursor.clamp(cols, rows);
     }
 ```
 
-Remplacer les méthodes vides `csi_dispatch` et `esc_dispatch` de `impl Perform for Term` :
+Dans `term/perform.rs`, remplacer `csi_dispatch` et `esc_dispatch`, et ajouter `use crate::params::{arg_or, args, raw};` :
 
 ```rust
     fn csi_dispatch(&mut self, params: &Params, intermediates: &[u8], _ignore: bool, action: char) {
@@ -1886,24 +2501,19 @@ Remplacer les méthodes vides `csi_dispatch` et `esc_dispatch` de `impl Perform 
         let n = |i: usize| usize::from(arg_or(&p, i, 1));
         match (intermediates, action) {
             ([], 'A') => self.cursor_up(n(0)),
-            ([], 'B') | ([], 'e') => self.cursor_down(n(0)),
-            ([], 'C') | ([], 'a') => self.cursor_forward(n(0)),
+            ([], 'B' | 'e') => self.cursor_down(n(0)),
+            ([], 'C' | 'a') => self.cursor_forward(n(0)),
             ([], 'D') => self.cursor_back(n(0)),
             ([], 'E') => {
                 self.cursor_down(n(0));
-                self.cursor.col = 0;
+                self.cursor_to_col(0);
             }
             ([], 'F') => {
                 self.cursor_up(n(0));
-                self.cursor.col = 0;
+                self.cursor_to_col(0);
             }
-            ([], 'G') | ([], '`') => {
-                let row = self.cursor.row;
-                self.cursor.pending_wrap = false;
-                self.cursor.col = (n(0) - 1).min(self.cols() - 1);
-                self.cursor.row = row;
-            }
-            ([], 'H') | ([], 'f') => self.cursor_to(n(1) - 1, n(0) - 1),
+            ([], 'G' | '`') => self.cursor_to_col(n(0) - 1),
+            ([], 'H' | 'f') => self.cursor_to(n(1) - 1, n(0) - 1),
             ([], 'd') => {
                 let col = self.cursor.col;
                 self.cursor_to(col, n(0) - 1);
@@ -1924,7 +2534,7 @@ Remplacer les méthodes vides `csi_dispatch` et `esc_dispatch` de `impl Perform 
     }
 ```
 
-`lib.rs` : ajouter `mod csi;` (privé).
+Note : `cursor_to` en mode origine n'applique pas `clamp` sur un `row` déjà borné ; `restore_cursor` borne via `Cursor::clamp` car la grille peut avoir changé depuis la sauvegarde.
 
 - [ ] **Step 4: Vérifier que tout passe**
 
@@ -1933,34 +2543,41 @@ Expected: tous `ok`.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.7"` ; CHANGELOG :
+`version = "0.1.0-alpha.8"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.7 — 2026-10-08 · « Déplacements du curseur »
+## 0.1.0-alpha.8 — 2026-10-08 · « Déplacements du curseur »
 
-- `rustty-vt` : CUU/CUD/CUF/CUB/CNL/CPL/CHA/VPA/CUP/HVP, région de défilement DECSTBM, mode origine, sauvegarde et restauration du curseur (DECSC/DECRC, CSI s/u).
+- `rustty-vt` : lecture des paramètres CSI ; CUU/CUD/CUF/CUB/CNL/CPL/CHA/VPA/CUP/HVP, DECSTBM, mode origine, DECSC/DECRC et CSI s/u.
 ```
 
 ```bash
-git add Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/csi.rs crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : déplacements du curseur et région de défilement (0.1.0-alpha.7)"
+git add Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/params.rs crates/rustty-vt/src/term/movement.rs crates/rustty-vt/src/term/perform.rs CHANGELOG.md
+git commit -m "rustty-vt : paramètres CSI et déplacements du curseur (0.1.0-alpha.8)"
 ```
 
 ---
 
-### Task 8 : Effacement et édition (ED, EL, ECH, ICH, DCH, IL, DL, SU, SD)
+### Task 9 : Effacement et édition
 
 **Files:**
-- Modify: `crates/rustty-vt/src/term.rs`
+- Create: `crates/rustty-vt/src/term/edit.rs`
+- Modify: `crates/rustty-vt/src/term/mod.rs` (`mod edit;`)
+- Modify: `crates/rustty-vt/src/term/perform.rs`
 
 **Interfaces:**
-- Produces: méthodes `Term` : `erase_in_line(mode: u16)`, `erase_in_display(mode: u16)`, `erase_chars(n)`, `insert_blank_chars(n)`, `delete_chars(n)`, `insert_lines(n)`, `delete_lines(n)`. Les arms `K`, `J`, `X`, `@`, `P`, `L`, `M`, `S`, `T` dans `csi_dispatch`.
+- Produces: `edit.rs` : `erase_in_line(mode)`, `erase_in_display(mode)`, `erase_chars(n)`, `insert_blank_chars(n)`, `delete_chars(n)`, `insert_lines(n)`, `delete_lines(n)`. Arms `K`, `J`, `X`, `@`, `P`, `L`, `M`, `S`, `T`.
 
 - [ ] **Step 1: Écrire les tests**
 
-Ajouter dans `mod tests` de `term.rs` :
+`term/edit.rs`, bas de fichier :
 
 ```rust
+#[cfg(test)]
+mod tests {
+    use crate::color::Color;
+    use crate::term::test_support::{feed, term};
+
     #[test]
     fn erase_in_line_modes() {
         let mut t = term(5, 3);
@@ -1999,7 +2616,7 @@ Ajouter dans `mod tests` de `term.rs` :
     fn erase_uses_current_background() {
         let mut t = term(3, 1);
         feed(&mut t, "abc\x1b[44m\x1b[2K");
-        assert_eq!(t.grid().cell(1, 0).style.bg, crate::Color::Indexed(4));
+        assert_eq!(t.grid().cell(1, 0).style.bg, Color::Indexed(4));
         assert!(t.grid().cell(1, 0).style.attrs.is_empty());
     }
 
@@ -2045,18 +2662,26 @@ Ajouter dans `mod tests` de `term.rs` :
         feed(&mut t, "\x1b[2T");
         assert_eq!(t.text(), vec!["", "", "b"]);
     }
+}
 ```
+
+Le test `erase_uses_current_background` dépend de SGR (tâche 10) : le marquer `#[ignore = "SGR en tâche 10"]` ici et retirer l'attribut en tâche 10.
 
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `cargo test -p rustty-vt`
-Expected: les nouveaux tests échouent (séquences ignorées).
+Expected: module `edit` introuvable.
 
 - [ ] **Step 3: Implémenter**
 
-Dans `impl Term` de `term.rs` :
+`term/edit.rs` :
 
 ```rust
+//! Effacement et édition : lignes et caractères, sans déplacer le curseur.
+
+use super::Term;
+
+impl Term {
     pub(crate) fn erase_in_line(&mut self, mode: u16) {
         let (col, row, cols) = (self.cursor.col, self.cursor.row, self.cols());
         let template = self.erase_template();
@@ -2109,31 +2734,28 @@ Dans `impl Term` de `term.rs` :
         self.active_grid_mut().line_mut(row).delete(col, n, template);
     }
 
-    fn cursor_in_scroll_region(&self) -> bool {
-        (self.scroll_top..=self.scroll_bottom).contains(&self.cursor.row)
-    }
-
     pub(crate) fn insert_lines(&mut self, n: usize) {
-        if !self.cursor_in_scroll_region() {
+        if !self.region.contains(self.cursor.row) {
             return;
         }
-        let (row, bottom) = (self.cursor.row, self.scroll_bottom);
+        let (row, bottom) = (self.cursor.row, self.region.bottom);
         let template = self.erase_template();
         self.active_grid_mut().scroll_down(row, bottom, n, template);
     }
 
     pub(crate) fn delete_lines(&mut self, n: usize) {
-        if !self.cursor_in_scroll_region() {
+        if !self.region.contains(self.cursor.row) {
             return;
         }
-        let (row, bottom) = (self.cursor.row, self.scroll_bottom);
+        let (row, bottom) = (self.cursor.row, self.region.bottom);
         let template = self.erase_template();
         // Les lignes supprimées ne vont jamais dans l'historique.
         let _ = self.active_grid_mut().scroll_up(row, bottom, n, template);
     }
+}
 ```
 
-Dans `csi_dispatch`, ajouter avant `_ => {}` :
+`term/mod.rs` : ajouter `mod edit;`. Dans `csi_dispatch`, avant `_ => {}` :
 
 ```rust
             ([], 'K') => self.erase_in_line(raw(&p, 0)),
@@ -2150,116 +2772,114 @@ Dans `csi_dispatch`, ajouter avant `_ => {}` :
 - [ ] **Step 4: Vérifier que tout passe**
 
 Run: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace`
-Expected: tous `ok`.
+Expected: tous `ok`, un test `ignored`.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.8"` ; CHANGELOG :
+`version = "0.1.0-alpha.9"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.8 — 2026-10-08 · « Effacement et édition »
+## 0.1.0-alpha.9 — 2026-10-08 · « Effacement et édition »
 
-- `rustty-vt` : ED (dont effacement de l'historique), EL, ECH, ICH, DCH, IL, DL, SU, SD, avec respect de la région de défilement et de la couleur de fond courante.
+- `rustty-vt` : ED (dont effacement de l'historique), EL, ECH, ICH, DCH, IL, DL, SU, SD, avec respect de la région de défilement.
 ```
 
 ```bash
-git add Cargo.toml crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : effacement et édition de lignes et caractères (0.1.0-alpha.8)"
+git add Cargo.toml crates/rustty-vt/src/term/mod.rs crates/rustty-vt/src/term/edit.rs crates/rustty-vt/src/term/perform.rs CHANGELOG.md
+git commit -m "rustty-vt : effacement et édition de lignes et caractères (0.1.0-alpha.9)"
 ```
 
 ---
 
-### Task 9 : Attributs SGR
+### Task 10 : Attributs SGR
 
 **Files:**
 - Create: `crates/rustty-vt/src/sgr.rs`
-- Modify: `crates/rustty-vt/src/term.rs`
+- Modify: `crates/rustty-vt/src/term/perform.rs`
+- Modify: `crates/rustty-vt/src/term/edit.rs` (retirer le `#[ignore]`)
 - Modify: `crates/rustty-vt/src/lib.rs`
 
 **Interfaces:**
-- Produces: `pub(crate) fn apply_sgr(style: &mut Style, params: &Params)` ; arm `m` dans `csi_dispatch`.
+- Produces: `pub(crate) fn apply_sgr(style: &mut Style, params: &Params)` ; arm `m`.
 
 - [ ] **Step 1: Écrire les tests**
 
-Ajouter dans `mod tests` de `term.rs` :
+`sgr.rs` est testé à travers `Term` car `vte::Params` n'a pas de constructeur public. Créer le fichier de tests d'intégration `crates/rustty-vt/tests/sgr.rs` :
 
 ```rust
-    fn style_at(t: &Term, col: usize) -> Style {
-        t.grid().cell(col, 0).style
-    }
+//! SGR vu de l'extérieur : on écrit un caractère et on lit le style de sa cellule.
 
-    #[test]
-    fn sgr_basic_attributes_and_reset() {
-        let mut t = term(10, 1);
-        feed(&mut t, "\x1b[1;3;4;5;7;8;9ma\x1b[0mb\x1b[2mc");
-        let a = style_at(&t, 0).attrs;
-        for f in [Attrs::BOLD, Attrs::ITALIC, Attrs::UNDERLINE, Attrs::BLINK, Attrs::INVERSE, Attrs::HIDDEN, Attrs::STRIKETHROUGH] {
-            assert!(a.contains(f), "{f:?} manquant");
-        }
-        assert!(style_at(&t, 1).attrs.is_empty());
-        assert_eq!(style_at(&t, 2).attrs, Attrs::DIM);
-    }
+use rustty_vt::{Attrs, Color, Style, Term};
 
-    #[test]
-    fn sgr_empty_is_reset() {
-        let mut t = term(4, 1);
-        feed(&mut t, "\x1b[1;31ma\x1b[mb");
-        assert_eq!(style_at(&t, 1), Style::default());
-    }
+fn style_after(seq: &str) -> Style {
+    let mut t = Term::new(10, 1, 0);
+    t.input(seq.as_bytes());
+    t.input(b"a");
+    t.grid().cell(0, 0).style
+}
 
-    #[test]
-    fn sgr_individual_resets() {
-        let mut t = term(10, 1);
-        feed(&mut t, "\x1b[1;2;3;4;5;7;8;9m\x1b[22;23;24;25;27;28;29ma");
-        assert!(style_at(&t, 0).attrs.is_empty(), "22 retire gras et atténué");
+#[test]
+fn basic_attributes() {
+    let a = style_after("\x1b[1;3;4;5;7;8;9m").attrs;
+    for f in [Attrs::BOLD, Attrs::ITALIC, Attrs::UNDERLINE, Attrs::BLINK, Attrs::INVERSE, Attrs::HIDDEN, Attrs::STRIKETHROUGH] {
+        assert!(a.contains(f), "{f:?} manquant");
     }
+    assert_eq!(style_after("\x1b[2m").attrs, Attrs::DIM);
+}
 
-    #[test]
-    fn sgr_indexed_colors() {
-        let mut t = term(10, 1);
-        feed(&mut t, "\x1b[31;42ma\x1b[94;105mb\x1b[39;49mc");
-        assert_eq!((style_at(&t, 0).fg, style_at(&t, 0).bg), (crate::Color::Indexed(1), crate::Color::Indexed(2)));
-        assert_eq!((style_at(&t, 1).fg, style_at(&t, 1).bg), (crate::Color::Indexed(12), crate::Color::Indexed(13)));
-        assert_eq!(style_at(&t, 2), Style::default());
-    }
+#[test]
+fn reset_explicit_and_empty() {
+    assert_eq!(style_after("\x1b[1;31m\x1b[0m"), Style::default());
+    assert_eq!(style_after("\x1b[1;31m\x1b[m"), Style::default());
+}
 
-    #[test]
-    fn sgr_256_and_truecolor_with_semicolons_and_colons() {
-        let mut t = term(10, 1);
-        feed(&mut t, "\x1b[38;5;200;48;2;10;20;30ma\x1b[0m\x1b[38:2::1:2:3;48:5:7mb");
-        assert_eq!(style_at(&t, 0).fg, crate::Color::Indexed(200));
-        assert_eq!(style_at(&t, 0).bg, crate::Color::Rgb(10, 20, 30));
-        assert_eq!(style_at(&t, 1).fg, crate::Color::Rgb(1, 2, 3), "forme 38:2::r:g:b avec espace colorimétrique vide");
-        assert_eq!(style_at(&t, 1).bg, crate::Color::Indexed(7));
-    }
+#[test]
+fn individual_resets() {
+    let a = style_after("\x1b[1;2;3;4;5;7;8;9m\x1b[22;23;24;25;27;28;29m").attrs;
+    assert!(a.is_empty(), "22 retire gras et atténué");
+}
 
-    #[test]
-    fn sgr_truncated_extended_color_is_ignored_but_rest_applies() {
-        let mut t = term(10, 1);
-        feed(&mut t, "\x1b[38;2;10m\x1b[1ma");
-        assert_eq!(style_at(&t, 0).fg, crate::Color::Default);
-        assert!(style_at(&t, 0).attrs.contains(Attrs::BOLD));
-    }
+#[test]
+fn indexed_colors() {
+    let s = style_after("\x1b[31;42m");
+    assert_eq!((s.fg, s.bg), (Color::Indexed(1), Color::Indexed(2)));
+    let s = style_after("\x1b[94;105m");
+    assert_eq!((s.fg, s.bg), (Color::Indexed(12), Color::Indexed(13)));
+    assert_eq!(style_after("\x1b[31;42m\x1b[39;49m"), Style::default());
+}
 
-    #[test]
-    fn sgr_underline_styles_via_subparams() {
-        let mut t = term(10, 1);
-        feed(&mut t, "\x1b[4:3ma\x1b[4:0mb");
-        assert!(style_at(&t, 0).attrs.contains(Attrs::UNDERLINE));
-        assert!(!style_at(&t, 1).attrs.contains(Attrs::UNDERLINE));
-    }
+#[test]
+fn extended_colors_with_semicolons_and_colons() {
+    let s = style_after("\x1b[38;5;200;48;2;10;20;30m");
+    assert_eq!((s.fg, s.bg), (Color::Indexed(200), Color::Rgb(10, 20, 30)));
+    let s = style_after("\x1b[38:2::1:2:3;48:5:7m");
+    assert_eq!(s.fg, Color::Rgb(1, 2, 3), "forme 38:2::r:g:b avec espace colorimétrique vide");
+    assert_eq!(s.bg, Color::Indexed(7));
+    assert_eq!(style_after("\x1b[38:2:4:5:6m").fg, Color::Rgb(4, 5, 6), "forme 38:2:r:g:b sans espace");
+}
+
+#[test]
+fn truncated_extended_color_is_ignored_but_rest_applies() {
+    let s = style_after("\x1b[38;2;10m\x1b[1m");
+    assert_eq!(s.fg, Color::Default);
+    assert!(s.attrs.contains(Attrs::BOLD));
+}
+
+#[test]
+fn underline_styles_via_subparams() {
+    assert!(style_after("\x1b[4:3m").attrs.contains(Attrs::UNDERLINE));
+    assert!(!style_after("\x1b[4m\x1b[4:0m").attrs.contains(Attrs::UNDERLINE));
+}
 ```
-
-Ajouter `use crate::cell::{Attrs, Style};` en tête du module de tests si nécessaire (déjà importés dans `term.rs` via `super::*`).
 
 - [ ] **Step 2: Vérifier l'échec**
 
-Run: `cargo test -p rustty-vt`
-Expected: les tests SGR échouent (style par défaut partout).
+Run: `cargo test -p rustty-vt --test sgr`
+Expected: tous les tests échouent (style par défaut).
 
 - [ ] **Step 3: Implémenter**
 
-`crates/rustty-vt/src/sgr.rs` :
+`sgr.rs` :
 
 ```rust
 //! Select Graphic Rendition : met à jour le style courant. Gère les deux
@@ -2313,11 +2933,10 @@ pub(crate) fn apply_sgr(style: &mut Style, params: &Params) {
                 } else {
                     // Forme `38;2;r;g;b` : les groupes suivants portent la suite.
                     let rest: Vec<u16> = groups[i + 1..].iter().map(|s| s.first().copied().unwrap_or(0)).collect();
-                    let (c, used) = match extended_color(&rest, false) {
+                    match extended_color(&rest, false) {
                         Some(c) => (Some(c), extended_len(&rest)),
                         None => (None, 0),
-                    };
-                    (c, used)
+                    }
                 };
                 if let Some(c) = color {
                     if code == 38 { style.fg = c } else { style.bg = c }
@@ -2357,49 +2976,57 @@ fn extended_color(items: &[u16], colon_form: bool) -> Option<Color> {
 }
 ```
 
-Dans `term.rs`, `csi_dispatch`, avant `_ => {}` :
+`lib.rs` : `mod sgr;`. Dans `csi_dispatch`, avant `_ => {}` :
 
 ```rust
             ([], 'm') => crate::sgr::apply_sgr(&mut self.cursor.style, params),
 ```
 
-`lib.rs` : `mod sgr;`. Dans `mod tests` de `term.rs`, ajouter `use crate::cell::{Attrs, Style};`.
+Retirer `#[ignore]` de `erase_uses_current_background` dans `term/edit.rs`.
 
 - [ ] **Step 4: Vérifier que tout passe**
 
 Run: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace`
-Expected: tous `ok`.
+Expected: tous `ok`, zéro `ignored`.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.9"` ; CHANGELOG :
+`version = "0.1.0-alpha.10"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.9 — 2026-10-08 · « Attributs SGR »
+## 0.1.0-alpha.10 — 2026-10-08 · « Attributs SGR »
 
 - `rustty-vt` : gras, atténué, italique, souligné (avec sous-paramètres), clignotant, inversé, caché, barré, couleurs 16, 256 et vraies couleurs dans les deux syntaxes.
 ```
 
 ```bash
-git add Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/sgr.rs crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : attributs et couleurs SGR (0.1.0-alpha.9)"
+git add Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/sgr.rs crates/rustty-vt/src/term/perform.rs crates/rustty-vt/src/term/edit.rs crates/rustty-vt/tests/sgr.rs CHANGELOG.md
+git commit -m "rustty-vt : attributs et couleurs SGR (0.1.0-alpha.10)"
 ```
 
 ---
 
-### Task 10 : Modes DEC et ANSI, écran alternatif, forme du curseur
+### Task 11 : Modes DEC et ANSI, écran alternatif, forme du curseur
 
 **Files:**
-- Modify: `crates/rustty-vt/src/term.rs`
+- Create: `crates/rustty-vt/src/term/mode_ops.rs`
+- Modify: `crates/rustty-vt/src/term/mod.rs` (`mod mode_ops;`)
+- Modify: `crates/rustty-vt/src/term/perform.rs`
 
 **Interfaces:**
-- Produces: méthodes `Term` : `set_dec_mode(mode: u16, on: bool)`, `set_ansi_mode(mode: u16, on: bool)`, `enter_alt_screen(save_cursor: bool, clear: bool)`, `leave_alt_screen(restore_cursor: bool)`, `set_cursor_shape(param: u16)`. Arms `?h`, `?l`, `h`, `l`, ` q` dans `csi_dispatch`.
+- Produces: `mode_ops.rs` : `set_dec_mode(mode, on)`, `set_ansi_mode(mode, on)`, `enter_alt_screen(save_cursor, clear)`, `leave_alt_screen(restore_cursor)`, `set_cursor_shape(param)`. Arms `?h`, `?l`, `h`, `l`, ` q`.
 
 - [ ] **Step 1: Écrire les tests**
 
-Ajouter dans `mod tests` de `term.rs` :
+`term/mode_ops.rs`, bas de fichier :
 
 ```rust
+#[cfg(test)]
+mod tests {
+    use crate::cursor::CursorShape;
+    use crate::modes::{Modes, MouseMode};
+    use crate::term::test_support::{feed, term};
+
     #[test]
     fn mode_1049_saves_cursor_switches_and_restores() {
         let mut t = term(5, 2);
@@ -2493,26 +3120,32 @@ Ajouter dans `mod tests` de `term.rs` :
             ("\x1b[6 q", CursorShape::Beam),
             ("\x1b[1 q", CursorShape::Block),
             ("\x1b[0 q", CursorShape::Block),
-            ("\x1b[4 q", CursorShape::Underline),
         ] {
             feed(&mut t, seq);
             assert_eq!(t.cursor_shape(), shape, "{seq:?}");
         }
     }
+}
 ```
-
-Ajouter `use crate::modes::MouseMode;` et `use crate::cursor::CursorShape;` dans le module de tests si `super::*` ne les apporte pas (ils sont importés en tête de `term.rs`, donc `super::*` suffit).
 
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `cargo test -p rustty-vt`
-Expected: les nouveaux tests échouent.
+Expected: module `mode_ops` introuvable.
 
 - [ ] **Step 3: Implémenter**
 
-Dans `impl Term` :
+`term/mode_ops.rs` :
 
 ```rust
+//! Modes DEC privés (DECSET/DECRST), modes ANSI (SM/RM), écrans alternatifs et
+//! forme du curseur (DECSCUSR).
+
+use super::Term;
+use crate::cursor::CursorShape;
+use crate::modes::MouseMode;
+
+impl Term {
     pub(crate) fn enter_alt_screen(&mut self, save_cursor: bool, clear: bool) {
         if self.modes.alt_screen {
             return;
@@ -2538,6 +3171,7 @@ Dans `impl Term` :
     }
 
     pub(crate) fn set_dec_mode(&mut self, mode: u16, on: bool) {
+        let mouse = |m: MouseMode| if on { m } else { MouseMode::None };
         match mode {
             1 => self.modes.app_cursor_keys = on,
             6 => {
@@ -2545,15 +3179,15 @@ Dans `impl Term` :
                 self.cursor_to(0, 0);
             }
             7 => self.modes.autowrap = on,
-            9 => self.modes.mouse = if on { MouseMode::X10 } else { MouseMode::None },
+            9 => self.modes.mouse = mouse(MouseMode::X10),
             12 => self.modes.cursor_blink = on,
             25 => self.modes.cursor_visible = on,
             47 => {
                 if on { self.enter_alt_screen(false, false) } else { self.leave_alt_screen(false) }
             }
-            1000 => self.modes.mouse = if on { MouseMode::Normal } else { MouseMode::None },
-            1002 => self.modes.mouse = if on { MouseMode::ButtonEvent } else { MouseMode::None },
-            1003 => self.modes.mouse = if on { MouseMode::AnyEvent } else { MouseMode::None },
+            1000 => self.modes.mouse = mouse(MouseMode::Normal),
+            1002 => self.modes.mouse = mouse(MouseMode::ButtonEvent),
+            1003 => self.modes.mouse = mouse(MouseMode::AnyEvent),
             1004 => self.modes.focus_events = on,
             1006 => self.modes.mouse_sgr = on,
             1047 => {
@@ -2582,25 +3216,36 @@ Dans `impl Term` :
     }
 
     pub(crate) fn set_cursor_shape(&mut self, param: u16) {
-        self.cursor_shape = match param {
-            3 | 4 => CursorShape::Underline,
-            5 | 6 => CursorShape::Beam,
-            _ => CursorShape::Block,
-        };
+        self.cursor_shape = CursorShape::from_decscusr(param);
     }
+}
 ```
 
-Ajouter `use crate::modes::{Modes, MouseMode};` en remplacement de l'import de `Modes`. Dans `csi_dispatch`, avant `_ => {}` :
+`term/mod.rs` : `mod mode_ops;`. Dans `csi_dispatch`, avant `_ => {}` :
 
 ```rust
-            ([b'?'], 'h') => p.iter().for_each(|&m| self.set_dec_mode(m, true)),
-            ([b'?'], 'l') => p.iter().for_each(|&m| self.set_dec_mode(m, false)),
-            ([], 'h') => p.iter().for_each(|&m| self.set_ansi_mode(m, true)),
-            ([], 'l') => p.iter().for_each(|&m| self.set_ansi_mode(m, false)),
+            ([b'?'], 'h') => {
+                for &m in &p {
+                    self.set_dec_mode(m, true);
+                }
+            }
+            ([b'?'], 'l') => {
+                for &m in &p {
+                    self.set_dec_mode(m, false);
+                }
+            }
+            ([], 'h') => {
+                for &m in &p {
+                    self.set_ansi_mode(m, true);
+                }
+            }
+            ([], 'l') => {
+                for &m in &p {
+                    self.set_ansi_mode(m, false);
+                }
+            }
             ([b' '], 'q') => self.set_cursor_shape(raw(&p, 0)),
 ```
-
-Si l'emprunteur refuse `p.iter().for_each(|&m| self.set_dec_mode(...))` (fermeture empruntant `self`), écrire une boucle `for &m in &p { self.set_dec_mode(m, true); }` ; `p` est un `Vec` local, pas un emprunt de `self`.
 
 - [ ] **Step 4: Vérifier que tout passe**
 
@@ -2609,37 +3254,45 @@ Expected: tous `ok`.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.10"` ; CHANGELOG :
+`version = "0.1.0-alpha.11"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.10 — 2026-10-08 · « Modes et écran alternatif »
+## 0.1.0-alpha.11 — 2026-10-08 · « Modes et écran alternatif »
 
-- `rustty-vt` : modes DEC (touches application, origine, autowrap, visibilité et clignotement du curseur, souris X10/normal/bouton/tout, SGR souris, focus, collage encadré), écrans alternatifs 47/1047/1049, modes ANSI insertion et LNM, forme du curseur DECSCUSR.
+- `rustty-vt` : modes DEC (touches application, origine, autowrap, curseur, souris, SGR souris, focus, collage encadré), écrans alternatifs 47/1047/1049, modes ANSI insertion et LNM, forme du curseur DECSCUSR.
 ```
 
 ```bash
-git add Cargo.toml crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : modes DEC et ANSI, écran alternatif, forme du curseur (0.1.0-alpha.10)"
+git add Cargo.toml crates/rustty-vt/src/term/mod.rs crates/rustty-vt/src/term/mode_ops.rs crates/rustty-vt/src/term/perform.rs CHANGELOG.md
+git commit -m "rustty-vt : modes DEC et ANSI, écran alternatif, forme du curseur (0.1.0-alpha.11)"
 ```
 
 ---
 
-### Task 11 : OSC (titre, presse-papiers) et réponses aux requêtes (DA, DSR)
+### Task 12 : OSC (titre, presse-papiers) et rapports (DA, DSR)
 
 **Files:**
-- Modify: `crates/rustty-vt/src/term.rs`
-- Modify: `crates/rustty-vt/Cargo.toml` (dépendance `base64`)
+- Create: `crates/rustty-vt/src/term/osc.rs`
+- Create: `crates/rustty-vt/src/term/reports.rs`
+- Modify: `crates/rustty-vt/src/term/mod.rs` (`mod osc; mod reports;`)
+- Modify: `crates/rustty-vt/src/term/perform.rs` (`osc_dispatch`, arms `c`, `>c`, `n`, `?n`)
+- Modify: `crates/rustty-vt/Cargo.toml` (`base64`)
 
 **Interfaces:**
-- Produces: `osc_dispatch` complet pour 0, 2, 52 ; méthodes `Term` : `set_title(String)`, `respond(&[u8])`, `device_attributes()`, `device_status_report(mode: u16, private: bool)`. Arms `c`, `>c`, `n`, `?n` dans `csi_dispatch`.
+- Produces: `osc.rs` : `set_title(String)`, `set_clipboard_from_base64(data: &[u8])`. `reports.rs` : `device_attributes()`, `secondary_device_attributes()`, `device_status_report(mode, private)`.
 
 - [ ] **Step 1: Écrire les tests**
 
-Ajouter dans `mod tests` de `term.rs` :
+`term/osc.rs`, bas de fichier :
 
 ```rust
+#[cfg(test)]
+mod tests {
+    use crate::outbox::TermEvent;
+    use crate::term::test_support::{feed, term};
+
     #[test]
-    fn osc_title_with_bel_and_st_terminators() {
+    fn title_with_bel_and_st_terminators() {
         let mut t = term(5, 1);
         feed(&mut t, "\x1b]0;Hello\x07");
         assert_eq!(t.title(), "Hello");
@@ -2670,6 +3323,15 @@ Ajouter dans `mod tests` de `term.rs` :
         assert!(t.drain_events().is_empty());
         assert!(t.drain_responses().is_empty(), "ne jamais divulguer le presse-papiers");
     }
+}
+```
+
+`term/reports.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::term::test_support::{feed, term};
 
     #[test]
     fn primary_and_secondary_device_attributes() {
@@ -2692,64 +3354,80 @@ Ajouter dans `mod tests` de `term.rs` :
         feed(&mut t, "\x1b[?6n");
         assert_eq!(t.drain_responses(), b"\x1b[?2;1R".to_vec());
     }
+}
 ```
 
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `cargo test -p rustty-vt`
-Expected: échecs (titre vide, réponses vides).
+Expected: modules introuvables.
 
 - [ ] **Step 3: Implémenter**
 
-`crates/rustty-vt/Cargo.toml`, `[dependencies]` : ajouter `base64.workspace = true`.
+`Cargo.toml` de la crate, `[dependencies]` : `base64.workspace = true`.
 
-Dans `impl Term` :
+`term/osc.rs` :
 
 ```rust
+//! Operating System Commands : titre de fenêtre et presse-papiers.
+
+use base64::Engine as _;
+
+use super::Term;
+use crate::outbox::TermEvent;
+
+impl Term {
     pub(crate) fn set_title(&mut self, title: String) {
         self.title.clone_from(&title);
-        self.push_event(TermEvent::Title(title));
+        self.outbox.event(TermEvent::Title(title));
     }
 
-    pub(crate) fn respond(&mut self, bytes: &[u8]) {
-        self.responses.extend_from_slice(bytes);
+    /// OSC 52 : `data` est le troisième paramètre. `?` (lecture) est refusé,
+    /// un base64 invalide est ignoré.
+    pub(crate) fn set_clipboard_from_base64(&mut self, data: &[u8]) {
+        if data == b"?" {
+            return;
+        }
+        let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(data) else { return };
+        let text = String::from_utf8_lossy(&bytes).into_owned();
+        self.outbox.event(TermEvent::SetClipboard(text));
     }
+}
+```
 
+`term/reports.rs` :
+
+```rust
+//! Réponses aux requêtes de l'application : identification et état.
+
+use super::Term;
+
+impl Term {
     /// DA1 : VT220 avec couleurs ANSI (22).
     pub(crate) fn device_attributes(&mut self) {
-        self.respond(b"\x1b[?62;22c");
+        self.outbox.respond(b"\x1b[?62;22c");
     }
 
     pub(crate) fn secondary_device_attributes(&mut self) {
-        self.respond(b"\x1b[>1;10;0c");
+        self.outbox.respond(b"\x1b[>1;10;0c");
     }
 
     pub(crate) fn device_status_report(&mut self, mode: u16, private: bool) {
         match mode {
-            5 => self.respond(b"\x1b[0n"),
+            5 => self.outbox.respond(b"\x1b[0n"),
             6 => {
-                let row = if self.modes.origin { self.cursor.row.saturating_sub(self.scroll_top) } else { self.cursor.row };
+                let row = if self.modes.origin { self.cursor.row.saturating_sub(self.region.top) } else { self.cursor.row };
                 let prefix = if private { "?" } else { "" };
                 let reply = format!("\x1b[{prefix}{};{}R", row + 1, self.cursor.col + 1);
-                self.respond(reply.as_bytes());
+                self.outbox.respond(reply.as_bytes());
             }
             _ => {}
         }
     }
-
-    fn handle_osc52(&mut self, params: &[&[u8]]) {
-        use base64::Engine as _;
-        let Some(data) = params.get(2) else { return };
-        if data == b"?" {
-            return; // requête de lecture : jamais honorée
-        }
-        let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(data) else { return };
-        let text = String::from_utf8_lossy(&bytes).into_owned();
-        self.push_event(TermEvent::SetClipboard(text));
-    }
+}
 ```
 
-Remplacer `osc_dispatch` dans `impl Perform for Term` :
+`term/mod.rs` : `mod osc; mod reports;`. Dans `perform.rs`, remplacer `osc_dispatch` :
 
 ```rust
     fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
@@ -2759,7 +3437,11 @@ Remplacer `osc_dispatch` dans `impl Perform for Term` :
                 let title = params.get(1).map(|t| String::from_utf8_lossy(t).into_owned()).unwrap_or_default();
                 self.set_title(title);
             }
-            b"52" => self.handle_osc52(params),
+            b"52" => {
+                if let Some(data) = params.get(2) {
+                    self.set_clipboard_from_base64(data);
+                }
+            }
             _ => {}
         }
     }
@@ -2781,77 +3463,37 @@ Expected: tous `ok`.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.11"` ; CHANGELOG :
+`version = "0.1.0-alpha.12"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.11 — 2026-10-08 · « Titre, presse-papiers et requêtes »
+## 0.1.0-alpha.12 — 2026-10-08 · « Titre, presse-papiers et requêtes »
 
-- `rustty-vt` : titre de fenêtre (OSC 0/2), écriture du presse-papiers (OSC 52, lecture refusée), réponses DA1, DA2, DSR 5 et 6 (dont la forme DEC privée).
+- `rustty-vt` : titre de fenêtre (OSC 0/2), écriture du presse-papiers (OSC 52, lecture refusée), réponses DA1, DA2, DSR 5 et 6.
 ```
 
 ```bash
-git add Cargo.toml Cargo.lock crates/rustty-vt/Cargo.toml crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : OSC titre et presse-papiers, réponses DA et DSR (0.1.0-alpha.11)"
+git add Cargo.toml Cargo.lock crates/rustty-vt/Cargo.toml crates/rustty-vt/src/term/mod.rs crates/rustty-vt/src/term/osc.rs crates/rustty-vt/src/term/reports.rs crates/rustty-vt/src/term/perform.rs CHANGELOG.md
+git commit -m "rustty-vt : OSC titre et presse-papiers, réponses DA et DSR (0.1.0-alpha.12)"
 ```
 
 ---
 
-### Task 12 : Jeux de caractères, tabulations et séquences ESC (IND, RI, NEL, HTS, RIS)
+### Task 13 : Séquences ESC (IND, RI, NEL, HTS, désignation G0/G1), TBC et RIS
 
 **Files:**
-- Modify: `crates/rustty-vt/src/charset.rs`
-- Modify: `crates/rustty-vt/src/term.rs`
+- Create: `crates/rustty-vt/src/term/reset.rs`
+- Modify: `crates/rustty-vt/src/term/scroll.rs` (`reverse_index`)
+- Modify: `crates/rustty-vt/src/term/mod.rs` (`mod reset;`)
+- Modify: `crates/rustty-vt/src/term/perform.rs`
 
 **Interfaces:**
-- Produces: `Charset::map` avec la table DEC Special Graphics ; méthodes `Term` : `reverse_index()`, `set_tab_stop()`, `clear_tab_stops(mode: u16)`, `reset()`. Arms `esc_dispatch` : `D`, `E`, `H`, `M`, `c`, `( 0`, `( B`, `) 0`, `) B` ; arm `csi_dispatch` : `g`.
+- Produces: `scroll.rs` : `reverse_index()`. `reset.rs` : `reset()`. Arms `esc_dispatch` : `D`, `E`, `H`, `M`, `c`, `( 0`, `( B`, `) 0`, `) B` ; arm `csi_dispatch` : `g` (délégué à `TabStops`).
 
 - [ ] **Step 1: Écrire les tests**
 
-Dans `charset.rs`, bas de fichier :
+Ajouter dans `mod tests` de `term/scroll.rs` :
 
 ```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ascii_is_identity() {
-        assert_eq!(Charset::Ascii.map('q'), 'q');
-    }
-
-    #[test]
-    fn dec_special_graphics_maps_line_drawing() {
-        let g = Charset::DecSpecialGraphics;
-        assert_eq!(g.map('q'), '─');
-        assert_eq!(g.map('x'), '│');
-        assert_eq!(g.map('l'), '┌');
-        assert_eq!(g.map('k'), '┐');
-        assert_eq!(g.map('m'), '└');
-        assert_eq!(g.map('j'), '┘');
-        assert_eq!(g.map('n'), '┼');
-        assert_eq!(g.map('a'), '▒');
-        assert_eq!(g.map('A'), 'A', "les lettres hors table sont inchangées");
-    }
-}
-```
-
-Dans `mod tests` de `term.rs` :
-
-```rust
-    #[test]
-    fn g0_dec_graphics_via_esc_paren_zero() {
-        let mut t = term(5, 1);
-        feed(&mut t, "\x1b(0qx\x1b(Bq");
-        assert_eq!(t.text(), vec!["─│q"]);
-    }
-
-    #[test]
-    fn g1_selected_with_shift_out() {
-        let mut t = term(5, 1);
-        feed(&mut t, "\x1b)0q\x0eq\x0fq");
-        assert_eq!(t.text(), vec!["q─q"]);
-    }
-
     #[test]
     fn index_and_reverse_index_scroll_at_region_edges() {
         let mut t = term(1, 3);
@@ -2867,6 +3509,24 @@ Dans `mod tests` de `term.rs` :
         feed(&mut t, "abc\x1bEx");
         assert_eq!(t.text(), vec!["abc", "x"]);
     }
+```
+
+Ajouter dans `mod tests` de `term/perform.rs` :
+
+```rust
+    #[test]
+    fn g0_dec_graphics_via_esc_paren_zero() {
+        let mut t = term(5, 1);
+        feed(&mut t, "\x1b(0qx\x1b(Bq");
+        assert_eq!(t.text(), vec!["─│q"]);
+    }
+
+    #[test]
+    fn g1_designated_then_selected_with_shift_out() {
+        let mut t = term(5, 1);
+        feed(&mut t, "\x1b)0q\x0eq\x0fq");
+        assert_eq!(t.text(), vec!["q─q"]);
+    }
 
     #[test]
     fn tab_stops_can_be_set_and_cleared() {
@@ -2878,102 +3538,68 @@ Dans `mod tests` de `term.rs` :
         feed(&mut t, "\x1b[3g\x1b[1;1H\t");
         assert_eq!(t.cursor().col, 19, "TBC 3 retire tous les taquets");
     }
+```
+
+`term/reset.rs`, bas de fichier :
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::cursor::Cursor;
+    use crate::modes::Modes;
+    use crate::term::test_support::{feed, term};
 
     #[test]
-    fn ris_resets_everything_but_keeps_size() {
+    fn ris_resets_everything_but_keeps_size_and_history() {
         let mut t = term(5, 2);
-        feed(&mut t, "abc\x1b[?25l\x1b[31m\x1b[2;2r\x1b]0;T\x07\x1bc");
+        feed(&mut t, "a\r\nb\r\nc\x1b[?25l\x1b[31m\x1b[1;2r\x1b]0;T\x07\x1bc");
         assert_eq!(t.text(), vec!["", ""]);
         assert_eq!(*t.modes(), Modes::default());
         assert_eq!(t.cursor(), Cursor::default());
-        assert_eq!((t.scroll_top, t.scroll_bottom), (0, 1));
+        assert_eq!((t.region.top, t.region.bottom), (0, 1));
         assert_eq!(t.title(), "");
         assert_eq!((t.grid().cols(), t.grid().rows()), (5, 2));
+        assert_eq!(t.scrollback().len(), 1, "l'historique survit à RIS, CSI 3 J existe pour lui");
     }
+}
 ```
 
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `cargo test -p rustty-vt`
-Expected: échecs.
+Expected: `reset` introuvable, tests ESC en échec.
 
 - [ ] **Step 3: Implémenter**
 
-`charset.rs`, remplacer `map` :
-
-```rust
-    pub fn map(self, c: char) -> char {
-        match self {
-            Self::Ascii => c,
-            Self::DecSpecialGraphics => match c {
-                '`' => '◆',
-                'a' => '▒',
-                'b' => '␉',
-                'c' => '␌',
-                'd' => '␍',
-                'e' => '␊',
-                'f' => '°',
-                'g' => '±',
-                'h' => '␤',
-                'i' => '␋',
-                'j' => '┘',
-                'k' => '┐',
-                'l' => '┌',
-                'm' => '└',
-                'n' => '┼',
-                'o' => '⎺',
-                'p' => '⎻',
-                'q' => '─',
-                'r' => '⎼',
-                's' => '⎽',
-                't' => '├',
-                'u' => '┤',
-                'v' => '┴',
-                'w' => '┬',
-                'x' => '│',
-                'y' => '≤',
-                'z' => '≥',
-                '{' => 'π',
-                '|' => '≠',
-                '}' => '£',
-                '~' => '·',
-                _ => c,
-            },
-        }
-    }
-```
-
-Dans `impl Term` de `term.rs` :
+Ajouter dans `impl Term` de `term/scroll.rs` :
 
 ```rust
     /// RI : monte d'une ligne, fait défiler vers le bas en haut de région.
     pub(crate) fn reverse_index(&mut self) {
         self.cursor.pending_wrap = false;
-        if self.cursor.row == self.scroll_top {
+        if self.cursor.row == self.region.top {
             self.scroll_down_region(1);
         } else if self.cursor.row > 0 {
             self.cursor.row -= 1;
         }
     }
+```
 
-    pub(crate) fn set_tab_stop(&mut self) {
-        let col = self.cursor.col;
-        self.tabs[col] = true;
-    }
+`term/reset.rs` :
 
-    pub(crate) fn clear_tab_stops(&mut self, mode: u16) {
-        match mode {
-            0 => {
-                let col = self.cursor.col;
-                self.tabs[col] = false;
-            }
-            3 => self.tabs.fill(false),
-            _ => {}
-        }
-    }
+```rust
+//! Remise à l'état initial (RIS) et, en tâche 15, redimensionnement.
 
-    /// RIS : état initial, taille conservée. Le scrollback est conservé aussi
-    /// (xterm le garde ; `CSI 3 J` existe pour l'effacer).
+use super::Term;
+use crate::charset::Charsets;
+use crate::cursor::{Cursor, CursorShape, SavedCursor};
+use crate::grid::Grid;
+use crate::modes::Modes;
+use crate::region::ScrollRegion;
+use crate::tabs::TabStops;
+
+impl Term {
+    /// RIS : état initial, taille et historique conservés.
     pub(crate) fn reset(&mut self) {
         let (cols, rows) = (self.cols(), self.rows());
         self.grid = Grid::new(cols, rows);
@@ -2983,17 +3609,16 @@ Dans `impl Term` de `term.rs` :
         self.saved_cursor_alt = SavedCursor::default();
         self.modes = Modes::default();
         self.cursor_shape = CursorShape::default();
-        self.scroll_top = 0;
-        self.scroll_bottom = rows - 1;
-        self.tabs = Self::default_tabs(cols);
-        self.charsets = [Charset::Ascii; 2];
-        self.active_charset = 0;
+        self.region = ScrollRegion::full(rows);
+        self.tabs = TabStops::new(cols);
+        self.charsets = Charsets::default();
         self.title.clear();
         self.display_offset = 0;
     }
+}
 ```
 
-Remplacer `esc_dispatch` :
+`term/mod.rs` : `mod reset;`. Dans `perform.rs`, remplacer `esc_dispatch` (ajouter `use crate::charset::Charset;`) :
 
 ```rust
     fn esc_dispatch(&mut self, intermediates: &[u8], _ignore: bool, byte: u8) {
@@ -3005,13 +3630,13 @@ Remplacer `esc_dispatch` :
                 self.linefeed();
                 self.carriage_return();
             }
-            ([], b'H') => self.set_tab_stop(),
+            ([], b'H') => self.tabs.set(self.cursor.col),
             ([], b'M') => self.reverse_index(),
             ([], b'c') => self.reset(),
-            ([b'('], b'0') => self.charsets[0] = Charset::DecSpecialGraphics,
-            ([b'('], b'B') => self.charsets[0] = Charset::Ascii,
-            ([b')'], b'0') => self.charsets[1] = Charset::DecSpecialGraphics,
-            ([b')'], b'B') => self.charsets[1] = Charset::Ascii,
+            ([b'('], b'0') => self.charsets.designate(0, Charset::DecSpecialGraphics),
+            ([b'('], b'B') => self.charsets.designate(0, Charset::Ascii),
+            ([b')'], b'0') => self.charsets.designate(1, Charset::DecSpecialGraphics),
+            ([b')'], b'B') => self.charsets.designate(1, Charset::Ascii),
             _ => {}
         }
     }
@@ -3020,10 +3645,12 @@ Remplacer `esc_dispatch` :
 Dans `csi_dispatch`, avant `_ => {}` :
 
 ```rust
-            ([], 'g') => self.clear_tab_stops(raw(&p, 0)),
+            ([], 'g') => match raw(&p, 0) {
+                0 => self.tabs.clear(self.cursor.col),
+                3 => self.tabs.clear_all(),
+                _ => {}
+            },
 ```
-
-Attention : `linefeed` applique LNM ; pour `ESC D` (IND) ce n'est pas strictement conforme mais sans effet pratique. Si un test futur l'exige, extraire une fonction `index()` sans le traitement LNM.
 
 - [ ] **Step 4: Vérifier que tout passe**
 
@@ -3032,32 +3659,32 @@ Expected: tous `ok`.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.12"` ; CHANGELOG :
+`version = "0.1.0-alpha.13"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.12 — 2026-10-08 · « Jeux de caractères et tabulations »
+## 0.1.0-alpha.13 — 2026-10-08 · « Séquences ESC et réinitialisation »
 
-- `rustty-vt` : jeu graphique DEC pour les lignes de boîte (G0/G1, SI/SO), IND, RI, NEL, taquets de tabulation HTS/TBC, réinitialisation RIS.
+- `rustty-vt` : IND, RI, NEL, HTS/TBC, désignation G0/G1 du jeu graphique DEC, RIS.
 ```
 
 ```bash
-git add Cargo.toml crates/rustty-vt/src/charset.rs crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : jeux de caractères, tabulations et séquences ESC (0.1.0-alpha.12)"
+git add Cargo.toml crates/rustty-vt/src/term/mod.rs crates/rustty-vt/src/term/reset.rs crates/rustty-vt/src/term/scroll.rs crates/rustty-vt/src/term/perform.rs CHANGELOG.md
+git commit -m "rustty-vt : séquences ESC, tabulations et réinitialisation (0.1.0-alpha.13)"
 ```
 
 ---
 
-### Task 13 : Caractères larges
+### Task 14 : Caractères larges
 
 **Files:**
-- Modify: `crates/rustty-vt/src/term.rs` (`print`, `put_char`)
+- Modify: `crates/rustty-vt/src/term/print.rs`
 
 **Interfaces:**
-- Produces: `put_char(c, width: usize)` gère `width == 2` : pose `WIDE` + `WIDE_CONTINUATION`, passe à la ligne si une seule colonne reste, et nettoie la moitié orpheline quand on écrase une moitié de caractère large.
+- Produces: `print_char` route `width == 2` vers `put_char(c, 2)` ; `put_char` pose `WIDE` + `WIDE_CONTINUATION`, passe à la ligne s'il ne reste qu'une colonne, nettoie la moitié orpheline quand on écrase une moitié de large ; `clear_wide_partner(col, row)`.
 
 - [ ] **Step 1: Écrire les tests**
 
-Dans `mod tests` de `term.rs` :
+Ajouter dans `mod tests` de `term/print.rs` :
 
 ```rust
     #[test]
@@ -3084,17 +3711,21 @@ Dans `mod tests` de `term.rs` :
     #[test]
     fn wide_char_at_last_column_without_autowrap_is_dropped() {
         let mut t = term(4, 1);
-        feed(&mut t, "\x1b[?7labc漢x");
+        t.modes.autowrap = false;
+        feed(&mut t, "abc漢x");
         assert_eq!(t.text(), vec!["abcx"], "le large n'a pas tenu et est abandonné, x prend la dernière colonne");
     }
 
     #[test]
     fn overwriting_half_of_a_wide_char_clears_the_other_half() {
         let mut t = term(5, 1);
-        feed(&mut t, "漢漢\x1b[1;2Hx");
+        feed(&mut t, "漢漢");
+        t.cursor.col = 1;
+        feed(&mut t, "x");
         assert_eq!(t.text(), vec![" x漢"]);
         assert!(!t.grid().cell(0, 0).is_wide());
-        feed(&mut t, "\x1b[1;3Hy");
+        t.cursor.col = 2;
+        feed(&mut t, "y");
         assert_eq!(t.text(), vec![" xy"]);
         assert!(!t.grid().cell(3, 0).is_wide_continuation());
     }
@@ -3113,6 +3744,13 @@ Dans `mod tests` de `term.rs` :
         feed(&mut t, "漢\u{301}");
         assert_eq!(t.grid().line(0).zerowidth(0), Some("\u{301}"));
     }
+
+    #[test]
+    fn wide_char_in_single_column_grid_is_narrowed_not_panicking() {
+        let mut t = term(1, 2);
+        feed(&mut t, "漢x");
+        assert_eq!(t.text(), vec!["漢", "x"]);
+    }
 ```
 
 - [ ] **Step 2: Vérifier l'échec**
@@ -3122,9 +3760,18 @@ Expected: échecs (le large est traité comme étroit).
 
 - [ ] **Step 3: Implémenter**
 
-Remplacer `put_char` et `print` dans `term.rs` :
+Dans `term/print.rs`, remplacer `print_char` et `put_char`, et ajouter `clear_wide_partner` (ajouter `use crate::cell::Attrs;`) :
 
 ```rust
+    pub(crate) fn print_char(&mut self, c: char) {
+        let c = self.charsets.map(c);
+        match c.width().unwrap_or(1) {
+            0 => self.put_zerowidth(c),
+            2 => self.put_char(c, 2),
+            _ => self.put_char(c, 1),
+        }
+    }
+
     /// Si la cellule `col` est une moitié de caractère large, efface l'autre moitié.
     fn clear_wide_partner(&mut self, col: usize, row: usize) {
         let template = self.erase_template();
@@ -3137,7 +3784,7 @@ Remplacer `put_char` et `print` dans `term.rs` :
     }
 
     /// Écrit un caractère de largeur `width` (1 ou 2) sous le curseur.
-    fn put_char(&mut self, c: char, width: usize) {
+    pub(crate) fn put_char(&mut self, c: char, width: usize) {
         let cols = self.cols();
         // Une grille d'une colonne ne peut pas contenir un large : on le traite
         // comme étroit plutôt que d'indexer hors de la ligne.
@@ -3175,7 +3822,7 @@ Remplacer `put_char` et `print` dans `term.rs` :
         let line = self.active_grid_mut().line_mut(row);
         line.set(col, Cell::new(c, style));
         if width == 2 {
-            let mut cont = Cell::erased(self.cursor.style);
+            let mut cont = template;
             cont.style.attrs.insert(Attrs::WIDE_CONTINUATION);
             line.set(col + 1, cont);
         }
@@ -3186,66 +3833,42 @@ Remplacer `put_char` et `print` dans `term.rs` :
             self.cursor.pending_wrap = true;
         }
     }
-
-    /// Retour à la ligne implicite : marque la ligne et descend.
-    fn wrap_line(&mut self) {
-        let row = self.cursor.row;
-        self.active_grid_mut().line_mut(row).wrapped = true;
-        self.carriage_return();
-        self.linefeed();
-    }
 ```
-
-Et dans `impl Perform for Term` :
-
-```rust
-    fn print(&mut self, c: char) {
-        let c = self.charsets[self.active_charset].map(c);
-        match c.width().unwrap_or(1) {
-            0 => self.put_zerowidth(c),
-            2 => self.put_char(c, 2),
-            _ => self.put_char(c, 1),
-        }
-    }
-```
-
-En tête de `term.rs`, remplacer `use crate::cell::Cell;` par `use crate::cell::{Attrs, Cell};`.
-
-Vérifier que `put_zerowidth` (tâche 6) cible bien la première moitié d'un large : après `漢` en colonnes 0-1 le curseur est en 2, `col - 1 = 1` est une continuation, donc on remonte à 0. C'est le comportement attendu par le dernier test.
 
 - [ ] **Step 4: Vérifier que tout passe**
 
 Run: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace`
-Expected: tous `ok`, y compris les anciens tests de la tâche 6.
+Expected: tous `ok`, y compris les tests de la tâche 7.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.13"` ; CHANGELOG :
+`version = "0.1.0-alpha.14"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.13 — 2026-10-08 · « Caractères larges »
+## 0.1.0-alpha.14 — 2026-10-08 · « Caractères larges »
 
 - `rustty-vt` : caractères CJK et emojis sur deux cellules, retour à la ligne en fin de ligne, nettoyage des moitiés orphelines, combinants attachés à la première moitié.
 ```
 
 ```bash
-git add Cargo.toml crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : caractères larges sur deux cellules (0.1.0-alpha.13)"
+git add Cargo.toml crates/rustty-vt/src/term/print.rs CHANGELOG.md
+git commit -m "rustty-vt : caractères larges sur deux cellules (0.1.0-alpha.14)"
 ```
 
 ---
 
-### Task 14 : Redimensionnement
+### Task 15 : Redimensionnement
 
 **Files:**
-- Modify: `crates/rustty-vt/src/term.rs`
+- Modify: `crates/rustty-vt/src/term/reset.rs`
+- Modify: `crates/rustty-vt/src/term/mod.rs` (réexport public de `resize` : la méthode est publique dans `reset.rs`, rien à faire côté `mod.rs` sauf la doc)
 
 **Interfaces:**
-- Produces: `Term::resize(&mut self, cols: usize, rows: usize)` : redimensionne les deux grilles et l'historique, borne le curseur et les curseurs sauvegardés, réinitialise la région de défilement, recalcule les taquets, annule `pending_wrap` et le décalage d'affichage. Pas de rewrap (v0.2).
+- Produces: `pub fn Term::resize(&mut self, cols, rows)` : redimensionne grilles et historique, borne curseur et curseurs sauvegardés, réinitialise région, taquets et décalage d'affichage. Pas de rewrap (v0.2).
 
 - [ ] **Step 1: Écrire les tests**
 
-Dans `mod tests` de `term.rs` :
+Ajouter dans `mod tests` de `term/reset.rs` :
 
 ```rust
     #[test]
@@ -3255,7 +3878,7 @@ Dans `mod tests` de `term.rs` :
         t.resize(5, 4);
         assert_eq!(t.text(), vec!["abc", "d", "", ""]);
         assert_eq!((t.cursor().col, t.cursor().row), (1, 1));
-        assert_eq!((t.scroll_top, t.scroll_bottom), (0, 3));
+        assert_eq!((t.region.top, t.region.bottom), (0, 3));
     }
 
     #[test]
@@ -3264,7 +3887,7 @@ Dans `mod tests` de `term.rs` :
         feed(&mut t, "\x1b[2;4r\x1b[4;9H\x1b7");
         t.resize(4, 2);
         assert_eq!((t.cursor().col, t.cursor().row), (3, 1));
-        assert_eq!((t.scroll_top, t.scroll_bottom), (0, 1));
+        assert_eq!((t.region.top, t.region.bottom), (0, 1));
         feed(&mut t, "\x1b8");
         assert_eq!((t.cursor().col, t.cursor().row), (3, 1), "le curseur sauvegardé est borné aussi");
         feed(&mut t, "x");
@@ -3307,7 +3930,7 @@ Expected: `no method named resize`.
 
 - [ ] **Step 3: Implémenter**
 
-Dans `impl Term` (section publique) :
+Ajouter dans `impl Term` de `term/reset.rs` (ajouter `use crate::cell::Cell;`) :
 
 ```rust
     /// Nouvelle taille en cellules. Les lignes sont tronquées ou complétées,
@@ -3319,20 +3942,16 @@ Dans `impl Term` (section publique) :
         self.grid.resize(cols, rows, template);
         self.alt_grid.resize(cols, rows, template);
         self.scrollback.resize_lines(cols, template);
-        self.scroll_top = 0;
-        self.scroll_bottom = rows - 1;
-        self.tabs = Self::default_tabs(cols);
+        self.region = ScrollRegion::full(rows);
+        self.tabs = TabStops::new(cols);
         self.display_offset = 0;
-        self.cursor.pending_wrap = false;
-        self.cursor.col = self.cursor.col.min(cols - 1);
-        self.cursor.row = self.cursor.row.min(rows - 1);
-        for saved in [&mut self.saved_cursor, &mut self.saved_cursor_alt] {
-            saved.cursor.col = saved.cursor.col.min(cols - 1);
-            saved.cursor.row = saved.cursor.row.min(rows - 1);
-            saved.cursor.pending_wrap = false;
-        }
+        self.cursor.clamp(cols, rows);
+        self.saved_cursor.cursor.clamp(cols, rows);
+        self.saved_cursor_alt.cursor.clamp(cols, rows);
     }
 ```
+
+Mettre à jour le commentaire de module de `reset.rs` : `//! Remise à l'état initial (RIS) et redimensionnement : les deux opérations qui refondent l'état entier.`
 
 - [ ] **Step 4: Vérifier que tout passe**
 
@@ -3341,50 +3960,59 @@ Expected: tous `ok`.
 
 - [ ] **Step 5: Version, CHANGELOG, commit**
 
-`version = "0.1.0-alpha.14"` ; CHANGELOG :
+`version = "0.1.0-alpha.15"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.14 — 2026-10-08 · « Redimensionnement »
+## 0.1.0-alpha.15 — 2026-10-08 · « Redimensionnement »
 
 - `rustty-vt` : `Term::resize` borne curseurs et région, redimensionne grilles et historique, sans rewrap.
 ```
 
 ```bash
-git add Cargo.toml crates/rustty-vt/src/term.rs CHANGELOG.md
-git commit -m "rustty-vt : redimensionnement du terminal (0.1.0-alpha.14)"
+git add Cargo.toml crates/rustty-vt/src/term/reset.rs CHANGELOG.md
+git commit -m "rustty-vt : redimensionnement du terminal (0.1.0-alpha.15)"
 ```
 
 ---
 
-### Task 15 : Instantané pour le renderer, défilement de l'affichage, fixtures et documentation
+### Task 16 : Instantané pour le renderer, défilement de l'affichage, fixtures et documentation
 
 **Files:**
 - Create: `crates/rustty-vt/src/snapshot.rs`
+- Create: `crates/rustty-vt/src/term/view.rs`
 - Create: `crates/rustty-vt/tests/fixtures.rs`
 - Create: `crates/rustty-vt/tests/snapshots/` (généré par `insta`)
-- Modify: `crates/rustty-vt/src/term.rs`
+- Modify: `crates/rustty-vt/src/term/mod.rs` (`mod view;`)
 - Modify: `crates/rustty-vt/src/lib.rs`
 - Modify: `crates/rustty-vt/Cargo.toml` (`insta` en dev-dependency)
 - Modify: `README.md`
 
 **Interfaces:**
 - Produces:
-  - `pub struct Snapshot { pub cols: usize, pub rows: usize, pub lines: Vec<Line>, pub cursor: Option<Cursor> (None si hors viewport ou invisible), pub cursor_shape: CursorShape, pub display_offset: usize, pub scrollback_len: usize, pub title: String }`
-  - `Term::snapshot(&self) -> Snapshot` : les `rows` lignes visibles compte tenu de `display_offset`.
-  - `Term::scroll_display(&mut self, delta: isize)` (positif = vers l'historique), `Term::scroll_display_to_bottom()`, `Term::display_offset() -> usize`.
-  - Toute sortie du programme (`input` qui modifie la grille) **ne** ramène **pas** l'affichage en bas ; c'est le binaire qui décide (option future). En revanche `resize` et RIS remettent à 0.
+  - `pub struct Snapshot { pub cols, pub rows, pub lines: Vec<Line>, pub cursor: Option<Cursor>, pub cursor_shape: CursorShape, pub display_offset: usize, pub scrollback_len: usize, pub title: String }`.
+  - `view.rs` : `pub fn snapshot(&self) -> Snapshot`, `pub fn scroll_display(&mut self, delta: isize)` (positif = vers l'historique), `pub fn scroll_display_to_bottom(&mut self)`, `pub fn display_offset(&self) -> usize`.
+  - La sortie du programme ne ramène pas l'affichage en bas ; c'est le binaire qui décide. `resize` et RIS remettent le décalage à 0.
 
 - [ ] **Step 1: Écrire les tests**
 
-Dans `mod tests` de `term.rs` :
+`term/view.rs`, bas de fichier :
 
 ```rust
+#[cfg(test)]
+mod tests {
+    use crate::term::test_support::{feed, term};
+    use crate::term::Term;
+
+    fn visible(t: &Term) -> Vec<String> {
+        t.snapshot().lines.iter().map(|l| l.text().trim_end().to_string()).collect()
+    }
+
     #[test]
     fn snapshot_shows_live_screen_by_default() {
         let mut t = term(3, 2);
         feed(&mut t, "a\r\nb");
         let s = t.snapshot();
-        assert_eq!(s.lines.iter().map(|l| l.text().trim_end().to_string()).collect::<Vec<_>>(), vec!["a", "b"]);
+        assert_eq!(visible(&t), vec!["a", "b"]);
         assert_eq!(s.cursor.map(|c| (c.col, c.row)), Some((1, 1)));
         assert_eq!((s.display_offset, s.scrollback_len), (0, 0));
     }
@@ -3395,12 +4023,11 @@ Dans `mod tests` de `term.rs` :
         feed(&mut t, "a\r\nb\r\nc\r\nd\x1b[H");
         assert_eq!(t.scrollback().len(), 2);
         t.scroll_display(1);
-        let s = t.snapshot();
-        assert_eq!(s.lines.iter().map(|l| l.text().trim_end().to_string()).collect::<Vec<_>>(), vec!["b", "c"]);
-        assert_eq!(s.cursor.map(|c| c.row), Some(1), "le curseur, en ligne 0 du vivant, descend d'une ligne à l'écran");
+        assert_eq!(visible(&t), vec!["b", "c"]);
+        assert_eq!(t.snapshot().cursor.map(|c| c.row), Some(1), "le curseur, en ligne 0 du vivant, descend d'une ligne à l'écran");
         t.scroll_display(5);
         assert_eq!(t.display_offset(), 2, "borné à l'historique");
-        assert_eq!(t.snapshot().lines.iter().map(|l| l.text().trim_end().to_string()).collect::<Vec<_>>(), vec!["a", "b"]);
+        assert_eq!(visible(&t), vec!["a", "b"]);
         assert!(t.snapshot().cursor.is_none(), "curseur hors viewport");
         t.scroll_display(-1);
         assert_eq!(t.display_offset(), 1);
@@ -3421,11 +4048,12 @@ Dans `mod tests` de `term.rs` :
         feed(&mut t, "a\r\nb");
         t.scroll_display(1);
         feed(&mut t, "\x1b[?1049hz");
-        assert_eq!(t.snapshot().lines[0].text().trim_end(), "z");
+        assert_eq!(visible(&t), vec!["z"]);
     }
+}
 ```
 
-`crates/rustty-vt/tests/fixtures.rs` (tests d'intégration, snapshots `insta`) :
+`crates/rustty-vt/tests/fixtures.rs` :
 
 ```rust
 //! Scénarios de bout en bout : une séquence réaliste, la grille attendue
@@ -3473,19 +4101,22 @@ fn garbage_input_does_not_panic() {
     t.input(&noise);
     t.input(b"\x1b[999999999;999999999H\x1b[?999999h\x1b]52;c;\x1b\\");
     assert_eq!((t.grid().cols(), t.grid().rows()), (5, 2));
+    let mut narrow = Term::new(1, 1, 0);
+    narrow.input("漢字\u{301}".as_bytes());
+    assert_eq!(narrow.grid().cols(), 1);
 }
 ```
 
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `cargo test -p rustty-vt`
-Expected: `no method named snapshot`, et `insta` introuvable.
+Expected: `view` introuvable, `insta` introuvable.
 
 - [ ] **Step 3: Implémenter**
 
-`crates/rustty-vt/Cargo.toml`, `[dev-dependencies]` : `insta.workspace = true`.
+`Cargo.toml` de la crate, `[dev-dependencies]` : `insta.workspace = true`.
 
-`crates/rustty-vt/src/snapshot.rs` :
+`snapshot.rs` :
 
 ```rust
 //! Copie figée de ce qui doit être dessiné. Le renderer ne touche jamais
@@ -3509,9 +4140,18 @@ pub struct Snapshot {
 }
 ```
 
-Dans `term.rs`, ajouter `use crate::line::Line;` et `use crate::snapshot::Snapshot;`, puis dans `impl Term` (section publique) :
+`term/view.rs` :
 
 ```rust
+//! Ce que l'interface voit : instantané de la zone affichée et défilement de
+//! l'affichage dans l'historique.
+
+use super::Term;
+use crate::cursor::Cursor;
+use crate::line::Line;
+use crate::snapshot::Snapshot;
+
+impl Term {
     pub fn display_offset(&self) -> usize {
         self.display_offset
     }
@@ -3535,7 +4175,7 @@ Dans `term.rs`, ajouter `use crate::line::Line;` et `use crate::snapshot::Snapsh
         let lines = (0..rows)
             .map(|r| {
                 if r < offset {
-                    // Ligne d'historique : offset-1 est la plus récente affichée en haut.
+                    // Ligne d'historique : offset-1 est la plus récente, affichée en haut.
                     self.scrollback.get(offset - 1 - r).cloned().unwrap_or_else(|| Line::new(grid.cols()))
                 } else {
                     grid.line(r - offset).clone()
@@ -3558,15 +4198,16 @@ Dans `term.rs`, ajouter `use crate::line::Line;` et `use crate::snapshot::Snapsh
             title: self.title.clone(),
         }
     }
+}
 ```
 
-`lib.rs` : `pub mod snapshot;` et `pub use snapshot::Snapshot;`.
+`term/mod.rs` : `mod view;`. `lib.rs` : `pub mod snapshot;` et `pub use snapshot::Snapshot;`.
 
-Lancer une première fois `cargo test -p rustty-vt` : les tests `insta` échouent en créant des fichiers `.snap.new`. Les inspecter avec `cargo insta review` (installer : `cargo install cargo-insta`) ou, sans l'outil, lire chaque `tests/snapshots/*.snap.new`, vérifier que la grille correspond à l'attendu décrit par le nom du test, puis renommer en `.snap`. Attendu notamment :
+Lancer `cargo test -p rustty-vt` : les tests `insta` créent des fichiers `.snap.new`. Les inspecter avec `cargo insta review` (installer : `cargo install cargo-insta`) ou, sans l'outil, lire chaque `tests/snapshots/*.snap.new`, vérifier que la grille correspond à l'attendu décrit par le nom du test, puis renommer en `.snap`. Attendu notamment :
 
-- `shell_prompt_with_colors_and_clear_line` : lignes `user@host:~$ ls`, `dir  file`, `$ `, curseur col=2 row=2.
+- `shell_prompt_with_colors_and_clear_line` : `user@host:~$ ls`, `dir  file`, `$ `, curseur col=2 row=2.
 - `box_drawing_with_dec_graphics` : `┌────┐`, `│    │`, `└────┘`.
-- `wide_chars_and_wrapping` : `日本`, `語テ`, `キス` puis `ト` sur une 4ᵉ ligne qui n'existe pas : avec 3 lignes la grille a défilé, on attend `語テ`, `キス`, `ト`.
+- `wide_chars_and_wrapping` : la grille 5×3 a défilé d'une ligne, on attend `語テ`, `キス`, `ト`.
 
 `README.md`, remplacer la section « Statut » par :
 
@@ -3587,30 +4228,29 @@ cargo insta review                           # accepter les snapshots de grille 
 - [ ] **Step 4: Vérifier que tout passe**
 
 Run: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace`
-Expected: tous `ok`, aucun `.snap.new` restant (`git status` ne montre que des `.snap`).
+Expected: tous `ok`, aucun `.snap.new` restant.
 
-- [ ] **Step 5: Version, CHANGELOG, commit**
+- [ ] **Step 5: Version, CHANGELOG, commit, push**
 
-`version = "0.1.0-alpha.15"` ; CHANGELOG :
+`version = "0.1.0-alpha.16"` ; CHANGELOG :
 
 ```markdown
-## 0.1.0-alpha.15 — 2026-10-08 · « Instantané et défilement de l'affichage »
+## 0.1.0-alpha.16 — 2026-10-08 · « Instantané et défilement de l'affichage »
 
 - `rustty-vt` : `Snapshot` pour le renderer, défilement de l'affichage dans l'historique, scénarios de bout en bout figés par insta, test de robustesse sur du bruit.
 - README : statut et commandes de développement.
 ```
 
 ```bash
-git add Cargo.toml Cargo.lock crates/rustty-vt/Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/snapshot.rs crates/rustty-vt/src/term.rs crates/rustty-vt/tests/fixtures.rs crates/rustty-vt/tests/snapshots README.md CHANGELOG.md
-git commit -m "rustty-vt : instantané, défilement de l'affichage et fixtures (0.1.0-alpha.15)"
+git add Cargo.toml Cargo.lock crates/rustty-vt/Cargo.toml crates/rustty-vt/src/lib.rs crates/rustty-vt/src/snapshot.rs crates/rustty-vt/src/term/mod.rs crates/rustty-vt/src/term/view.rs crates/rustty-vt/tests/fixtures.rs crates/rustty-vt/tests/snapshots README.md CHANGELOG.md
+git commit -m "rustty-vt : instantané, défilement de l'affichage et fixtures (0.1.0-alpha.16)"
 git push
 ```
 
-Après le push, attendre la CI verte sur les trois OS avant de passer au plan suivant (`gh run list --limit 3`, puis `gh run view <id>` ; filtrer par SHA car `--commit` est cassé).
+Après le push, attendre la CI verte sur les trois OS (`gh run list --limit 3`, puis `gh run view <id>` ; filtrer par SHA car `--commit` est cassé).
 
 ---
 
 ## Suite
 
 Plan suivant : `docs/superpowers/plans/2026-10-08-layout-et-config.md` (crates `rustty-layout` et `rustty-config`), à rédiger une fois ce plan exécuté et la CI verte.
-
