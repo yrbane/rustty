@@ -9,6 +9,8 @@ rust-version.workspace = true
 
 [dependencies]
 bitflags.workspace = true
+unicode-width.workspace = true
+vte.workspace = true
 
 [dev-dependencies]
 

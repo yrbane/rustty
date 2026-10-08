@@ -35,3 +35,7 @@ pub use modes::{Modes, MouseMode};
 pub use outbox::{Outbox, TermEvent};
 pub use region::ScrollRegion;
 pub use tabs::TabStops;
+
+pub mod term;
+
+pub use term::Term;
