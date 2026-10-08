@@ -167,3 +167,52 @@ fn dropping_a_pty_kills_the_child() {
     // Le lecteur cloné voit la fin du flux : Ok(0) ou une erreur, jamais un blocage infini.
     let _ = read_until(&mut *reader, "\u{0}jamais", Duration::from_secs(10));
 }
+
+#[test]
+fn large_output_is_delivered_in_order() {
+    // 2 000 lignes numérotées : bien plus qu'un bloc de lecture.
+    let shell = if cfg!(windows) {
+        Shell::new(
+            "cmd.exe",
+            vec![
+                "/C".into(),
+                "for /L %i in (1,1,2000) do @echo ligne-%i".into(),
+            ],
+        )
+    } else {
+        Shell::new(
+            "/bin/sh",
+            vec![
+                "-c".into(),
+                "i=1; while [ $i -le 2000 ]; do echo ligne-$i; i=$((i+1)); done".into(),
+            ],
+        )
+    };
+    let mut pty = Pty::spawn(&shell, PtySize::new(200, 50), &default_env(), None).unwrap();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let handle = rustty_pty::spawn_reader(pty.reader().unwrap(), tx);
+    let mut out = Vec::new();
+    for ev in rx.iter() {
+        match ev {
+            rustty_pty::PtyEvent::Data(d) => out.extend_from_slice(&d),
+            rustty_pty::PtyEvent::Eof => break,
+        }
+    }
+    handle.join().unwrap();
+    let text = String::from_utf8_lossy(&out);
+    let mut expected = 1;
+    for line in text
+        .lines()
+        .map(str::trim)
+        .filter(|l| l.starts_with("ligne-"))
+    {
+        assert_eq!(
+            line,
+            format!("ligne-{expected}"),
+            "ordre ou perte de lignes"
+        );
+        expected += 1;
+    }
+    assert_eq!(expected, 2001, "les 2000 lignes sont arrivées");
+    let _ = pty.wait();
+}

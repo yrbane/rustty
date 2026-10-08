@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.38 — 2026-10-08 · « Thread lecteur »
+
+- `rustty-pty` : `spawn_reader` lit le pseudo-terminal par blocs de 64 Kio et pousse `PtyEvent::Data` puis `Eof` dans un canal ou un rappel ; 2 000 lignes livrées dans l'ordre sans perte.
+
 ## 0.1.0-alpha.37 — 2026-10-08 · « Pseudo-terminal »
 
 - `rustty-pty` : `Pty::spawn` lance le shell dans un pseudo-terminal ; lecture clonable, écriture, redimensionnement, code de sortie, `kill`, et le processus est tué à la destruction. Tests avec un vrai shell sur Unix et Windows.
