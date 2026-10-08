@@ -1,0 +1,143 @@
+//! Le fichier de configuration d'exemple. Chaque valeur est le défaut : copier
+//! ce fichier ne change rien, le modifier change exactement ce qu'on touche.
+
+pub const DEFAULT_TOML: &str = r###"# Configuration de rustty — ~/.config/rustty/rustty.toml
+# Chaque valeur ci-dessous est la valeur par défaut : tout est optionnel.
+
+[font]
+# Famille de police ; repli automatique sur une police à chasse fixe du système.
+family = "monospace"
+# Taille en points.
+size = 11.0
+# Afficher le gras avec la couleur vive correspondante (0–7 → 8–15).
+bold_is_bright = false
+
+[window]
+# Opacité du fond, de 0.0 (transparent) à 1.0 (opaque).
+opacity = 1.0
+# Marge intérieure en pixels autour de la grille.
+padding = 4
+# Lignes d'historique conservées par fenêtre (plafond : 1 000 000).
+scrollback_lines = 10000
+# Demander confirmation avant de fermer une fenêtre dont le shell a des enfants.
+confirm_close_with_running_children = true
+
+[tabs]
+# Position de la barre d'onglets : "top", "bottom" ou "hidden".
+position = "top"
+# Nombre d'onglets à partir duquel la barre s'affiche.
+min_tabs = 1
+# Bouton de fermeture cliquable sur chaque onglet.
+close_button = true
+# Gabarit du titre : {index} et {title} sont remplacés.
+title_template = "{index}: {title}"
+
+[tabs.close_button_style]
+foreground = "#ffffff"
+background = "#d32f2f"
+hover_foreground = "#ffffff"
+hover_background = "#ef5350"
+
+[colors]
+# Thème Catppuccin Mocha.
+foreground = "#cdd6f4"
+background = "#1e1e2e"
+cursor = "#f5e0dc"
+selection_background = "#45475a"
+# Les 16 couleurs ANSI : 0–7 normales, 8–15 vives.
+palette = [
+  "#45475a", "#f38ba8", "#a6e3a1", "#f9e2af", "#89b4fa", "#f5c2e7", "#94e2d5", "#bac2de",
+  "#585b70", "#f38ba8", "#a6e3a1", "#f9e2af", "#89b4fa", "#f5c2e7", "#94e2d5", "#a6adc8",
+]
+
+[keys]
+# Les raccourcis ci-dessous sont ceux par défaut ; en ajouter en surcharge
+# un existant, et "none" délie une combinaison.
+# Actions sans paramètre : "new_tab", "close_tab", "next_tab", "prev_tab",
+# "close_window", "toggle_zoom", "rotate", "copy", "paste", "scroll_to_bottom",
+# "reload_config", "none".
+# Actions à paramètre : { split = "horizontal" | "vertical" },
+# { focus = "left" | "right" | "up" | "down" },
+# { resize = "narrower" | "wider" | "taller" | "shorter" },
+# { opacity = +0.05 }, { go_to_tab = 3 }, { scroll_lines = -3 }, { scroll_pages = 1 }.
+"ctrl+shift+t" = "new_tab"
+"ctrl+shift+q" = "close_tab"
+"ctrl+shift+w" = "close_window"
+"ctrl+shift+right" = "next_tab"
+"ctrl+shift+left" = "prev_tab"
+"alt+1" = { go_to_tab = 1 }
+"alt+2" = { go_to_tab = 2 }
+"alt+3" = { go_to_tab = 3 }
+"alt+4" = { go_to_tab = 4 }
+"alt+5" = { go_to_tab = 5 }
+"ctrl+shift+o" = { split = "horizontal" }
+"ctrl+shift+e" = { split = "vertical" }
+"shift+left" = { focus = "left" }
+"shift+right" = { focus = "right" }
+"shift+up" = { focus = "up" }
+"shift+down" = { focus = "down" }
+"ctrl+left" = { resize = "narrower" }
+"ctrl+right" = { resize = "wider" }
+"ctrl+up" = { resize = "taller" }
+"ctrl+down" = { resize = "shorter" }
+"ctrl+shift+z" = "toggle_zoom"
+"ctrl+shift+r" = "rotate"
+"ctrl+shift+c" = "copy"
+"ctrl+shift+v" = "paste"
+"shift+page_up" = { scroll_pages = 1 }
+"shift+page_down" = { scroll_pages = -1 }
+"ctrl+shift+end" = "scroll_to_bottom"
+"ctrl+shift+f5" = "reload_config"
+"###;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[test]
+    fn example_file_parses_to_the_defaults() {
+        let parsed = Config::from_str(DEFAULT_TOML).unwrap();
+        assert_eq!(
+            parsed,
+            Config::default(),
+            "chaque valeur de l'exemple doit être un défaut"
+        );
+    }
+
+    #[test]
+    fn example_file_is_published_in_docs() {
+        let published = include_str!("../../../docs/rustty.example.toml");
+        assert_eq!(
+            published, DEFAULT_TOML,
+            "régénérer docs/rustty.example.toml depuis DEFAULT_TOML"
+        );
+    }
+
+    #[test]
+    fn every_section_and_key_is_documented() {
+        for key in [
+            "[font]",
+            "family",
+            "size",
+            "bold_is_bright",
+            "[window]",
+            "opacity",
+            "padding",
+            "scrollback_lines",
+            "confirm_close_with_running_children",
+            "[tabs]",
+            "position",
+            "min_tabs",
+            "close_button",
+            "title_template",
+            "[tabs.close_button_style]",
+            "hover_background",
+            "[colors]",
+            "palette",
+            "[keys]",
+        ] {
+            assert!(DEFAULT_TOML.contains(key), "{key} absent de l'exemple");
+        }
+    }
+}

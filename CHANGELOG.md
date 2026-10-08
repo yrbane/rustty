@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.32 — 2026-10-08 · « Fichier d'exemple »
+
+- `rustty-config` : `DEFAULT_TOML`, fichier d'exemple commenté publié dans `docs/rustty.example.toml`, garanti égal aux défauts par les tests.
+- README : statut des trois crates et section Configuration.
+
 ## 0.1.0-alpha.31 — 2026-10-08 · « Chargement de la configuration »
 
 - `rustty-config` : `Config::load` (fichier absent = défauts, illisible = erreur avec le chemin), chemin par défaut `~/.config/rustty/rustty.toml` et équivalents macOS et Windows.
