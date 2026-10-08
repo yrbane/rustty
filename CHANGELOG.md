@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.49 — 2026-10-08 · « Barre d'onglets »
+
+- `rustty-render` : disposition de la barre d'onglets, boutons de fermeture ✕ sur pastille arrondie avec couleurs de survol, bouton « + », test de clic ; image de référence.
+- README : statut des cinq crates et régénération des images de référence.
+
 ## 0.1.0-alpha.48 — 2026-10-08 · « Renderer »
 
 - `rustty-render` : `Renderer` assemble fonds, glyphes (cache + atlas reconstruit au débordement), décorations et chrome en une passe ; opacité du fond par l'alpha ; images de référence comparées hors écran sur les trois OS.

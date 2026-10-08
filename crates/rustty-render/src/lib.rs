@@ -32,3 +32,9 @@ pub use grid::{
 pub mod renderer;
 
 pub use renderer::Renderer;
+pub mod chrome;
+
+pub use chrome::{
+    HoverTarget, TAB_BAR_PADDING, TabBarLayout, TabBarStyle, TabRect, TabSpec, layout_tab_bar,
+    tab_bar_chrome, tab_bar_height,
+};

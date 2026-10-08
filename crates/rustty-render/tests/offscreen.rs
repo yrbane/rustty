@@ -207,3 +207,56 @@ fn render_survives_tiny_viewport() {
         assert_eq!(px.len() as u32, target.size().0 * target.size().1 * 4);
     }
 }
+
+#[test]
+fn tab_bar_with_close_buttons_matches_golden() {
+    use rustty_render::{
+        HoverTarget, TabBarStyle, TabSpec, layout_tab_bar, tab_bar_chrome, tab_bar_height,
+    };
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let m = r.metrics();
+    let palette = Palette::from_config(&Colors::default(), false);
+    let style =
+        TabBarStyle::from_config(&palette, &rustty_config::CloseButtonStyle::default(), true);
+    let tabs = [
+        TabSpec {
+            title: "1: sh",
+            active: true,
+        },
+        TabSpec {
+            title: "2: vim",
+            active: false,
+        },
+    ];
+    let width = 30 * m.width;
+    let bar_h = tab_bar_height(m);
+    let layout = layout_tab_bar(width, 0, &tabs, &style, m);
+    let chrome = tab_bar_chrome(&layout, &tabs, &style, m, HoverTarget::CloseButton(1));
+    let mut term = Term::new(30, 1, 0);
+    term.input(b"$ \x1b[?25l");
+    let snap = term.snapshot();
+    let height = bar_h + m.height + 2 * PADDING;
+    let target = Offscreen::new(&ctx, width, height);
+    let frame = Frame {
+        viewport: (width, height),
+        background: palette.background,
+        panes: vec![PaneFrame {
+            rect: PixelRect::new(0, bar_h, width, height - bar_h),
+            snapshot: &snap,
+            focused: true,
+        }],
+        chrome,
+    };
+    r.render(&ctx, target.view(), &frame);
+    let px = target.read_rgba(&ctx).unwrap();
+    assert_matches_golden("tab_bar", &px, width, height);
+    let hover_px = pixel(&px, width, layout.tabs[1].close.unwrap().x + 15, 10);
+    assert_eq!(
+        hover_px,
+        style.close_hover_background.to_u8(),
+        "le bouton survolé est dans sa couleur de survol"
+    );
+}
