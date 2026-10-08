@@ -17,3 +17,7 @@ pub use line::Line;
 pub mod grid;
 
 pub use grid::Grid;
+
+pub mod scrollback;
+
+pub use scrollback::Scrollback;
