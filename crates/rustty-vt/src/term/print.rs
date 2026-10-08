@@ -1,11 +1,10 @@
 //! Écriture des caractères imprimables : largeur, retour à la ligne différé,
-//! mode insertion, caractères combinants. Les caractères larges arrivent en
-//! tâche 14.
+//! mode insertion, caractères combinants et caractères larges sur deux cellules.
 
 use unicode_width::UnicodeWidthChar;
 
 use super::Term;
-use crate::cell::Cell;
+use crate::cell::{Attrs, Cell};
 
 impl Term {
     /// Point d'entrée depuis `Perform::print`.
@@ -13,13 +12,28 @@ impl Term {
         let c = self.charsets.map(c);
         match c.width().unwrap_or(1) {
             0 => self.put_zerowidth(c),
+            2 => self.put_char(c, 2),
             _ => self.put_char(c, 1),
         }
     }
 
-    /// Écrit un caractère de largeur `width` sous le curseur.
+    /// Si la cellule `col` est une moitié de caractère large, efface l'autre moitié.
+    fn clear_wide_partner(&mut self, col: usize, row: usize) {
+        let template = self.erase_template();
+        let line = self.active_grid_mut().line_mut(row);
+        if line.get(col).is_wide() && col + 1 < line.len() {
+            line.set(col + 1, template);
+        } else if line.get(col).is_wide_continuation() && col > 0 {
+            line.set(col - 1, template);
+        }
+    }
+
+    /// Écrit un caractère de largeur `width` (1 ou 2) sous le curseur.
     pub(crate) fn put_char(&mut self, c: char, width: usize) {
         let cols = self.cols();
+        // Une grille d'une colonne ne peut pas contenir un large : on le traite
+        // comme étroit plutôt que d'indexer hors de la ligne.
+        let width = if width == 2 && cols < 2 { 1 } else { width };
         if self.cursor.pending_wrap {
             if self.modes.autowrap {
                 self.wrap_line();
@@ -27,15 +41,38 @@ impl Term {
                 self.cursor.pending_wrap = false;
             }
         }
-        let (col, row) = (self.cursor.col, self.cursor.row);
-        let cell = Cell::new(c, self.cursor.style);
-        let template = self.erase_template();
-        let insert = self.modes.insert;
-        let line = self.active_grid_mut().line_mut(row);
-        if insert {
-            line.insert_blank(col, width, template);
+        if width == 2 && self.cursor.col + 1 >= cols {
+            if !self.modes.autowrap {
+                return; // pas de place et pas de retour à la ligne : abandonné
+            }
+            // Une seule colonne libre : on la blanchit et on passe à la ligne.
+            let (col, row) = (self.cursor.col, self.cursor.row);
+            let template = self.erase_template();
+            self.active_grid_mut().line_mut(row).set(col, template);
+            self.wrap_line();
         }
-        line.set(col, cell);
+        let (col, row) = (self.cursor.col, self.cursor.row);
+        let template = self.erase_template();
+        if self.modes.insert {
+            self.active_grid_mut()
+                .line_mut(row)
+                .insert_blank(col, width, template);
+        }
+        self.clear_wide_partner(col, row);
+        if width == 2 {
+            self.clear_wide_partner(col + 1, row);
+        }
+        let mut style = self.cursor.style;
+        if width == 2 {
+            style.attrs.insert(Attrs::WIDE);
+        }
+        let line = self.active_grid_mut().line_mut(row);
+        line.set(col, Cell::new(c, style));
+        if width == 2 {
+            let mut cont = template;
+            cont.style.attrs.insert(Attrs::WIDE_CONTINUATION);
+            line.set(col + 1, cont);
+        }
         if col + width < cols {
             self.cursor.col += width;
         } else {
@@ -121,5 +158,78 @@ mod tests {
         t.cursor.col = 0;
         feed(&mut t, "X");
         assert_eq!(t.text(), vec!["Xabc"]);
+    }
+
+    #[test]
+    fn wide_char_takes_two_cells() {
+        let mut t = term(5, 1);
+        feed(&mut t, "漢a");
+        assert!(t.grid().cell(0, 0).is_wide());
+        assert!(t.grid().cell(1, 0).is_wide_continuation());
+        assert_eq!(t.grid().cell(2, 0).c, 'a');
+        assert_eq!(t.text(), vec!["漢a"]);
+        assert_eq!(t.cursor().col, 3);
+    }
+
+    #[test]
+    fn wide_char_at_last_column_wraps() {
+        let mut t = term(4, 2);
+        feed(&mut t, "abc漢");
+        assert_eq!(t.text(), vec!["abc", "漢"]);
+        assert_eq!(
+            t.grid().cell(3, 0).c,
+            ' ',
+            "la dernière cellule de la ligne 1 est un blanc"
+        );
+        assert!(t.grid().line(0).wrapped);
+        assert_eq!(t.cursor().col, 2);
+    }
+
+    #[test]
+    fn wide_char_at_last_column_without_autowrap_is_dropped() {
+        let mut t = term(4, 1);
+        t.modes.autowrap = false;
+        feed(&mut t, "abc漢x");
+        assert_eq!(
+            t.text(),
+            vec!["abcx"],
+            "le large n'a pas tenu et est abandonné, x prend la dernière colonne"
+        );
+    }
+
+    #[test]
+    fn overwriting_half_of_a_wide_char_clears_the_other_half() {
+        let mut t = term(5, 1);
+        feed(&mut t, "漢漢");
+        t.cursor.col = 1;
+        feed(&mut t, "x");
+        assert_eq!(t.text(), vec![" x漢"]);
+        assert!(!t.grid().cell(0, 0).is_wide());
+        t.cursor.col = 2;
+        feed(&mut t, "y");
+        assert_eq!(t.text(), vec![" xy"]);
+        assert!(!t.grid().cell(3, 0).is_wide_continuation());
+    }
+
+    #[test]
+    fn wide_char_fills_exactly_the_last_two_columns() {
+        let mut t = term(4, 1);
+        feed(&mut t, "ab漢");
+        assert_eq!(t.text(), vec!["ab漢"]);
+        assert!(t.cursor().pending_wrap);
+    }
+
+    #[test]
+    fn combining_char_after_wide_char_attaches_to_its_first_half() {
+        let mut t = term(5, 1);
+        feed(&mut t, "漢\u{301}");
+        assert_eq!(t.grid().line(0).zerowidth(0), Some("\u{301}"));
+    }
+
+    #[test]
+    fn wide_char_in_single_column_grid_is_narrowed_not_panicking() {
+        let mut t = term(1, 2);
+        feed(&mut t, "漢x");
+        assert_eq!(t.text(), vec!["漢", "x"]);
     }
 }
