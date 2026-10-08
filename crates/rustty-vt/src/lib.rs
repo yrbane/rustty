@@ -9,3 +9,7 @@ pub mod color;
 
 pub use cell::{Attrs, Cell, Style};
 pub use color::Color;
+
+pub mod line;
+
+pub use line::Line;
