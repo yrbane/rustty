@@ -9,3 +9,6 @@ pub mod size;
 pub use error::PtyError;
 pub use shell::{Shell, default_env};
 pub use size::PtySize;
+pub mod pty;
+
+pub use pty::{ExitStatus, Pty};
