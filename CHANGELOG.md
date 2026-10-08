@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.2 — 2026-10-08 · « Cellule et style »
+
+- `rustty-vt` : types `Color`, `Attrs`, `Style`, `Cell` ; cellule effacée conservant les couleurs.
+
 ## 0.1.0-alpha.1 — 2026-10-08 · « Workspace et CI »
 
 - Workspace Cargo (edition 2024, version unique), crate `rustty-vt` vide exposant `VERSION`.

@@ -3,3 +3,9 @@
 
 /// Version de la crate, héritée du workspace. Affichée dans l'interface.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub mod cell;
+pub mod color;
+
+pub use cell::{Attrs, Cell, Style};
+pub use color::Color;
