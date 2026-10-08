@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.51 — 2026-10-08 · « CI bornée »
+
+- CI : délai de 30 minutes par job et tests exécutés un à la fois, pour qu'un test bloqué (GPU ou pty) échoue en nommant le coupable au lieu d'occuper le runner six heures.
+
 ## 0.1.0-alpha.50 — 2026-10-08 · « Corrections de revue »
 
 - `rustty-render` : le repli par couverture teste les polices du système sans copier leurs octets, à chasse fixe d'abord, et mémorise les échecs par bloc Unicode (plus de gel par icône inconnue).
