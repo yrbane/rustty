@@ -123,7 +123,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "SGR en tâche 10"]
     fn erase_uses_current_background() {
         let mut t = term(3, 1);
         feed(&mut t, "abc\x1b[44m\x1b[2K");

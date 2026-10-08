@@ -59,6 +59,7 @@ impl Perform for Term {
             ([], 'M') => self.delete_lines(n(0)),
             ([], 'S') => self.scroll_up_region(n(0)),
             ([], 'T') => self.scroll_down_region(n(0)),
+            ([], 'm') => crate::sgr::apply_sgr(&mut self.cursor.style, params),
             _ => {}
         }
     }

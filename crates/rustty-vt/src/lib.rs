@@ -41,3 +41,5 @@ pub mod term;
 pub use term::Term;
 
 mod params;
+
+mod sgr;
