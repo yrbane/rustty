@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.44 — 2026-10-08 · « Contexte GPU hors écran »
+
+- `rustty-render` : `GpuContext::headless` (matériel ou rendu logiciel), cible hors écran `Offscreen` avec relecture des pixels, passe d'effacement. CI Linux équipée de lavapipe pour exécuter les tests GPU.
+
 ## 0.1.0-alpha.43 — 2026-10-08 · « Atlas de glyphes »
 
 - `rustty-render` : `AtlasPacker` place les bitmaps par étagères avec une marge d'un pixel ; coordonnées de texture normalisées.

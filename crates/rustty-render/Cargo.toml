@@ -10,9 +10,12 @@ rust-version.workspace = true
 [dependencies]
 rustty-config = { path = "../rustty-config" }
 rustty-vt = { path = "../rustty-vt" }
+bytemuck.workspace = true
 fontdb.workspace = true
+pollster.workspace = true
 swash.workspace = true
 thiserror.workspace = true
+wgpu.workspace = true
 
 [dev-dependencies]
 

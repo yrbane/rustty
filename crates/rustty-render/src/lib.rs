@@ -15,3 +15,6 @@ pub use builtin::{builtin_glyph, is_builtin};
 pub mod atlas;
 
 pub use atlas::{AtlasPacker, AtlasRegion, DEFAULT_ATLAS_SIZE};
+pub mod gpu;
+
+pub use gpu::{GpuContext, GpuError, OFFSCREEN_FORMAT, Offscreen, clear};
