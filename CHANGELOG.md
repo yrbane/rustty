@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.27 — 2026-10-08 · « Crate config »
+
+- `rustty-config` : type `Rgb` analysé depuis `#rrggbb`, avec erreurs nommant la valeur fautive.
+
 ## 0.1.0-alpha.26 — 2026-10-08 · « Zoom et invariants »
 
 - `rustty-layout` : zoom d'une fenêtre sur tout l'onglet ; tests par propriétés garantissant couverture sans chevauchement, une entrée par fenêtre et focus toujours valide, quelle que soit la suite d'opérations.
