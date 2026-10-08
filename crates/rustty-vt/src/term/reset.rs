@@ -25,6 +25,7 @@ impl Term {
         self.tabs = TabStops::new(cols);
         self.charsets = Charsets::default();
         self.title.clear();
+        self.display_offset = 0;
     }
 
     /// Nouvelle taille en cellules. Les lignes sont tronquées ou complétées,
@@ -38,6 +39,7 @@ impl Term {
         self.scrollback.resize_lines(cols, template);
         self.region = ScrollRegion::full(rows);
         self.tabs = TabStops::new(cols);
+        self.display_offset = 0;
         self.cursor.clamp(cols, rows);
         self.saved_cursor.cursor.clamp(cols, rows);
         self.saved_cursor_alt.cursor.clamp(cols, rows);

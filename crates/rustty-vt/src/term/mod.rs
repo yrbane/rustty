@@ -11,6 +11,7 @@ mod print;
 mod reports;
 mod reset;
 mod scroll;
+mod view;
 
 use vte::Parser;
 
@@ -37,6 +38,8 @@ pub struct Term {
     pub(crate) tabs: TabStops,
     pub(crate) charsets: Charsets,
     pub(crate) title: String,
+    /// Décalage d'affichage dans le scrollback : 0 = écran vivant.
+    pub(crate) display_offset: usize,
     pub(crate) outbox: Outbox,
     parser: Parser,
 }
@@ -58,6 +61,7 @@ impl Term {
             tabs: TabStops::new(cols),
             charsets: Charsets::default(),
             title: String::new(),
+            display_offset: 0,
             outbox: Outbox::default(),
             parser: Parser::new(),
         }

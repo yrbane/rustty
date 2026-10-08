@@ -43,3 +43,7 @@ pub use term::Term;
 mod params;
 
 mod sgr;
+
+pub mod snapshot;
+
+pub use snapshot::Snapshot;

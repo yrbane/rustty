@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.16 — 2026-10-08 · « Instantané et défilement de l'affichage »
+
+- `rustty-vt` : `Snapshot` pour le renderer, défilement de l'affichage dans l'historique, scénarios de bout en bout figés par insta, test de robustesse sur du bruit.
+- README : statut et commandes de développement.
+
 ## 0.1.0-alpha.15 — 2026-10-08 · « Redimensionnement »
 
 - `rustty-vt` : `Term::resize` borne curseurs et région, redimensionne grilles et historique, sans rewrap.

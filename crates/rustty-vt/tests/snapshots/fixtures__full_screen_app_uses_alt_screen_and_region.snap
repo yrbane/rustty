@@ -1,0 +1,10 @@
+---
+source: crates/rustty-vt/tests/fixtures.rs
+assertion_line: 26
+expression: "render(10, 4,\n\"\\x1b[?1049h\\x1b[H\\x1b[2J\\x1b[1;1HTitle\\x1b[2;4r\\x1b[2;1Hl1\\r\\nl2\\r\\nl3\\r\\nl4\\x1b[4;1Hstatus\")"
+---
+Title
+l2
+l3
+status
+-- cursor col=6 row=3
