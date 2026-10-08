@@ -2,3 +2,6 @@
 **/*.rs.bk
 *.pdb
 .DS_Store
+
+# Zone de dépôt des visuels bruts, non versionnée (les retenus vont dans assets/)
+/res/

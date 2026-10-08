@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" width="320" alt="Mascotte rustty : un crabe orange souriant dans une fenêtre de terminal">
+</p>
+
 # rustty
 
 Émulateur de terminal accéléré par GPU, écrit en Rust, inspiré de

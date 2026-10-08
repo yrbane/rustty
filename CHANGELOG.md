@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.18 — 2026-10-08 · « Mascotte et icône »
+
+- Identité visuelle : mascotte crabe en tête du README (`assets/logo.png`, version 512 px ; original 1254 px dans `assets/logo-1254.png`) et icône vectorielle de l'application (`assets/icon.svg`), utilisée par le futur binaire.
+- `res/` devient la zone de dépôt des visuels bruts, hors git.
+
 ## 0.1.0-alpha.17 — 2026-10-08 · « Corrections de revue »
 
 - `rustty-vt` : le resize des rangées garde la ligne du curseur visible en échangeant des lignes avec l'historique ; la vue reste stable quand de la sortie arrive pendant la relecture de l'historique ; nouvel événement `TermEvent::ModeChanged` pour les modes qui concernent l'hôte ; une couleur SGR étendue tronquée ne pose plus d'attributs parasites ; les titres OSC gardent leurs points-virgules ; RIS rafraîchit le titre et ED 3 remet le décalage d'affichage à zéro.
