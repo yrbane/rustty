@@ -277,14 +277,14 @@ dependencies = [
 
 [[package]]
 name = "rustty-layout"
-version = "0.1.0-alpha.21"
+version = "0.1.0-alpha.22"
 dependencies = [
  "proptest",
 ]
 
 [[package]]
 name = "rustty-vt"
-version = "0.1.0-alpha.21"
+version = "0.1.0-alpha.22"
 dependencies = [
  "base64",
  "bitflags",
