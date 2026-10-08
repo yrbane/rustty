@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.12 — 2026-10-08 · « Titre, presse-papiers et requêtes »
+
+- `rustty-vt` : titre de fenêtre (OSC 0/2), écriture du presse-papiers (OSC 52, lecture refusée), réponses DA1, DA2, DSR 5 et 6.
+
 ## 0.1.0-alpha.11 — 2026-10-08 · « Modes et écran alternatif »
 
 - `rustty-vt` : modes DEC (touches application, origine, autowrap, curseur, souris, SGR souris, focus, collage encadré), écrans alternatifs 47/1047/1049, modes ANSI insertion et LNM, forme du curseur DECSCUSR.

@@ -5,8 +5,10 @@
 mod edit;
 mod mode_ops;
 mod movement;
+mod osc;
 mod perform;
 mod print;
+mod reports;
 mod scroll;
 
 use vte::Parser;

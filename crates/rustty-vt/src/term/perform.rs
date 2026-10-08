@@ -81,6 +81,10 @@ impl Perform for Term {
                 }
             }
             ([b' '], 'q') => self.set_cursor_shape(raw(&p, 0)),
+            ([], 'c') => self.device_attributes(),
+            ([b'>'], 'c') => self.secondary_device_attributes(),
+            ([], 'n') => self.device_status_report(raw(&p, 0), false),
+            ([b'?'], 'n') => self.device_status_report(raw(&p, 0), true),
             _ => {}
         }
     }
@@ -93,7 +97,24 @@ impl Perform for Term {
         }
     }
 
-    fn osc_dispatch(&mut self, _params: &[&[u8]], _bell_terminated: bool) {}
+    fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
+        let Some(code) = params.first() else { return };
+        match *code {
+            b"0" | b"2" => {
+                let title = params
+                    .get(1)
+                    .map(|t| String::from_utf8_lossy(t).into_owned())
+                    .unwrap_or_default();
+                self.set_title(title);
+            }
+            b"52" => {
+                if let Some(data) = params.get(2) {
+                    self.set_clipboard_from_base64(data);
+                }
+            }
+            _ => {}
+        }
+    }
 
     fn hook(&mut self, _params: &Params, _intermediates: &[u8], _ignore: bool, _action: char) {}
 
