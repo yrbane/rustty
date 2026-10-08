@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.21 — 2026-10-08 · « Crate layout »
+
+- `rustty-layout` : géométrie (`Rect`, `Axis`, `Direction`, `WindowId`) et `TabLayout` à une fenêtre avec focus.
+
 ## 0.1.0-alpha.20 — 2026-10-08 · « Plan layout et config »
 
 - Plan d'implémentation des crates `rustty-layout` (arbre de divisions, voisinage, zoom, invariants par propriétés) et `rustty-config` (sections TOML, couleurs, raccourcis, actions, chargement, fichier d'exemple), douze tâches.
