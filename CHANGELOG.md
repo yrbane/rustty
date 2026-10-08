@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.46 — 2026-10-08 · « Pipeline de glyphes »
+
+- `rustty-render` : texture d'atlas RGBA8 avec envoi par région, quads texturés monochromes (couleur d'instance) ou couleur (emoji), échantillonnage au pixel près.
+
 ## 0.1.0-alpha.45 — 2026-10-08 · « Pipeline de quads »
 
 - `rustty-render` : rectangles colorés instanciés en coordonnées pixels avec mélange alpha, vérifiés par relecture.

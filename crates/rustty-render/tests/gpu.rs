@@ -120,3 +120,143 @@ fn empty_batch_is_none() {
     let pipeline = QuadPipeline::new(&ctx.device, rustty_render::OFFSCREEN_FORMAT);
     assert!(pipeline.prepare(&ctx.device, &[], (8, 8)).is_none());
 }
+
+use rustty_render::{AtlasRegion, AtlasTexture, GlyphInstance, GlyphPipeline};
+
+fn draw_glyphs(
+    ctx: &rustty_render::GpuContext,
+    target: &Offscreen,
+    atlas: &AtlasTexture,
+    instances: &[GlyphInstance],
+) -> Vec<u8> {
+    let pipeline = GlyphPipeline::new(&ctx.device, rustty_render::OFFSCREEN_FORMAT);
+    let batch = pipeline
+        .prepare(&ctx.device, atlas, instances, target.size())
+        .unwrap();
+    let mut encoder = ctx.device.create_command_encoder(&Default::default());
+    {
+        let mut pass = load_pass(&mut encoder, target.view());
+        pipeline.draw(&mut pass, &batch);
+    }
+    ctx.queue.submit(Some(encoder.finish()));
+    target.read_rgba(ctx).unwrap()
+}
+
+#[test]
+fn monochrome_glyph_takes_the_instance_color() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let target = Offscreen::new(&ctx, 6, 6);
+    clear(&ctx, target.view(), Rgba::new(0.0, 0.0, 0.0, 1.0));
+    let atlas = AtlasTexture::new(&ctx.device, 8);
+    let region = AtlasRegion {
+        x: 0,
+        y: 0,
+        width: 2,
+        height: 2,
+    };
+    // Masque : plein en haut à gauche et en bas à droite, vide ailleurs.
+    atlas.upload(
+        &ctx.queue,
+        region,
+        &[
+            255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 255,
+        ],
+    );
+    let px = draw_glyphs(
+        &ctx,
+        &target,
+        &atlas,
+        &[GlyphInstance::new(
+            1.0,
+            2.0,
+            2.0,
+            2.0,
+            region.uv(8),
+            Rgba::new(1.0, 0.0, 0.0, 1.0),
+            false,
+        )],
+    );
+    assert_eq!(
+        pixel(&px, 6, 1, 2),
+        [255, 0, 0, 255],
+        "texel plein → couleur d'instance"
+    );
+    assert_eq!(
+        pixel(&px, 6, 2, 2),
+        [0, 0, 0, 255],
+        "texel vide → fond inchangé"
+    );
+    assert_eq!(pixel(&px, 6, 2, 3), [255, 0, 0, 255]);
+    assert_eq!(pixel(&px, 6, 0, 0), [0, 0, 0, 255]);
+}
+
+#[test]
+fn color_glyph_keeps_its_own_colors() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let target = Offscreen::new(&ctx, 4, 4);
+    clear(&ctx, target.view(), Rgba::new(0.0, 0.0, 0.0, 1.0));
+    let atlas = AtlasTexture::new(&ctx.device, 4);
+    let region = AtlasRegion {
+        x: 1,
+        y: 1,
+        width: 1,
+        height: 1,
+    };
+    atlas.upload(&ctx.queue, region, &[0, 255, 0, 255]);
+    let px = draw_glyphs(
+        &ctx,
+        &target,
+        &atlas,
+        &[GlyphInstance::new(
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            region.uv(4),
+            Rgba::new(1.0, 0.0, 0.0, 1.0),
+            true,
+        )],
+    );
+    assert_eq!(
+        pixel(&px, 4, 0, 0),
+        [0, 255, 0, 255],
+        "la texture l'emporte sur la couleur d'instance"
+    );
+}
+
+#[test]
+fn atlas_clear_wipes_previous_glyphs() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let target = Offscreen::new(&ctx, 2, 2);
+    clear(&ctx, target.view(), Rgba::new(0.0, 0.0, 0.0, 1.0));
+    let atlas = AtlasTexture::new(&ctx.device, 2);
+    let region = AtlasRegion {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+    };
+    atlas.upload(&ctx.queue, region, &[255, 255, 255, 255]);
+    atlas.clear(&ctx.queue);
+    let px = draw_glyphs(
+        &ctx,
+        &target,
+        &atlas,
+        &[GlyphInstance::new(
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            region.uv(2),
+            Rgba::new(1.0, 1.0, 1.0, 1.0),
+            false,
+        )],
+    );
+    assert_eq!(pixel(&px, 2, 0, 0), [0, 0, 0, 255]);
+}
