@@ -4,3 +4,6 @@
 pub mod color;
 
 pub use color::{Palette, Rgba};
+pub mod font;
+
+pub use font::{CellMetrics, FaceData, FontError, FontSet, Variant};

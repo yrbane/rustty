@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.40 — 2026-10-08 · « Polices »
+
+- `rustty-render` : `FontSet` charge la famille configurée ou un repli à chasse fixe (quatre variantes), police DejaVu Sans Mono embarquée en dernier recours et pour les tests, métriques de cellule (largeur, hauteur, ligne de base, soulignement, barré).
+
 ## 0.1.0-alpha.39 — 2026-10-08 · « Crate render et palette »
 
 - `rustty-render` : `Rgba` et `Palette` (16 couleurs ANSI, cube 6×6×6, gris, vraies couleurs ; gras vif, inversion, atténuation, texte caché).
