@@ -1,0 +1,15 @@
+[package]
+name = "rustty-pty"
+description = "Lancement d'un shell dans un pseudo-terminal et échange d'octets, sur les trois OS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+portable-pty.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

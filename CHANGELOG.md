@@ -4,6 +4,91 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.54 — 2026-10-08 · « Lignes sous ConPTY »
+
+- `rustty-pty` : le test des 2 000 lignes extrait les numéros indépendamment des séquences de contrôle que ConPTY intercale sur la même ligne ; vérifie toujours l'ordre strict, sans perte ni doublon.
+
+## 0.1.0-alpha.53 — 2026-10-08 · « ConPTY répondu »
+
+- `rustty-pty` : le harnais de tests répond aux demandes de position du curseur (`ESC[6n`) comme un vrai terminal ; ConPTY n'émet rien tant qu'il n'a pas cette réponse, ce qui bloquait tous les tests Windows. Sur macOS, la sortie pompée en continu a levé le blocage.
+
+## 0.1.0-alpha.52 — 2026-10-08 · « Tests pty bornés »
+
+- `rustty-pty` : les tests d'intégration pompent la sortie dans un thread et bornent chaque attente (`try_wait` sondé) ; un blocage devient un échec qui montre la sortie lue, au lieu de suspendre la CI (macOS et Windows restaient coincés sur une lecture bloquante).
+
+## 0.1.0-alpha.51 — 2026-10-08 · « CI bornée »
+
+- CI : délai de 30 minutes par job et tests exécutés un à la fois, pour qu'un test bloqué (GPU ou pty) échoue en nommant le coupable au lieu d'occuper le runner six heures.
+
+## 0.1.0-alpha.50 — 2026-10-08 · « Corrections de revue »
+
+- `rustty-render` : le repli par couverture teste les polices du système sans copier leurs octets, à chasse fixe d'abord, et mémorise les échecs par bloc Unicode (plus de gel par icône inconnue).
+- `rustty-render` : après une reconstruction d'atlas en cours d'image, les instances sont recréées en une seconde passe (plus de glyphes corrompus pendant une image).
+- `rustty-pty` : un shell tué par un signal est rapporté `Signaled` (et non `Exited(1)`).
+- `rustty-pty` : contrat de fin de flux documenté pour Windows (ConPTY ne ferme le tube qu'à la libération du `Pty` : sonder `try_wait`).
+- Écart assumé avec la spec pour l'alpha : atlas RGBA8 unique, cache par `(char, variante)`, reconstruction totale au débordement (R8, clé par glyphe et éviction LRU viendront plus tard).
+
+## 0.1.0-alpha.49 — 2026-10-08 · « Barre d'onglets »
+
+- `rustty-render` : disposition de la barre d'onglets, boutons de fermeture ✕ sur pastille arrondie avec couleurs de survol, bouton « + », test de clic ; image de référence.
+- README : statut des cinq crates et régénération des images de référence.
+
+## 0.1.0-alpha.48 — 2026-10-08 · « Renderer »
+
+- `rustty-render` : `Renderer` assemble fonds, glyphes (cache + atlas reconstruit au débordement), décorations et chrome en une passe ; opacité du fond par l'alpha ; images de référence comparées hors écran sur les trois OS.
+
+## 0.1.0-alpha.47 — 2026-10-08 · « Instances de grille »
+
+- `rustty-render` : `Frame`/`PaneFrame`/`Chrome` décrivent une image à dessiner ; `pane_instances` transforme un `Snapshot` en fonds fusionnés, demandes de glyphes, soulignements, barrés et curseur (bloc plein ou creux, barre, souligné), avec rognage à la zone visible.
+
+## 0.1.0-alpha.46 — 2026-10-08 · « Pipeline de glyphes »
+
+- `rustty-render` : texture d'atlas RGBA8 avec envoi par région, quads texturés monochromes (couleur d'instance) ou couleur (emoji), échantillonnage au pixel près.
+
+## 0.1.0-alpha.45 — 2026-10-08 · « Pipeline de quads »
+
+- `rustty-render` : rectangles colorés instanciés en coordonnées pixels avec mélange alpha, vérifiés par relecture.
+
+## 0.1.0-alpha.44 — 2026-10-08 · « Contexte GPU hors écran »
+
+- `rustty-render` : `GpuContext::headless` (matériel ou rendu logiciel), cible hors écran `Offscreen` avec relecture des pixels, passe d'effacement. CI Linux équipée de lavapipe pour exécuter les tests GPU.
+
+## 0.1.0-alpha.43 — 2026-10-08 · « Atlas de glyphes »
+
+- `rustty-render` : `AtlasPacker` place les bitmaps par étagères avec une marge d'un pixel ; coordonnées de texture normalisées.
+
+## 0.1.0-alpha.42 — 2026-10-08 · « Glyphes procéduraux »
+
+- `rustty-render` : lignes de boîte, blocs, trames et symboles powerline dessinés par le renderer, nets quelle que soit la police.
+
+## 0.1.0-alpha.41 — 2026-10-08 · « Rastérisation »
+
+- `rustty-render` : `Rasterizer` (swash) produit des bitmaps RGBA8 pour contours, contours couleur et emojis bitmap ; `FontSet::glyph` cherche le glyphe dans les variantes, puis dans les polices du système qui couvrent le caractère, puis dans la police embarquée.
+
+## 0.1.0-alpha.40 — 2026-10-08 · « Polices »
+
+- `rustty-render` : `FontSet` charge la famille configurée ou un repli à chasse fixe (quatre variantes), police DejaVu Sans Mono embarquée en dernier recours et pour les tests, métriques de cellule (largeur, hauteur, ligne de base, soulignement, barré).
+
+## 0.1.0-alpha.39 — 2026-10-08 · « Crate render et palette »
+
+- `rustty-render` : `Rgba` et `Palette` (16 couleurs ANSI, cube 6×6×6, gris, vraies couleurs ; gras vif, inversion, atténuation, texte caché).
+
+## 0.1.0-alpha.38 — 2026-10-08 · « Thread lecteur »
+
+- `rustty-pty` : `spawn_reader` lit le pseudo-terminal par blocs de 64 Kio et pousse `PtyEvent::Data` puis `Eof` dans un canal ou un rappel ; 2 000 lignes livrées dans l'ordre sans perte.
+
+## 0.1.0-alpha.37 — 2026-10-08 · « Pseudo-terminal »
+
+- `rustty-pty` : `Pty::spawn` lance le shell dans un pseudo-terminal ; lecture clonable, écriture, redimensionnement, code de sortie, `kill`, et le processus est tué à la destruction. Tests avec un vrai shell sur Unix et Windows.
+
+## 0.1.0-alpha.36 — 2026-10-08 · « Crate pty »
+
+- `rustty-pty` : `Shell` (défaut `$SHELL`, `/bin/sh` ou `powershell.exe`), environnement `TERM`/`COLORTERM`, `PtySize` bornée à une cellule, `PtyError`.
+
+## 0.1.0-alpha.35 — 2026-10-08 · « Plan pty et render »
+
+- Plan d'implémentation des crates `rustty-pty` (shell dans un pseudo-terminal, thread lecteur) et `rustty-render` (palette, polices avec repli et police embarquée, glyphes procéduraux, atlas, pipelines wgpu, renderer testé hors écran contre des images de référence, barre d'onglets), quatorze tâches.
+
 ## 0.1.0-alpha.34 — 2026-10-08 · « Corrections de revue »
 
 - `rustty-config` : palette strictement de 16 couleurs ; deux graphies d'un même raccourci dans `[keys]` sont une erreur ; variation d'opacité bornée à ±1 et acceptée en nombre ou en chaîne (`+0.05` ou `"+0.05"`) ; les messages d'erreur d'action conservent le détail (variante inconnue, valeur hors plage).

@@ -7,10 +7,10 @@
 Émulateur de terminal accéléré par GPU, écrit en Rust, inspiré de
 [kitty](https://sw.kovidgoyal.net/kitty/).
 
-> Statut : fondations. Trois crates de logique pure sont fonctionnelles et
-> testées : `rustty-vt` (émulation de terminal), `rustty-layout` (onglets et
-> divisions) et `rustty-config` (configuration TOML). Les crates pty, render
-> et le binaire suivent, voir les plans dans `docs/superpowers/plans/`.
+> Statut : fondations. Cinq crates sont fonctionnelles et testées : `rustty-vt`
+> (émulation), `rustty-layout` (onglets et divisions), `rustty-config` (TOML),
+> `rustty-pty` (shell dans un pseudo-terminal) et `rustty-render` (rendu wgpu,
+> testé hors écran sur les trois OS). Reste le binaire qui les assemble.
 
 ## Développement
 
@@ -19,6 +19,11 @@ cargo test --workspace                       # tous les tests
 cargo clippy --workspace --all-targets -- -D warnings
 cargo insta review                           # accepter les snapshots de grille modifiés
 ```
+
+Les tests de rendu comparent des images de référence (`crates/rustty-render/tests/golden/`)
+produites avec la police embarquée DejaVu Sans Mono. Pour les régénérer après un
+changement voulu du rendu : `UPDATE_GOLDEN=1 cargo test -p rustty-render --test offscreen`,
+puis vérifier les PNG à l'œil avant de les committer.
 
 ## Objectifs de la v0.1
 
