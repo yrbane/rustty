@@ -1,5 +1,7 @@
 //! La configuration complète : analyse, validation.
 
+use std::path::{Path, PathBuf};
+
 use serde::Deserialize;
 
 use crate::error::ConfigError;
@@ -62,6 +64,32 @@ impl Config {
             );
         }
         Ok(())
+    }
+
+    /// Lit et valide `path`. Un fichier absent n'est pas une erreur : ce sont
+    /// les défauts. Un fichier illisible en est une.
+    pub fn load(path: &Path) -> Result<Self, ConfigError> {
+        match std::fs::read_to_string(path) {
+            Ok(text) => Self::from_str(&text),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Self::default()),
+            Err(source) => Err(ConfigError::Io {
+                path: path.to_path_buf(),
+                source,
+            }),
+        }
+    }
+
+    /// `~/.config/rustty/rustty.toml` sur Linux, l'équivalent ailleurs.
+    pub fn default_path() -> Option<PathBuf> {
+        directories::ProjectDirs::from("", "", "rustty").map(|d| d.config_dir().join("rustty.toml"))
+    }
+
+    /// Charge le fichier par défaut ; sans chemin résolvable, ce sont les défauts.
+    pub fn load_default() -> Result<Self, ConfigError> {
+        match Self::default_path() {
+            Some(path) => Self::load(&path),
+            None => Ok(Self::default()),
+        }
     }
 }
 
@@ -209,6 +237,73 @@ mod tests {
                 );
             }
             other => panic!("attendu Parse, obtenu {other:?}"),
+        }
+    }
+
+    fn scratch_file(name: &str, contents: Option<&str>) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("rustty-config-tests-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(name);
+        match contents {
+            Some(c) => std::fs::write(&path, c).unwrap(),
+            None => {
+                let _ = std::fs::remove_file(&path);
+            }
+        }
+        path
+    }
+
+    #[test]
+    fn missing_file_means_defaults() {
+        let path = scratch_file("absent.toml", None);
+        assert_eq!(Config::load(&path).unwrap(), Config::default());
+    }
+
+    #[test]
+    fn existing_file_is_parsed_and_validated() {
+        let path = scratch_file("ok.toml", Some("[font]\nsize = 13\n"));
+        assert_eq!(Config::load(&path).unwrap().font.size, 13.0);
+        let path = scratch_file("bad.toml", Some("[window]\nopacity = 7\n"));
+        assert!(matches!(
+            Config::load(&path),
+            Err(ConfigError::Invalid {
+                field: "window.opacity",
+                ..
+            })
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unreadable_file_is_an_io_error_naming_the_path() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = scratch_file("locked.toml", Some("[font]\nsize = 13\n"));
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let result = Config::load(&path);
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        if nix_is_root() {
+            return; // root lit tout : le cas ne peut pas être reproduit
+        }
+        match result {
+            Err(ConfigError::Io { path: p, .. }) => assert_eq!(p, path),
+            other => panic!("attendu Io, obtenu {other:?}"),
+        }
+    }
+
+    #[cfg(unix)]
+    fn nix_is_root() -> bool {
+        std::fs::read_to_string("/proc/self/status")
+            .map(|s| s.lines().any(|l| l.starts_with("Uid:\t0\t")))
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn default_path_ends_with_rustty_toml() {
+        if let Some(p) = Config::default_path() {
+            assert!(
+                p.ends_with("rustty/rustty.toml") || p.ends_with("rustty\\rustty.toml"),
+                "{p:?}"
+            );
         }
     }
 }
