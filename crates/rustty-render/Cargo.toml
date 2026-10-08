@@ -18,6 +18,7 @@ thiserror.workspace = true
 wgpu.workspace = true
 
 [dev-dependencies]
+wgpu.workspace = true
 
 [lints]
 workspace = true

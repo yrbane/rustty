@@ -18,3 +18,6 @@ pub use atlas::{AtlasPacker, AtlasRegion, DEFAULT_ATLAS_SIZE};
 pub mod gpu;
 
 pub use gpu::{GpuContext, GpuError, OFFSCREEN_FORMAT, Offscreen, clear};
+pub mod pipeline;
+
+pub use pipeline::quad::{QuadBatch, QuadInstance, QuadPipeline};
