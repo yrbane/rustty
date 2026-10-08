@@ -1,0 +1,3 @@
+# Fins de ligne LF partout, quel que soit l'OS : les tests comparent des fichiers octet à octet.
+* text=auto eol=lf
+*.png binary

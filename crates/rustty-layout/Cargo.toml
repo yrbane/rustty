@@ -1,0 +1,16 @@
+[package]
+name = "rustty-layout"
+description = "Arbre d'onglets et de divisions : du focus aux rectangles en pixels"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

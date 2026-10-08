@@ -7,9 +7,10 @@
 Émulateur de terminal accéléré par GPU, écrit en Rust, inspiré de
 [kitty](https://sw.kovidgoyal.net/kitty/).
 
-> Statut : fondations. La crate `rustty-vt` (émulation de terminal pure) est
-> fonctionnelle et testée ; les crates layout, config, pty, render et le binaire
-> suivent, voir les plans dans `docs/superpowers/plans/`.
+> Statut : fondations. Trois crates de logique pure sont fonctionnelles et
+> testées : `rustty-vt` (émulation de terminal), `rustty-layout` (onglets et
+> divisions) et `rustty-config` (configuration TOML). Les crates pty, render
+> et le binaire suivent, voir les plans dans `docs/superpowers/plans/`.
 
 ## Développement
 
@@ -26,6 +27,13 @@ cargo insta review                           # accepter les snapshots de grille 
 - Onglets avec bouton de fermeture cliquable et réactif au survol.
 - Divisions horizontales et verticales de l'écran, redimensionnables au clavier.
 - Opacité du fond, configuration en TOML rechargée à chaud, raccourcis configurables.
+
+## Configuration
+
+Fichier TOML, `~/.config/rustty/rustty.toml` sur Linux (équivalents macOS et
+Windows). Toutes les clés sont optionnelles ; le fichier d'exemple
+[`docs/rustty.example.toml`](docs/rustty.example.toml) liste chaque clé avec
+sa valeur par défaut et les raccourcis fournis.
 
 ## Pile technique
 

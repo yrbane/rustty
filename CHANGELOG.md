@@ -4,6 +4,68 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.34 — 2026-10-08 · « Corrections de revue »
+
+- `rustty-config` : palette strictement de 16 couleurs ; deux graphies d'un même raccourci dans `[keys]` sont une erreur ; variation d'opacité bornée à ±1 et acceptée en nombre ou en chaîne (`+0.05` ou `"+0.05"`) ; les messages d'erreur d'action conservent le détail (variante inconnue, valeur hors plage).
+- `rustty-layout` : un `resize` avec un delta non fini est ignoré au lieu de corrompre le ratio.
+
+## 0.1.0-alpha.33 — 2026-10-08 · « Portabilité Windows »
+
+- Fins de ligne forcées en LF par `.gitattributes` (le fichier d'exemple est comparé octet à octet) ; le test du chemin de configuration par défaut accepte la disposition Windows (`rustty\config\rustty.toml`).
+
+## 0.1.0-alpha.32 — 2026-10-08 · « Fichier d'exemple »
+
+- `rustty-config` : `DEFAULT_TOML`, fichier d'exemple commenté publié dans `docs/rustty.example.toml`, garanti égal aux défauts par les tests.
+- README : statut des trois crates et section Configuration.
+
+## 0.1.0-alpha.31 — 2026-10-08 · « Chargement de la configuration »
+
+- `rustty-config` : `Config::load` (fichier absent = défauts, illisible = erreur avec le chemin), chemin par défaut `~/.config/rustty/rustty.toml` et équivalents macOS et Windows.
+
+## 0.1.0-alpha.30 — 2026-10-08 · « Actions et raccourcis »
+
+- `rustty-config` : actions (onglets, divisions, focus, redimensionnement, zoom, rotation, opacité, presse-papiers, défilement, rechargement), table de raccourcis par défaut surchargeable dans `[keys]`, `"none"` pour délier, erreurs nommant le raccourci fautif.
+
+## 0.1.0-alpha.29 — 2026-10-08 · « Combinaisons de touches »
+
+- `rustty-config` : `KeyCombo` analysé depuis `ctrl+shift+t`, alias des modificateurs et des touches nommées, forme canonique, erreurs nommant le raccourci fautif.
+
+## 0.1.0-alpha.28 — 2026-10-08 · « Sections de configuration »
+
+- `rustty-config` : sections `font`, `window`, `tabs` (avec style du bouton de fermeture) et `colors` (palette Catppuccin Mocha par défaut), clés inconnues refusées, erreurs positionnées ligne et colonne, validation des bornes.
+
+## 0.1.0-alpha.27 — 2026-10-08 · « Crate config »
+
+- `rustty-config` : type `Rgb` analysé depuis `#rrggbb`, avec erreurs nommant la valeur fautive.
+
+## 0.1.0-alpha.26 — 2026-10-08 · « Zoom et invariants »
+
+- `rustty-layout` : zoom d'une fenêtre sur tout l'onglet ; tests par propriétés garantissant couverture sans chevauchement, une entrée par fenêtre et focus toujours valide, quelle que soit la suite d'opérations.
+
+## 0.1.0-alpha.25 — 2026-10-08 · « Voisinage »
+
+- `rustty-layout` : `neighbor` choisit la fenêtre adjacente partageant le plus long bord, pour les déplacements de focus au clavier.
+
+## 0.1.0-alpha.24 — 2026-10-08 · « Redimensionnement et rotation »
+
+- `rustty-layout` : `resize` sur la division la plus proche de l'axe demandé, ratio borné à 10–90 % ; `rotate` inverse l'orientation d'une division.
+
+## 0.1.0-alpha.23 — 2026-10-08 · « Fermeture de fenêtre »
+
+- `rustty-layout` : `TabLayout::close` promeut le panneau frère et transfère le focus ; fermer la dernière fenêtre vide l'onglet.
+
+## 0.1.0-alpha.22 — 2026-10-08 · « Divisions »
+
+- `rustty-layout` : `TabLayout::split` horizontal et vertical, rectangles avec ratio et espace entre panneaux, bornes dégénérées sans panique.
+
+## 0.1.0-alpha.21 — 2026-10-08 · « Crate layout »
+
+- `rustty-layout` : géométrie (`Rect`, `Axis`, `Direction`, `WindowId`) et `TabLayout` à une fenêtre avec focus.
+
+## 0.1.0-alpha.20 — 2026-10-08 · « Plan layout et config »
+
+- Plan d'implémentation des crates `rustty-layout` (arbre de divisions, voisinage, zoom, invariants par propriétés) et `rustty-config` (sections TOML, couleurs, raccourcis, actions, chargement, fichier d'exemple), douze tâches.
+
 ## 0.1.0-alpha.19 — 2026-10-08 · « Icône carrée »
 
 - `assets/icon.svg` : viewBox carré 840 × 840, dessin d'origine centré verticalement, prêt pour la génération des icônes ICO, ICNS et PNG.
