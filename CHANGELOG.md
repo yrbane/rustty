@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.15 — 2026-10-08 · « Redimensionnement »
+
+- `rustty-vt` : `Term::resize` borne curseurs et région, redimensionne grilles et historique, sans rewrap.
+
 ## 0.1.0-alpha.14 — 2026-10-08 · « Caractères larges »
 
 - `rustty-vt` : caractères CJK et emojis sur deux cellules, retour à la ligne en fin de ligne, nettoyage des moitiés orphelines, combinants attachés à la première moitié.
