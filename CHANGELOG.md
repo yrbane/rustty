@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.52 — 2026-10-08 · « Tests pty bornés »
+
+- `rustty-pty` : les tests d'intégration pompent la sortie dans un thread et bornent chaque attente (`try_wait` sondé) ; un blocage devient un échec qui montre la sortie lue, au lieu de suspendre la CI (macOS et Windows restaient coincés sur une lecture bloquante).
+
 ## 0.1.0-alpha.51 — 2026-10-08 · « CI bornée »
 
 - CI : délai de 30 minutes par job et tests exécutés un à la fois, pour qu'un test bloqué (GPU ou pty) échoue en nommant le coupable au lieu d'occuper le runner six heures.
