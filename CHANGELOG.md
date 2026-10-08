@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.28 — 2026-10-08 · « Sections de configuration »
+
+- `rustty-config` : sections `font`, `window`, `tabs` (avec style du bouton de fermeture) et `colors` (palette Catppuccin Mocha par défaut), clés inconnues refusées, erreurs positionnées ligne et colonne, validation des bornes.
+
 ## 0.1.0-alpha.27 — 2026-10-08 · « Crate config »
 
 - `rustty-config` : type `Rgb` analysé depuis `#rrggbb`, avec erreurs nommant la valeur fautive.
