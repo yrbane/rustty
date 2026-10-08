@@ -9,6 +9,7 @@ mod osc;
 mod perform;
 mod print;
 mod reports;
+mod reset;
 mod scroll;
 
 use vte::Parser;

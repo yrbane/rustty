@@ -4,6 +4,7 @@
 use vte::{Params, Perform};
 
 use super::Term;
+use crate::charset::Charset;
 use crate::outbox::TermEvent;
 use crate::params::{arg_or, args, raw};
 
@@ -85,6 +86,11 @@ impl Perform for Term {
             ([b'>'], 'c') => self.secondary_device_attributes(),
             ([], 'n') => self.device_status_report(raw(&p, 0), false),
             ([b'?'], 'n') => self.device_status_report(raw(&p, 0), true),
+            ([], 'g') => match raw(&p, 0) {
+                0 => self.tabs.clear(self.cursor.col),
+                3 => self.tabs.clear_all(),
+                _ => {}
+            },
             _ => {}
         }
     }
@@ -93,6 +99,18 @@ impl Perform for Term {
         match (intermediates, byte) {
             ([], b'7') => self.save_cursor(),
             ([], b'8') => self.restore_cursor(),
+            ([], b'D') => self.linefeed(),
+            ([], b'E') => {
+                self.linefeed();
+                self.carriage_return();
+            }
+            ([], b'H') => self.tabs.set(self.cursor.col),
+            ([], b'M') => self.reverse_index(),
+            ([], b'c') => self.reset(),
+            ([b'('], b'0') => self.charsets.designate(0, Charset::DecSpecialGraphics),
+            ([b'('], b'B') => self.charsets.designate(0, Charset::Ascii),
+            ([b')'], b'0') => self.charsets.designate(1, Charset::DecSpecialGraphics),
+            ([b')'], b'B') => self.charsets.designate(1, Charset::Ascii),
             _ => {}
         }
     }
@@ -143,5 +161,34 @@ mod tests {
             .designate(1, crate::charset::Charset::DecSpecialGraphics);
         feed(&mut t, "q\x0eq\x0fq");
         assert_eq!(t.text(), vec!["q─q"]);
+    }
+
+    #[test]
+    fn g0_dec_graphics_via_esc_paren_zero() {
+        let mut t = term(5, 1);
+        feed(&mut t, "\x1b(0qx\x1b(Bq");
+        assert_eq!(t.text(), vec!["─│q"]);
+    }
+
+    #[test]
+    fn g1_designated_then_selected_with_shift_out() {
+        let mut t = term(5, 1);
+        feed(&mut t, "\x1b)0q\x0eq\x0fq");
+        assert_eq!(t.text(), vec!["q─q"]);
+    }
+
+    #[test]
+    fn tab_stops_can_be_set_and_cleared() {
+        let mut t = term(20, 1);
+        feed(&mut t, "\x1b[1;4H\x1bH\x1b[1;1H\t");
+        assert_eq!(t.cursor().col, 3, "HTS pose un taquet en colonne 4");
+        feed(&mut t, "\x1b[g\x1b[1;1H\t");
+        assert_eq!(
+            t.cursor().col,
+            8,
+            "TBC 0 retire le taquet courant seulement"
+        );
+        feed(&mut t, "\x1b[3g\x1b[1;1H\t");
+        assert_eq!(t.cursor().col, 19, "TBC 3 retire tous les taquets");
     }
 }

@@ -20,6 +20,16 @@ impl Term {
         self.active_grid_mut().scroll_down(top, bottom, n, template);
     }
 
+    /// RI : monte d'une ligne, fait défiler vers le bas en haut de région.
+    pub(crate) fn reverse_index(&mut self) {
+        self.cursor.pending_wrap = false;
+        if self.cursor.row == self.region.top {
+            self.scroll_down_region(1);
+        } else if self.cursor.row > 0 {
+            self.cursor.row -= 1;
+        }
+    }
+
     /// LF / VT / FF / IND : descend d'une ligne, fait défiler en bas de région.
     pub(crate) fn linefeed(&mut self) {
         self.cursor.pending_wrap = false;
@@ -69,5 +79,21 @@ mod tests {
         t.cursor.row = 2;
         feed(&mut t, "\n\n");
         assert!(t.scrollback().is_empty());
+    }
+
+    #[test]
+    fn index_and_reverse_index_scroll_at_region_edges() {
+        let mut t = term(1, 3);
+        feed(&mut t, "a\r\nb\r\nc\x1bD");
+        assert_eq!(t.text(), vec!["b", "c", ""]);
+        feed(&mut t, "\x1b[1;1H\x1bM");
+        assert_eq!(t.text(), vec!["", "b", "c"]);
+    }
+
+    #[test]
+    fn next_line_moves_to_first_column_of_next_row() {
+        let mut t = term(5, 2);
+        feed(&mut t, "abc\x1bEx");
+        assert_eq!(t.text(), vec!["abc", "x"]);
     }
 }
