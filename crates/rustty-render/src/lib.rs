@@ -9,3 +9,6 @@ pub mod font;
 pub use font::{
     CellMetrics, FaceData, FontError, FontSet, GlyphBitmap, GlyphRef, Rasterizer, Variant,
 };
+pub mod builtin;
+
+pub use builtin::{builtin_glyph, is_builtin};
