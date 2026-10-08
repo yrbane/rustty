@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.1 — 2026-10-08 · « Workspace et CI »
+
+- Workspace Cargo (edition 2024, version unique), crate `rustty-vt` vide exposant `VERSION`.
+- CI GitHub Actions : fmt, clippy en mode strict, tests sur Linux, macOS et Windows.
+
 ## 0.0.3 — 2026-10-08 · « Plan modulaire »
 
 - Plan des fondations restructuré en seize tâches : objets-valeur isolés (`Cursor`, `Modes`, `Charsets`, `TabStops`, `ScrollRegion`, `Outbox`), façade `Term` composée, dispatch `vte::Perform` séparé de la logique, un module par famille d'opérations.
