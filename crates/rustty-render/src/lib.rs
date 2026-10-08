@@ -22,3 +22,10 @@ pub mod pipeline;
 
 pub use pipeline::glyph::{AtlasTexture, GlyphBatch, GlyphInstance, GlyphPipeline};
 pub use pipeline::quad::{QuadBatch, QuadInstance, QuadPipeline};
+pub mod frame;
+pub mod grid;
+
+pub use frame::{Chrome, ChromeQuad, ChromeText, Frame, PaneFrame, PixelRect};
+pub use grid::{
+    CURSOR_BAR_WIDTH, GlyphRequest, GridGeometry, PaneInstances, grid_geometry, pane_instances,
+};
