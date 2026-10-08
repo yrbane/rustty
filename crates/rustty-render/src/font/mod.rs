@@ -3,11 +3,13 @@
 
 pub mod loader;
 pub mod metrics;
+pub mod raster;
 
 use rustty_vt::Attrs;
 
-pub use loader::{EMBEDDED_FONT, FaceData, FontSet};
+pub use loader::{EMBEDDED_FONT, FaceData, FontSet, GlyphRef};
 pub use metrics::CellMetrics;
+pub use raster::{GlyphBitmap, Rasterizer};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Variant {

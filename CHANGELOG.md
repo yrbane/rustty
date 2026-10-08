@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.41 — 2026-10-08 · « Rastérisation »
+
+- `rustty-render` : `Rasterizer` (swash) produit des bitmaps RGBA8 pour contours, contours couleur et emojis bitmap ; `FontSet::glyph` cherche le glyphe dans les variantes, puis dans les polices du système qui couvrent le caractère, puis dans la police embarquée.
+
 ## 0.1.0-alpha.40 — 2026-10-08 · « Polices »
 
 - `rustty-render` : `FontSet` charge la famille configurée ou un repli à chasse fixe (quatre variantes), police DejaVu Sans Mono embarquée en dernier recours et pour les tests, métriques de cellule (largeur, hauteur, ligne de base, soulignement, barré).

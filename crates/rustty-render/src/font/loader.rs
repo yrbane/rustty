@@ -1,6 +1,7 @@
 //! Chargement des polices : la famille demandée ou un repli à chasse fixe,
 //! en quatre variantes, plus la police embarquée comme dernier recours.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use fontdb::{Database, Family, Query, Stretch, Style, Weight};
@@ -35,7 +36,12 @@ impl FaceData {
 }
 
 pub struct FontSet {
+    db: Database,
     faces: [FaceData; 4],
+    /// Faces de repli chargées à la demande (slots ≥ 4).
+    fallbacks: Vec<FaceData>,
+    /// Slot mémorisé par caractère hors des quatre variantes.
+    coverage: HashMap<char, Option<usize>>,
     family_name: String,
     size_px: f32,
     metrics: CellMetrics,
@@ -49,7 +55,7 @@ impl FontSet {
         let candidates = std::iter::once(family).chain(FALLBACK_FAMILIES.iter().copied());
         for name in candidates {
             if let Some(regular) = query(&db, name, Variant::Regular) {
-                return Self::build(&db, name, regular, size_px);
+                return Self::build(db, name, regular, size_px);
             }
         }
         let any_monospace = db.faces().find(|f| f.monospaced).map(|f| {
@@ -62,7 +68,7 @@ impl FontSet {
             )
         });
         if let Some((name, id)) = any_monospace {
-            return Self::build(&db, &name, id, size_px);
+            return Self::build(db, &name, id, size_px);
         }
         Ok(Self::embedded(size_px))
     }
@@ -87,7 +93,10 @@ impl FontSet {
             .map(|s| s.to_string())
             .unwrap_or_else(|| "embedded".into());
         Ok(Self {
+            db: Database::new(),
             faces: [face.clone(), face.clone(), face.clone(), face],
+            fallbacks: Vec::new(),
+            coverage: HashMap::new(),
             family_name,
             size_px,
             metrics,
@@ -95,15 +104,15 @@ impl FontSet {
     }
 
     fn build(
-        db: &Database,
+        db: Database,
         family: &str,
         regular: fontdb::ID,
         size_px: f32,
     ) -> Result<Self, FontError> {
-        let regular_face = load_face(db, regular)?;
+        let regular_face = load_face(&db, regular)?;
         let variant_face = |v: Variant| {
-            query(db, family, v)
-                .and_then(|id| load_face(db, id).ok())
+            query(&db, family, v)
+                .and_then(|id| load_face(&db, id).ok())
                 .unwrap_or_else(|| regular_face.clone())
         };
         let faces = [
@@ -117,7 +126,10 @@ impl FontSet {
             .ok_or_else(|| FontError::Invalid(family.into()))?;
         let metrics = CellMetrics::from_font(&font, size_px);
         Ok(Self {
+            db,
             faces,
+            fallbacks: Vec::new(),
+            coverage: HashMap::new(),
             family_name: family.to_string(),
             size_px,
             metrics,
@@ -138,6 +150,89 @@ impl FontSet {
 
     pub fn family_name(&self) -> &str {
         &self.family_name
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GlyphRef {
+    /// 0–3 : variante demandée ou voisine ; ≥ 4 : face de repli.
+    pub slot: usize,
+    pub glyph_id: u16,
+}
+
+impl FontSet {
+    pub fn face_by_slot(&self, slot: usize) -> &FaceData {
+        if slot < 4 {
+            &self.faces[slot]
+        } else {
+            &self.fallbacks[slot - 4]
+        }
+    }
+
+    /// Le glyphe de `ch` : la variante demandée, les autres variantes, puis une
+    /// police du système qui couvre `ch`, puis la police embarquée.
+    pub fn glyph(&mut self, ch: char, variant: Variant) -> Option<GlyphRef> {
+        let order = [variant.index(), 0, 1, 2, 3];
+        for slot in order {
+            if let Some(gid) = glyph_in(&self.faces[slot], ch) {
+                return Some(GlyphRef {
+                    slot,
+                    glyph_id: gid,
+                });
+            }
+        }
+        if let Some(cached) = self.coverage.get(&ch) {
+            return cached.map(|slot| GlyphRef {
+                slot,
+                glyph_id: glyph_in(self.face_by_slot(slot), ch).unwrap_or(0),
+            });
+        }
+        let found = self.find_fallback(ch);
+        self.coverage.insert(ch, found.map(|g| g.slot));
+        found
+    }
+
+    fn find_fallback(&mut self, ch: char) -> Option<GlyphRef> {
+        for (i, face) in self.fallbacks.iter().enumerate() {
+            if let Some(gid) = glyph_in(face, ch) {
+                return Some(GlyphRef {
+                    slot: 4 + i,
+                    glyph_id: gid,
+                });
+            }
+        }
+        let ids: Vec<fontdb::ID> = self.db.faces().map(|f| f.id).collect();
+        for id in ids {
+            let Ok(face) = load_face(&self.db, id) else {
+                continue;
+            };
+            if let Some(gid) = glyph_in(&face, ch) {
+                self.fallbacks.push(face);
+                return Some(GlyphRef {
+                    slot: 4 + self.fallbacks.len() - 1,
+                    glyph_id: gid,
+                });
+            }
+        }
+        let embedded = FaceData {
+            data: Arc::new(EMBEDDED_FONT.to_vec()),
+            index: 0,
+        };
+        let gid = glyph_in(&embedded, ch)?;
+        self.fallbacks.push(embedded);
+        Some(GlyphRef {
+            slot: 4 + self.fallbacks.len() - 1,
+            glyph_id: gid,
+        })
+    }
+}
+
+/// Identifiant du glyphe de `ch` dans `face`, `None` si la face ne le couvre pas.
+fn glyph_in(face: &FaceData, ch: char) -> Option<u16> {
+    let font = face.font_ref()?;
+    match font.charmap().map(ch) {
+        0 => None,
+        gid => Some(gid),
     }
 }
 
