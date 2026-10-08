@@ -1,0 +1,20 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0-alpha.17"
+edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/yrbane/rustty"
+rust-version = "1.96"
+
+[workspace.dependencies]
+vte = "0.15"
+unicode-width = "0.2"
+bitflags = "2"
+base64 = "0.22"
+insta = "1"
+
+[workspace.lints.clippy]
+all = "warn"

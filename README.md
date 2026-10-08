@@ -3,8 +3,17 @@
 Émulateur de terminal accéléré par GPU, écrit en Rust, inspiré de
 [kitty](https://sw.kovidgoyal.net/kitty/).
 
-> Statut : en conception. La v0.1 est en cours de construction, voir la
-> [spécification](docs/superpowers/specs/2026-10-08-rustty-design.md).
+> Statut : fondations. La crate `rustty-vt` (émulation de terminal pure) est
+> fonctionnelle et testée ; les crates layout, config, pty, render et le binaire
+> suivent, voir les plans dans `docs/superpowers/plans/`.
+
+## Développement
+
+```bash
+cargo test --workspace                       # tous les tests
+cargo clippy --workspace --all-targets -- -D warnings
+cargo insta review                           # accepter les snapshots de grille modifiés
+```
 
 ## Objectifs de la v0.1
 

@@ -1,0 +1,9 @@
+---
+source: crates/rustty-vt/tests/fixtures.rs
+assertion_line: 35
+expression: "render(6, 3, \"\\x1b(0lqqqqk\\r\\nx    x\\r\\nmqqqqj\\x1b(B\")"
+---
+┌────┐
+│    │
+└────┘
+-- cursor col=5 row=2

@@ -1,0 +1,20 @@
+[package]
+name = "rustty-vt"
+description = "Émulation de terminal pure : grille, scrollback, curseur, modes"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+base64.workspace = true
+bitflags.workspace = true
+unicode-width.workspace = true
+vte.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+
+[lints]
+workspace = true

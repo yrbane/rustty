@@ -1,0 +1,9 @@
+---
+source: crates/rustty-vt/tests/fixtures.rs
+assertion_line: 17
+expression: "render(20, 3,\n\"\\x1b[32muser\\x1b[0m@host:~$ ls\\r\\n\\x1b[1;34mdir\\x1b[0m  file\\r\\n\\x1b[K$ \")"
+---
+user@host:~$ ls
+dir  file
+$
+-- cursor col=2 row=2
