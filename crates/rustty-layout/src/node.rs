@@ -3,6 +3,10 @@
 
 use crate::geometry::{Axis, Rect, WindowId};
 
+/// Un panneau ne peut pas descendre sous 10 % de l'espace de sa division.
+pub const MIN_RATIO: f32 = 0.1;
+pub const MAX_RATIO: f32 = 0.9;
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Node {
     Leaf(WindowId),
@@ -121,6 +125,59 @@ impl Node {
                 }
             }
         }
+    }
+    /// Ajuste la division la plus proche de `id` ayant l'axe `axis` : `delta`
+    /// positif agrandit le côté qui contient `id`. Faux si aucune ne convient.
+    pub(crate) fn resize(&mut self, id: WindowId, axis: Axis, delta: f32) -> bool {
+        let Self::Split {
+            axis: own_axis,
+            ratio,
+            first,
+            second,
+        } = self
+        else {
+            return false;
+        };
+        let in_first = first.contains(id);
+        if !in_first && !second.contains(id) {
+            return false;
+        }
+        let child = if in_first { first } else { second };
+        if child.resize(id, axis, delta) {
+            return true;
+        }
+        if *own_axis != axis {
+            return false;
+        }
+        let signed = if in_first { delta } else { -delta };
+        *ratio = (*ratio + signed).clamp(MIN_RATIO, MAX_RATIO);
+        true
+    }
+
+    /// Inverse l'axe de la division la plus proche de `id`.
+    pub(crate) fn rotate(&mut self, id: WindowId) -> bool {
+        let Self::Split {
+            axis,
+            first,
+            second,
+            ..
+        } = self
+        else {
+            return false;
+        };
+        let in_first = first.contains(id);
+        if !in_first && !second.contains(id) {
+            return false;
+        }
+        let child = if in_first { first } else { second };
+        if child.rotate(id) {
+            return true;
+        }
+        *axis = match axis {
+            Axis::Horizontal => Axis::Vertical,
+            Axis::Vertical => Axis::Horizontal,
+        };
+        true
     }
 }
 

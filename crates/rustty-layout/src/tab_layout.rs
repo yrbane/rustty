@@ -74,6 +74,18 @@ impl TabLayout {
         out
     }
 
+    /// Agrandit (`delta > 0`) ou réduit le panneau de `id` le long de `axis`.
+    pub fn resize(&mut self, id: WindowId, axis: Axis, delta: f32) -> bool {
+        self.root
+            .as_mut()
+            .is_some_and(|r| r.resize(id, axis, delta))
+    }
+
+    /// Inverse l'orientation de la division la plus proche de `id`.
+    pub fn rotate(&mut self, id: WindowId) -> bool {
+        self.root.as_mut().is_some_and(|r| r.rotate(id))
+    }
+
     /// Ferme `id` ; son panneau frère reprend l'espace. Si `id` avait le focus,
     /// la première feuille du frère promu le reçoit. Vrai si `id` existait.
     pub fn close(&mut self, id: WindowId) -> bool {
@@ -282,5 +294,86 @@ mod tests {
         assert!(layout.rects(Rect::new(0, 0, 10, 10), 0).is_empty());
         assert!(!layout.close(a), "déjà fermée");
         assert_eq!(layout.split(a, Axis::Vertical), None);
+    }
+
+    #[test]
+    fn resize_grows_the_pane_containing_the_window() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        let bounds = Rect::new(0, 0, 100, 10);
+        assert!(layout.resize(a, Axis::Vertical, 0.1));
+        assert_eq!(rect_of(&layout, a, bounds, 0).width, 60);
+        assert!(layout.resize(b, Axis::Vertical, 0.3));
+        assert_eq!(
+            rect_of(&layout, a, bounds, 0).width,
+            30,
+            "agrandir b réduit a"
+        );
+    }
+
+    #[test]
+    fn resize_targets_the_nearest_split_with_that_axis() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        let c = layout.split(b, Axis::Horizontal).unwrap();
+        let bounds = Rect::new(0, 0, 100, 100);
+        assert!(
+            layout.resize(c, Axis::Vertical, 0.2),
+            "c n'a pas de division verticale directe : on remonte"
+        );
+        assert_eq!(rect_of(&layout, a, bounds, 0).width, 30);
+        assert_eq!(rect_of(&layout, c, bounds, 0).width, 70);
+        assert!(layout.resize(c, Axis::Horizontal, 0.2));
+        assert_eq!(rect_of(&layout, c, bounds, 0).height, 70);
+        assert_eq!(rect_of(&layout, b, bounds, 0).height, 30);
+    }
+
+    #[test]
+    fn resize_is_clamped() {
+        let (mut layout, a) = TabLayout::new();
+        let _ = layout.split(a, Axis::Vertical).unwrap();
+        let bounds = Rect::new(0, 0, 100, 10);
+        for _ in 0..20 {
+            layout.resize(a, Axis::Vertical, 0.1);
+        }
+        assert_eq!(rect_of(&layout, a, bounds, 0).width, 90);
+        for _ in 0..40 {
+            layout.resize(a, Axis::Vertical, -0.1);
+        }
+        assert_eq!(rect_of(&layout, a, bounds, 0).width, 10);
+    }
+
+    #[test]
+    fn resize_without_a_matching_split_or_unknown_window_does_nothing() {
+        let (mut layout, a) = TabLayout::new();
+        assert!(!layout.resize(a, Axis::Vertical, 0.1), "une seule fenêtre");
+        let _ = layout.split(a, Axis::Vertical).unwrap();
+        assert!(
+            !layout.resize(a, Axis::Horizontal, 0.1),
+            "pas de division horizontale"
+        );
+        assert!(!layout.resize(WindowId(9), Axis::Vertical, 0.1));
+    }
+
+    #[test]
+    fn rotate_flips_the_nearest_split() {
+        let (mut layout, a) = TabLayout::new();
+        let b = layout.split(a, Axis::Vertical).unwrap();
+        let c = layout.split(b, Axis::Horizontal).unwrap();
+        let bounds = Rect::new(0, 0, 100, 100);
+        assert!(layout.rotate(c));
+        assert_eq!(
+            rect_of(&layout, b, bounds, 0),
+            Rect::new(50, 0, 25, 100),
+            "b et c passent côte à côte"
+        );
+        assert_eq!(rect_of(&layout, c, bounds, 0), Rect::new(75, 0, 25, 100));
+        assert_eq!(
+            rect_of(&layout, a, bounds, 0),
+            Rect::new(0, 0, 50, 100),
+            "la division racine n'a pas bougé"
+        );
+        let (mut single, s) = TabLayout::new();
+        assert!(!single.rotate(s));
     }
 }

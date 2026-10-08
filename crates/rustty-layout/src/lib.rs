@@ -6,4 +6,5 @@ mod node;
 pub mod tab_layout;
 
 pub use geometry::{Axis, Direction, Rect, WindowId};
+pub use node::{MAX_RATIO, MIN_RATIO};
 pub use tab_layout::TabLayout;
