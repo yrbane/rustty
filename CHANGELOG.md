@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.55 — 2026-10-08 · « Plan 4 : le binaire »
+
+- Plan d'implémentation du binaire `rustty` (14 tâches) : ligne de commande, thread écrivain PTY, clavier (raccourcis, encodage xterm, collage), souris (rapports, sélection), géométrie, onglets et espace de travail, titres et bandeau, modèle d'interface à effets, `TermWindow`, rechargement de la configuration, surface wgpu et frame, boucle winit.
+
 ## 0.1.0-alpha.54 — 2026-10-08 · « Lignes sous ConPTY »
 
 - `rustty-pty` : le test des 2 000 lignes extrait les numéros indépendamment des séquences de contrôle que ConPTY intercale sur la même ligne ; vérifie toujours l'ordre strict, sans perte ni doublon.
