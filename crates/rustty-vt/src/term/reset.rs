@@ -38,10 +38,18 @@ impl Term {
         let rows = rows.max(1);
         let template = Cell::default();
         let old_rows = self.rows();
-        let reflowed = cols != self.cols() && !self.modes.alt_screen;
         let mut reflowed_cursor = None;
-        if reflowed {
-            reflowed_cursor = Some(self.reflow_primary(cols, rows));
+        let mut reflowed_saved = None;
+        if cols != self.cols() {
+            // L'écran principal est redécoupé même sous l'écran alternatif : son
+            // curseur est alors celui sauvegardé à l'entrée (mode 1049).
+            if self.modes.alt_screen {
+                let saved = self.saved_cursor.cursor;
+                reflowed_saved = Some(self.reflow_primary(cols, rows, saved));
+            } else {
+                let cursor = self.cursor;
+                reflowed_cursor = Some(self.reflow_primary(cols, rows, cursor));
+            }
         } else {
             self.scrollback.resize_lines(cols, template);
             if !self.modes.alt_screen && rows < old_rows {
@@ -59,6 +67,10 @@ impl Term {
         self.cursor.clamp(cols, rows);
         self.saved_cursor.cursor.clamp(cols, rows);
         self.saved_cursor_alt.cursor.clamp(cols, rows);
+        if let Some((row, col)) = reflowed_saved {
+            self.saved_cursor.cursor.row = row;
+            self.saved_cursor.cursor.col = col.min(cols - 1);
+        }
         if let Some((row, col)) = reflowed_cursor {
             // Après `clamp`, qui annule le retour à la ligne en attente.
             self.cursor.row = row;
@@ -69,7 +81,7 @@ impl Term {
 
     /// Redécoupe l'historique et l'écran principal à `cols` colonnes et rend
     /// la nouvelle position (ligne, colonne) du curseur dans la grille.
-    fn reflow_primary(&mut self, cols: usize, rows: usize) -> (usize, usize) {
+    fn reflow_primary(&mut self, cols: usize, rows: usize, cursor: Cursor) -> (usize, usize) {
         let mut lines = self.scrollback.drain_all();
         let history = lines.len();
         let screen = self.grid.lines();
@@ -77,18 +89,20 @@ impl Term {
             .iter()
             .rposition(|l| l.cells().iter().any(|c| *c != Cell::default()))
             .map_or(0, |i| i + 1)
-            .max(self.cursor.row + 1)
+            .max(cursor.row + 1)
             .min(screen.len());
         lines.extend(screen[..used].iter().cloned());
-        let cursor_col = self.cursor.col + usize::from(self.cursor.pending_wrap);
-        let (lines, cursor) = reflow(lines, Some((history + self.cursor.row, cursor_col)), cols);
-        let (row, col) = cursor.unwrap_or((lines.len().saturating_sub(1), 0));
-        // Les `rows` dernières lignes à l'écran, sans jamais cacher le curseur.
-        let start = lines.len().saturating_sub(rows).min(row);
+        let cursor_col = cursor.col + usize::from(cursor.pending_wrap);
+        let (lines, moved) = reflow(lines, Some((history + cursor.row, cursor_col)), cols);
+        let (row, col) = moved.unwrap_or((lines.len().saturating_sub(1), 0));
+        // Les `rows` dernières lignes à l'écran : aucun texte n'est perdu. Si
+        // le curseur était plus haut, il reste en haut de l'écran (l'application
+        // qui l'y a mis redessine à la réception du nouveau format).
+        let start = lines.len().saturating_sub(rows);
         let mut lines = lines.into_iter();
         self.scrollback.extend(lines.by_ref().take(start).collect());
         self.grid = Grid::from_lines(cols, rows, lines.take(rows).collect());
-        (row - start, col)
+        (row.saturating_sub(start), col)
     }
 
     /// Avant de tronquer le bas de l'écran, pousse assez de lignes du haut dans
@@ -129,6 +143,37 @@ mod tests {
     use crate::cursor::Cursor;
     use crate::modes::Modes;
     use crate::term::test_support::{feed, term};
+
+    #[test]
+    fn lines_below_the_cursor_are_never_lost() {
+        let mut t = term(10, 4);
+        feed(
+            &mut t,
+            "aaaaaaaaaa\r\nbbbbbbbbbb\r\ncccccccccc\r\ndddddddddd\x1b[H",
+        );
+        t.resize(5, 4);
+        let history: Vec<String> = (0..t.scrollback().len())
+            .rev()
+            .map(|i| t.scrollback().get(i).unwrap().text().trim_end().to_string())
+            .collect();
+        let all = [history, t.text()].concat().join("|");
+        for part in ["aaaaa", "bbbbb", "ccccc", "ddddd"] {
+            assert_eq!(all.matches(part).count(), 2, "{part} perdu : {all}");
+        }
+    }
+
+    #[test]
+    fn alt_screen_resize_reflows_the_primary_screen() {
+        let mut t = term(10, 3);
+        feed(&mut t, "0123456789AB\x1b[?1049hvim");
+        t.resize(6, 3);
+        feed(&mut t, "\x1b[?1049l");
+        assert_eq!(
+            t.text(),
+            ["012345", "6789AB", ""],
+            "l'écran principal n'est pas tronqué"
+        );
+    }
 
     #[test]
     fn resize_narrower_reflows_screen_and_history() {

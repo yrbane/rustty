@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.89 — 2026-10-09 · « Corrections de revue »
+
+- Reflow quinze fois plus rapide (10 000 lignes d'historique : 5,6 ms au lieu de 82 ms) : les lignes qui tiennent déjà sont seulement mises à la largeur, plus de saccade en glissant une barre.
+- Plus aucune ligne perdue quand le curseur est en haut d'un panneau qu'on rétrécit.
+- Redimensionner pendant vim ou less réorganise aussi l'écran principal et l'historique au lieu de les tronquer.
+- Le bandeau (confirmation de fermeture, erreur de configuration) reste au-dessus d'un panneau zoomé.
+
 ## 0.1.0-alpha.88 — 2026-10-09 · « Documentation des panneaux »
 
 - README : section « Installer » (`cargo install --path crates/rustty`, `cargo install --git …`, `--install-desktop`, `--init-config`), raccourcis à jour, zoom par panneau, glisser des barres, reflow ; `docs/e2e.md` complété.

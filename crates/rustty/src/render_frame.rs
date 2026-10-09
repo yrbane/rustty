@@ -8,6 +8,7 @@ use rustty_render::{
 use rustty_vt::Snapshot;
 
 use crate::mouse::Selection;
+use crate::pane_fonts::SizeKey;
 
 pub struct PaneView {
     pub rect: PixelRect,
@@ -111,9 +112,45 @@ pub fn build_frame(
     }
 }
 
+/// Une passe de rendu : la base (efface, panneaux à la taille configurée,
+/// décor), une par taille zoomée, puis le décor qui doit rester au-dessus
+/// de tout (bandeau).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Pass {
+    Base,
+    Size(SizeKey),
+    Overlay,
+}
+
+pub fn pass_order(base: SizeKey, keys: impl IntoIterator<Item = SizeKey>) -> Vec<Pass> {
+    let mut passes = vec![Pass::Base];
+    passes.extend(keys.into_iter().filter(|k| *k != base).map(Pass::Size));
+    passes.push(Pass::Overlay);
+    passes
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn overlay_pass_comes_last() {
+        let base = SizeKey::of(11.0);
+        let passes = pass_order(base, [SizeKey::of(14.0), SizeKey::of(9.0)]);
+        assert_eq!(passes.first(), Some(&Pass::Base));
+        assert_eq!(
+            passes.last(),
+            Some(&Pass::Overlay),
+            "le bandeau passe au-dessus des panneaux zoomés"
+        );
+        assert_eq!(passes.len(), 4);
+        assert!(passes.contains(&Pass::Size(SizeKey::of(9.0))));
+        assert_eq!(
+            pass_order(base, [base]),
+            vec![Pass::Base, Pass::Overlay],
+            "la base n'est pas dessinée deux fois"
+        );
+    }
 
     #[test]
     fn tab_specs_carry_accents() {

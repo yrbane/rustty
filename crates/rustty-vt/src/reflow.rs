@@ -41,51 +41,70 @@ pub fn reflow(
     cols: usize,
 ) -> (Vec<Line>, Option<(usize, usize)>) {
     let cols = cols.max(1);
-    let mut out = Vec::new();
+    let mut out = Vec::with_capacity(lines.len());
     let mut new_cursor = None;
-    for logical in logical_lines(&lines, cursor) {
-        layout(logical, cols, &mut out, &mut new_cursor);
+    let mut current: Option<Logical> = None;
+    for (row, mut line) in lines.into_iter().enumerate() {
+        let on_cursor = cursor.is_some_and(|(r, _)| r == row);
+        // Chemin rapide : une ligne isolée qui tient déjà est seulement mise à
+        // la largeur (le cas de presque tout l'historique).
+        if current.is_none() && !line.wrapped && !on_cursor && used_width(&line) <= cols {
+            line.resize(cols, Cell::default());
+            line.wrapped = false;
+            out.push(line);
+            continue;
+        }
+        let logical = current.get_or_insert_with(Logical::default);
+        append(logical, &line, row, cursor);
+        if !line.wrapped
+            && let Some(done) = current.take()
+        {
+            layout(trimmed(done), cols, &mut out, &mut new_cursor);
+        }
+    }
+    if let Some(done) = current {
+        layout(trimmed(done), cols, &mut out, &mut new_cursor);
     }
     (out, new_cursor)
 }
 
-fn logical_lines(lines: &[Line], cursor: Option<(usize, usize)>) -> Vec<Logical> {
-    let mut logicals = Vec::new();
-    let mut current = Logical::default();
-    for (row, line) in lines.iter().enumerate() {
-        for (col, cell) in line.cells().iter().enumerate() {
-            if cursor == Some((row, col)) {
-                // Sur une seconde moitié, le curseur désigne le caractère large.
-                let back = usize::from(cell.is_wide_continuation());
-                current.cursor = Some(current.entries.len().saturating_sub(back));
-            }
-            if !cell.is_wide_continuation() {
-                current.entries.push(Entry {
-                    cell: *cell,
-                    zerowidth: line.zerowidth(col).map(str::to_owned),
-                });
-            }
+/// Colonnes occupées : jusqu'à la dernière cellule qui n'est pas un blanc par défaut.
+fn used_width(line: &Line) -> usize {
+    line.cells()
+        .iter()
+        .rposition(|c| *c != Cell::default())
+        .map_or(0, |i| i + 1)
+}
+
+fn append(logical: &mut Logical, line: &Line, row: usize, cursor: Option<(usize, usize)>) {
+    for (col, cell) in line.cells().iter().enumerate() {
+        if cursor == Some((row, col)) {
+            // Sur une seconde moitié, le curseur désigne le caractère large.
+            let back = usize::from(cell.is_wide_continuation());
+            logical.cursor = Some(logical.entries.len().saturating_sub(back));
         }
-        if let Some((r, c)) = cursor
-            && r == row
-            && c >= line.len()
-        {
-            current.cursor = Some(current.entries.len() + (c - line.len()));
-        }
-        if !line.wrapped {
-            logicals.push(std::mem::take(&mut current));
+        if !cell.is_wide_continuation() {
+            logical.entries.push(Entry {
+                cell: *cell,
+                zerowidth: line.zerowidth(col).map(str::to_owned),
+            });
         }
     }
-    if !current.entries.is_empty() || current.cursor.is_some() {
-        logicals.push(current);
+    if let Some((r, c)) = cursor
+        && r == row
+        && c >= line.len()
+    {
+        logical.cursor = Some(logical.entries.len() + (c - line.len()));
     }
-    for logical in &mut logicals {
-        let keep = logical.cursor.unwrap_or(0);
-        while logical.entries.len() > keep && logical.entries.last().is_some_and(Entry::is_blank) {
-            logical.entries.pop();
-        }
+}
+
+/// Retire les blancs de fin, sauf ceux qui précèdent le curseur.
+fn trimmed(mut logical: Logical) -> Logical {
+    let keep = logical.cursor.unwrap_or(0);
+    while logical.entries.len() > keep && logical.entries.last().is_some_and(Entry::is_blank) {
+        logical.entries.pop();
     }
-    logicals
+    logical
 }
 
 fn layout(logical: Logical, cols: usize, out: &mut Vec<Line>, cursor: &mut Option<(usize, usize)>) {
@@ -244,5 +263,40 @@ mod tests {
         let (out, cursor) = reflow(Vec::new(), None, 5);
         assert!(out.is_empty());
         assert_eq!(cursor, None);
+    }
+}
+
+#[cfg(test)]
+mod perf {
+    use super::*;
+
+    /// Un historique de 10 000 lignes courtes, redécoupé à chaque colonne
+    /// franchie pendant un glisser : doit rester bien sous la frame.
+    #[test]
+    fn reflowing_ten_thousand_short_lines_is_fast() {
+        let lines: Vec<Line> = (0..10_000)
+            .map(|i| {
+                let mut l = Line::new(120);
+                for (c, ch) in format!("ligne {i} avec un peu de texte")
+                    .chars()
+                    .enumerate()
+                {
+                    l.set(c, Cell::new(ch, Default::default()));
+                }
+                l
+            })
+            .collect();
+        let start = std::time::Instant::now();
+        let (out, _) = reflow(lines, None, 119);
+        let elapsed = start.elapsed();
+        assert_eq!(out.len(), 10_000);
+        assert_eq!(
+            out[9_999].text().trim_end(),
+            "ligne 9999 avec un peu de texte"
+        );
+        assert!(
+            elapsed < std::time::Duration::from_millis(100),
+            "reflow de 10 000 lignes : {elapsed:?}"
+        );
     }
 }
