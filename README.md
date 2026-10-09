@@ -72,7 +72,8 @@ alias img='rustty img'                   # à mettre dans ~/.bashrc ou ~/.zshrc
 
 L'image s'affiche dans le panneau courant, via le protocole graphique de kitty ;
 elle défile avec le texte, suit le zoom de police et disparaît avec `clear`.
-Formats : PNG, JPEG, GIF (première image), WebP, BMP. Les images de plus de
+Formats : PNG, JPEG, GIF (première image), WebP, BMP ; l'orientation EXIF des
+photos est appliquée. Les images de plus de
 2048 px de côté sont réduites avant l'envoi. `rustty img` marche aussi dans kitty.
 
 Côté terminal, chaque image posée est conservée à sa taille affichée (marge ×2

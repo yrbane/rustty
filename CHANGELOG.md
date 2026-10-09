@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.118 — 2026-10-09 · « Photos remises d'aplomb »
+
+- `rustty img` : l'orientation EXIF est appliquée après décodage (`ImageDecoder::orientation` puis `DynamicImage::apply_orientation`) ; les photos de téléphone prises en portrait ne s'affichent plus couchées. Un EXIF illisible laisse l'image telle quelle.
+- `img::decode` : décodage au format deviné, testé avec un JPEG portant un segment EXIF construit à la volée.
+- README : mention de l'orientation EXIF.
+
 ## 0.1.0-alpha.117 — 2026-10-09 · « Plus de bouton collé après alt-tab »
 
 - Souris : à la perte du focus, le bouton tenu est relâché auprès du terminal qui a reçu l'appui (cellule bornée à son panneau) et le filtre de mouvement est remis à zéro ; après un alt-tab, vim ou tmux ne reçoivent plus de glisser fantôme.

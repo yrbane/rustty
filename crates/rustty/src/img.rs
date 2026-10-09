@@ -5,7 +5,8 @@ use std::io::{Cursor, Write};
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use image::{DynamicImage, ImageFormat, imageops::FilterType};
+use image::metadata::Orientation;
+use image::{DynamicImage, ImageDecoder, ImageFormat, ImageReader, imageops::FilterType};
 
 use crate::img_fetch::read_source;
 
@@ -17,12 +18,24 @@ const CHUNK: usize = 4096;
 /// Lit `source`, décode et écrit les séquences ; rien n'est écrit en cas d'erreur.
 pub fn run(source: &str, out: &mut impl Write) -> Result<(), String> {
     let bytes = read_source(source)?;
-    let img =
-        image::load_from_memory(&bytes).map_err(|e| format!("image illisible ({source}) : {e}"))?;
+    let img = decode(&bytes).map_err(|e| format!("image illisible ({source}) : {e}"))?;
     let data = encode_for_terminal(img)?;
     out.write_all(&data)
         .and_then(|()| out.flush())
         .map_err(|e| format!("écriture impossible : {e}"))
+}
+
+/// Décode l'image, format deviné, et applique son orientation EXIF (photos
+/// de téléphone prises en portrait).
+pub fn decode(bytes: &[u8]) -> image::ImageResult<DynamicImage> {
+    let mut decoder = ImageReader::new(Cursor::new(bytes))
+        .with_guessed_format()?
+        .into_decoder()?;
+    // Un EXIF illisible ne doit pas empêcher l'affichage : image telle quelle.
+    let orientation = decoder.orientation().unwrap_or(Orientation::NoTransforms);
+    let mut img = DynamicImage::from_decoder(decoder)?;
+    img.apply_orientation(orientation);
+    Ok(img)
 }
 
 /// Réduit à `MAX_SIDE`, encode en PNG et découpe en séquences APC, `\n` final compris.
@@ -136,6 +149,35 @@ mod tests {
         assert!(run(text.to_str().unwrap(), &mut out).is_err());
         let _ = std::fs::remove_file(text);
         assert!(out.is_empty());
+    }
+
+    /// JPEG 16×8 portant un segment EXIF `Orientation = orientation`.
+    fn jpeg_with_orientation(orientation: u8) -> Vec<u8> {
+        let mut jpeg = Vec::new();
+        plain(16, 8)
+            .to_rgb8()
+            .write_to(&mut Cursor::new(&mut jpeg), ImageFormat::Jpeg)
+            .unwrap();
+        // APP1 : « Exif\0\0 », en-tête TIFF gros-boutiste, un IFD d'une entrée
+        // 0x0112 (SHORT, 1 valeur), pas d'IFD suivant.
+        let mut app1 = vec![0xFF, 0xE1, 0x00, 0x22];
+        app1.extend_from_slice(b"Exif\0\0MM\0\x2A\0\0\0\x08\0\x01");
+        app1.extend_from_slice(&[0x01, 0x12, 0x00, 0x03, 0, 0, 0, 1, 0, orientation, 0, 0]);
+        app1.extend_from_slice(&[0, 0, 0, 0]);
+        jpeg.splice(2..2, app1);
+        jpeg
+    }
+
+    #[test]
+    fn exif_orientation_is_applied() {
+        let rotated = decode(&jpeg_with_orientation(6)).unwrap();
+        assert_eq!(
+            (rotated.width(), rotated.height()),
+            (8, 16),
+            "quart de tour"
+        );
+        let upright = decode(&jpeg_with_orientation(1)).unwrap();
+        assert_eq!((upright.width(), upright.height()), (16, 8));
     }
 
     #[test]
