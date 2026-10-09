@@ -7,10 +7,8 @@ use rustty_render::{
 use rustty_vt::Snapshot;
 
 use crate::mouse::Selection;
-use crate::tab::TermId;
 
 pub struct PaneView {
-    pub term: TermId,
     pub rect: PixelRect,
     pub snapshot: Snapshot,
     pub focused: bool,
@@ -168,7 +166,6 @@ mod tests {
         let mut t = Term::new(10, 2, 0);
         t.input(b"x");
         let panes = vec![PaneView {
-            term: TermId(1),
             rect: PixelRect::new(0, 24, 200, 100),
             snapshot: t.snapshot(),
             focused: true,

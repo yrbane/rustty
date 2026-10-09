@@ -48,11 +48,6 @@ impl Selection {
         (self.anchor.min(self.head), self.anchor.max(self.head))
     }
 
-    pub fn contains(&self, pos: CellPos) -> bool {
-        let (start, end) = self.bounds();
-        start <= pos && pos <= end
-    }
-
     /// Le texte sélectionné, lignes de fin nettoyées, retours à la ligne
     /// seulement entre deux lignes logiques distinctes.
     pub fn text(&self, snapshot: &Snapshot) -> String {
@@ -116,22 +111,6 @@ mod tests {
         assert_eq!(s.bounds(), (pos(1, 0), pos(5, 2)));
         assert!(!s.is_empty());
         assert!(Selection::start(pos(3, 3)).is_empty());
-    }
-
-    #[test]
-    fn contains_follows_reading_order() {
-        let mut s = Selection::start(pos(4, 0));
-        s.extend(pos(2, 2));
-        assert!(
-            s.contains(pos(4, 0)) && s.contains(pos(9, 0)),
-            "fin de la première ligne"
-        );
-        assert!(
-            s.contains(pos(0, 1)) && s.contains(pos(9, 1)),
-            "ligne entière au milieu"
-        );
-        assert!(s.contains(pos(0, 2)) && s.contains(pos(2, 2)));
-        assert!(!s.contains(pos(3, 2)) && !s.contains(pos(3, 0)));
     }
 
     #[test]

@@ -82,10 +82,6 @@ impl TermWindow {
         *self.term.lock().modes()
     }
 
-    pub fn title(&self) -> String {
-        self.term.lock().title().to_string()
-    }
-
     pub fn write(&self, bytes: Vec<u8>) {
         self.writer.send(bytes);
     }

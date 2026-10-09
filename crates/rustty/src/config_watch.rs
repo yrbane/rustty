@@ -2,7 +2,6 @@
 //! casse jamais la session (une config invalide garde l'ancienne).
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rustty_config::Config;
@@ -63,6 +62,7 @@ impl ConfigWatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
     use std::sync::mpsc::channel;
     use std::time::Duration;
 

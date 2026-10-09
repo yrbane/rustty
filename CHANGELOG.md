@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.69 — 2026-10-09 · « Le terminal s'ouvre »
+
+- `rustty` : fenêtre winit + surface wgpu, un shell par panneau, clavier (raccourcis puis encodage), souris (barre d'onglets avec ✕ au survol, sélection avec copie, collage, molette, rapports aux applications), onglets et splits, opacité, bandeaux, rechargement de la configuration à chaud, fin de shell avec `--hold`, icône et titre avec la version.
+- CI : bibliothèques Wayland et xkbcommon sur Linux pour compiler winit.
+- Docs : `docs/e2e.md` (parcours manuel) et README (lancement, raccourcis).
+
 ## 0.1.0-alpha.68 — 2026-10-09 · « Surface et frame »
 
 - `rustty` : surface wgpu (format non-sRGB ou vue linéaire, composition alpha prémultipliée pour l'opacité, acquisition robuste), et construction pure de la `Frame` (panneaux, onglets, sélection, fond avec opacité).

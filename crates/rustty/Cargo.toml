@@ -17,6 +17,8 @@ rustty-pty = { path = "../rustty-pty" }
 rustty-render = { path = "../rustty-render" }
 rustty-vt = { path = "../rustty-vt" }
 anyhow.workspace = true
+arboard.workspace = true
+image.workspace = true
 wgpu.workspace = true
 pollster.workspace = true
 notify.workspace = true

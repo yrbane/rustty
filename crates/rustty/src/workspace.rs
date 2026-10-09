@@ -2,7 +2,7 @@
 //! portent, et les opérations de la configuration (onglets, splits, focus).
 
 use rustty_config::{FocusDirection, ResizeDir, SplitAxis};
-use rustty_layout::{Axis, Direction, WindowId};
+use rustty_layout::{Axis, Direction};
 
 use crate::tab::{Tab, TermId};
 
@@ -57,10 +57,6 @@ impl Workspace {
 
     pub fn focused_term(&self) -> Option<TermId> {
         self.tabs.get(self.active).and_then(Tab::focused_term)
-    }
-
-    pub fn window_of_focused(&self) -> Option<WindowId> {
-        self.tabs.get(self.active).and_then(|t| t.layout.focused())
     }
 
     pub fn tab_of(&self, term: TermId) -> Option<usize> {
@@ -291,7 +287,10 @@ mod tests {
         assert!(ws.resize(ResizeDir::Wider));
         assert!(ws.rotate());
         assert!(ws.toggle_zoom());
-        assert_eq!(ws.active_tab().layout.zoomed(), ws.window_of_focused());
+        assert_eq!(
+            ws.active_tab().layout.zoomed(),
+            ws.active_tab().layout.focused()
+        );
         assert!(ws.toggle_zoom());
         assert!(ws.focus_term(t2));
         assert_eq!(ws.focused_term(), Some(t2));
