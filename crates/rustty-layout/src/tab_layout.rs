@@ -1,6 +1,6 @@
 //! Façade d'un onglet : l'arbre de divisions, la fenêtre focalisée et le zoom.
 
-use crate::geometry::{Axis, Direction, Rect, WindowId};
+use crate::geometry::{Axis, Direction, Rect, SplitId, WindowId};
 use crate::node::Node;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -97,6 +97,18 @@ impl TabLayout {
         out
     }
 
+    /// Les barres entre panneaux : l'interstice de chaque division, avec
+    /// l'identifiant de la division. Aucune quand un panneau est zoomé.
+    pub fn dividers(&self, bounds: Rect, gap: u32) -> Vec<(SplitId, Rect)> {
+        let mut out = Vec::new();
+        if self.zoomed.is_none()
+            && let Some(root) = &self.root
+        {
+            root.dividers(bounds, gap, &mut out);
+        }
+        out
+    }
+
     /// Côté de la grille virtuelle utilisée pour les calculs de voisinage.
     const VIRTUAL_SIDE: u32 = 10_000;
 
@@ -187,6 +199,63 @@ fn overlap_1d(a0: u32, a1: u32, b0: u32, b1: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_vertical_split_has_one_vertical_divider() {
+        let (mut l, first) = TabLayout::new();
+        let second = l.split(first, Axis::Vertical).unwrap();
+        let d = l.dividers(Rect::new(0, 24, 802, 500), 2);
+        assert_eq!(d, vec![(SplitId(second.0), Rect::new(400, 24, 2, 500))]);
+    }
+
+    #[test]
+    fn nested_splits_list_every_divider() {
+        let (mut l, first) = TabLayout::new();
+        let second = l.split(first, Axis::Vertical).unwrap();
+        let third = l.split(second, Axis::Horizontal).unwrap();
+        let bounds = Rect::new(0, 0, 802, 602);
+        let d = l.dividers(bounds, 2);
+        assert_eq!(d.len(), 2);
+        assert_eq!(d[0].0, SplitId(second.0));
+        assert_eq!(d[1].0, SplitId(third.0));
+        assert_eq!(d[1].1, Rect::new(402, 300, 400, 2));
+        for (_, bar) in &d {
+            for (_, pane) in l.rects(bounds, 2) {
+                assert!(!bar.intersects(&pane), "{bar:?} chevauche {pane:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn divider_ids_survive_closing_other_panes() {
+        let (mut l, first) = TabLayout::new();
+        let second = l.split(first, Axis::Vertical).unwrap();
+        let third = l.split(first, Axis::Horizontal).unwrap();
+        assert!(l.close(third));
+        let ids: Vec<_> = l
+            .dividers(Rect::new(0, 0, 800, 600), 2)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        assert_eq!(ids, vec![SplitId(second.0)]);
+        assert!(l.rotate(first));
+        assert_eq!(
+            l.dividers(Rect::new(0, 0, 800, 600), 2)[0].0,
+            SplitId(second.0),
+            "la rotation garde l'identifiant"
+        );
+    }
+
+    #[test]
+    fn no_dividers_when_zoomed_or_without_gap() {
+        let (mut l, first) = TabLayout::new();
+        l.split(first, Axis::Vertical).unwrap();
+        assert!(l.dividers(Rect::new(0, 0, 800, 600), 0).is_empty());
+        assert!(l.toggle_zoom(first));
+        assert!(l.dividers(Rect::new(0, 0, 800, 600), 2).is_empty());
+        let (single, _) = TabLayout::new();
+        assert!(single.dividers(Rect::new(0, 0, 800, 600), 2).is_empty());
+    }
     use crate::geometry::Axis;
     use crate::geometry::Direction;
 

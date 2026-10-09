@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.74 — 2026-10-09 · « Barres de split »
+
+- `rustty-layout` : chaque division porte un identifiant stable (`SplitId`, celui de la fenêtre qu'elle a créée) et `TabLayout::dividers` rend le rectangle de chaque barre entre panneaux.
+
 ## 0.1.0-alpha.73 — 2026-10-09 · « Options de personnalisation »
 
 - `rustty-config` : section `[splits]` (barre avec ou sans, épaisseur, couleur, couleur aléatoire par division), marges horizontale et verticale et espacement des onglets, section `[tabs.colors]` (couleurs d'onglet et tirage aléatoire), actions `rename_tab`, `increase_font_size`, `decrease_font_size`, `reset_font_size` avec leurs raccourcis par défaut, noms de touches `plus`, `minus`, `equal`, bornes validées.

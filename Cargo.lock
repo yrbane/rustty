@@ -2063,7 +2063,7 @@ dependencies = [
 
 [[package]]
 name = "rustty"
-version = "0.1.0-alpha.73"
+version = "0.1.0-alpha.74"
 dependencies = [
  "anyhow",
  "arboard",
@@ -2086,7 +2086,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-config"
-version = "0.1.0-alpha.73"
+version = "0.1.0-alpha.74"
 dependencies = [
  "bitflags 2.13.2",
  "directories",
@@ -2097,14 +2097,14 @@ dependencies = [
 
 [[package]]
 name = "rustty-layout"
-version = "0.1.0-alpha.73"
+version = "0.1.0-alpha.74"
 dependencies = [
  "proptest",
 ]
 
 [[package]]
 name = "rustty-pty"
-version = "0.1.0-alpha.73"
+version = "0.1.0-alpha.74"
 dependencies = [
  "libc",
  "portable-pty",
@@ -2113,7 +2113,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-render"
-version = "0.1.0-alpha.73"
+version = "0.1.0-alpha.74"
 dependencies = [
  "bytemuck",
  "fontdb",
@@ -2129,7 +2129,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-vt"
-version = "0.1.0-alpha.73"
+version = "0.1.0-alpha.74"
 dependencies = [
  "base64",
  "bitflags 2.13.2",
