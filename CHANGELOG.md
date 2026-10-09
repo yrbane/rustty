@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.68 — 2026-10-09 · « Surface et frame »
+
+- `rustty` : surface wgpu (format non-sRGB ou vue linéaire, composition alpha prémultipliée pour l'opacité, acquisition robuste), et construction pure de la `Frame` (panneaux, onglets, sélection, fond avec opacité).
+
 ## 0.1.0-alpha.67 — 2026-10-09 · « Rechargement de la config »
 
 - `rustty` : surveillance du fichier de configuration (`notify`, répertoire parent) et rechargement sûr — fichier absent = défauts, fichier invalide = ancienne config conservée avec le message d'erreur.

@@ -1950,11 +1950,12 @@ dependencies = [
 
 [[package]]
 name = "rustty"
-version = "0.1.0-alpha.67"
+version = "0.1.0-alpha.68"
 dependencies = [
  "anyhow",
  "notify",
  "parking_lot",
+ "pollster",
  "rustty-config",
  "rustty-layout",
  "rustty-pty",
@@ -1964,12 +1965,13 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unicode-width",
+ "wgpu",
  "winit",
 ]
 
 [[package]]
 name = "rustty-config"
-version = "0.1.0-alpha.67"
+version = "0.1.0-alpha.68"
 dependencies = [
  "bitflags 2.13.2",
  "directories",
@@ -1980,14 +1982,14 @@ dependencies = [
 
 [[package]]
 name = "rustty-layout"
-version = "0.1.0-alpha.67"
+version = "0.1.0-alpha.68"
 dependencies = [
  "proptest",
 ]
 
 [[package]]
 name = "rustty-pty"
-version = "0.1.0-alpha.67"
+version = "0.1.0-alpha.68"
 dependencies = [
  "libc",
  "portable-pty",
@@ -1996,7 +1998,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-render"
-version = "0.1.0-alpha.67"
+version = "0.1.0-alpha.68"
 dependencies = [
  "bytemuck",
  "fontdb",
@@ -2012,7 +2014,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-vt"
-version = "0.1.0-alpha.67"
+version = "0.1.0-alpha.68"
 dependencies = [
  "base64",
  "bitflags 2.13.2",

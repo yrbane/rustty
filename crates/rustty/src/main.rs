@@ -18,7 +18,11 @@ mod config_watch;
 #[allow(unused)]
 mod events;
 #[allow(unused)]
+mod gpu_surface;
+#[allow(unused)]
 mod model;
+#[allow(unused)]
+mod render_frame;
 #[allow(unused)]
 mod tab;
 #[allow(unused)]
