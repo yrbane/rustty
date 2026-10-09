@@ -5,7 +5,7 @@
 use rustty_render::Chrome;
 
 use crate::context_menu::{
-    ContextMenu, ENTRIES, MenuClick, MenuEntry, MenuLayout, layout, menu_chrome, shortcuts,
+    ContextMenu, ENTRIES, MenuClick, MenuEntry, MenuLayout, layout, menu_chrome,
 };
 use crate::model::Effect;
 use crate::mouse::MouseButton;
@@ -13,23 +13,33 @@ use crate::tab::TermId;
 use crate::term_window::TermWindow;
 use crate::window_state::OsWindow;
 
+/// Le clic est rendu au traitement normal après la fermeture du menu :
+/// un clic droit hors du menu en ouvre un nouveau au point cliqué.
+fn reopen_on(button: MouseButton, decision: MenuClick) -> bool {
+    button == MouseButton::Right && decision == MenuClick::Close
+}
+
 impl OsWindow {
     /// Ouvre le menu au point `(x, y)` pour le panneau de `term`.
     pub(crate) fn open_context_menu(&mut self, term: TermId, x: f64, y: f64) -> Vec<Effect> {
+        // Ne remplace ni une confirmation de fermeture ni un renommage.
+        if !self.model.accepts_context_menu() {
+            return Vec::new();
+        }
         let can_copy = self
             .selection
             .as_ref()
             .is_some_and(|(t, s)| *t == term && !s.is_empty());
         let zoomed = !self.model.workspace.is_empty()
             && self.model.workspace.active_tab().layout.zoomed().is_some();
-        self.menu = Some(ContextMenu {
+        self.menu = Some(ContextMenu::new(
             term,
-            x: x.max(0.0) as u32,
-            y: y.max(0.0) as u32,
+            x.max(0.0) as u32,
+            y.max(0.0) as u32,
             can_copy,
             zoomed,
-            hovered: None,
-        });
+            &self.config.keys,
+        ));
         vec![Effect::Redraw]
     }
 
@@ -40,13 +50,8 @@ impl OsWindow {
         }
     }
 
-    fn menu_layout(&self, menu: &ContextMenu) -> MenuLayout {
-        layout(
-            menu,
-            self.surface.size(),
-            self.metrics(),
-            &shortcuts(&self.config.keys),
-        )
+    pub(crate) fn menu_layout(&self, menu: &ContextMenu) -> MenuLayout {
+        layout(menu, self.surface.size(), self.metrics())
     }
 
     /// Mouvement de souris menu ouvert : met à jour l'entrée survolée.
@@ -77,7 +82,16 @@ impl OsWindow {
             .click(menu, button == MouseButton::Left, x, y);
         let index = match decision {
             MenuClick::Keep => return Some(Vec::new()),
-            MenuClick::Close => return Some(self.close_context_menu()),
+            MenuClick::Close => {
+                let effects = self.close_context_menu();
+                if reopen_on(button, decision) {
+                    // Le clic droit suit son cours ; le menu fermé doit disparaître même
+                    // si rien ne le rouvre.
+                    self.window.request_redraw();
+                    return None;
+                }
+                return Some(effects);
+            }
             MenuClick::Run(index) => index,
         };
         let menu = self.menu.take()?;
@@ -97,14 +111,20 @@ impl OsWindow {
     /// Le menu ouvert en chrome, pour la passe finale du rendu.
     pub(crate) fn context_menu_chrome(&self) -> Option<Chrome> {
         let menu = self.menu.as_ref()?;
-        let keys = shortcuts(&self.config.keys);
-        let layout = layout(menu, self.surface.size(), self.metrics(), &keys);
-        Some(menu_chrome(
-            menu,
-            &layout,
-            &keys,
-            &self.palette,
-            self.metrics(),
-        ))
+        let layout = self.menu_layout(menu);
+        Some(menu_chrome(menu, &layout, &self.palette, self.metrics()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn right_click_outside_reopens() {
+        assert!(reopen_on(MouseButton::Right, MenuClick::Close));
+        assert!(!reopen_on(MouseButton::Left, MenuClick::Close));
+        assert!(!reopen_on(MouseButton::Right, MenuClick::Keep));
+        assert!(!reopen_on(MouseButton::Right, MenuClick::Run(0)));
     }
 }

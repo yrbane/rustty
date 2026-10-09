@@ -103,10 +103,7 @@ impl OsWindow {
             overlay.quads.extend(b.quads);
             overlay.texts.extend(b.texts);
         }
-        if let Some(menu) = self.context_menu_chrome() {
-            overlay.quads.extend(menu.quads);
-            overlay.texts.extend(menu.texts);
-        }
+        let menu_chrome = self.context_menu_chrome().unwrap_or_default();
         let background = render_frame::background_color(
             self.palette.background,
             self.model.opacity,
@@ -114,12 +111,17 @@ impl OsWindow {
         );
         let mut base_pass = Some((panes, chrome));
         let mut overlay = Some(overlay);
+        let mut menu_chrome = Some(menu_chrome);
         let keys: Vec<SizeKey> = groups.keys().copied().collect();
         for pass in render_frame::pass_order(base_key, keys) {
             let (key, (panes, chrome)) = match pass {
                 Pass::Base => (base_key, base_pass.take().unwrap_or_default()),
                 Pass::Size(key) => (key, groups.remove(&key).unwrap_or_default()),
                 Pass::Overlay => (base_key, (Vec::new(), overlay.take().unwrap_or_default())),
+                Pass::Menu => (
+                    base_key,
+                    (Vec::new(), menu_chrome.take().unwrap_or_default()),
+                ),
             };
             let frame = render_frame::build_frame((w, h), background, &panes, chrome);
             let Some(renderer) = self.renderers.get_mut(key) else {

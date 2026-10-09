@@ -95,6 +95,11 @@ impl Model {
         changed
     }
 
+    /// Le menu contextuel peut s'ouvrir : ni confirmation ni renommage en cours.
+    pub fn accepts_context_menu(&self) -> bool {
+        self.pending_close.is_none() && self.renaming.is_none()
+    }
+
     /// Abandonne une édition de nom en cours.
     pub fn cancel_rename(&mut self) -> Vec<Effect> {
         match self.renaming.take() {
@@ -354,6 +359,19 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn no_menu_while_a_confirmation_or_rename_is_pending() {
+        let (mut m, _) = Model::new(0.9, false);
+        assert!(m.accepts_context_menu());
+        m.start_rename(0);
+        assert!(!m.accepts_context_menu(), "édition de nom en cours");
+        m.cancel_rename();
+        m.pending_close = Some(CloseRequest::Window);
+        assert!(!m.accepts_context_menu(), "confirmation en attente");
+        m.pending_close = None;
+        assert!(m.accepts_context_menu());
+    }
 
     #[test]
     fn any_other_action_or_tab_bar_click_cancels_the_edit() {

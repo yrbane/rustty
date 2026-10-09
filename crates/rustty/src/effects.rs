@@ -110,7 +110,13 @@ impl OsWindow {
             return Vec::new();
         };
         match tw.poll_exit() {
-            Some(status) => self.model.term_exited(id, status),
+            Some(status) => {
+                // Avec --hold le panneau mort reste : le menu ne doit pas le viser.
+                if self.menu.as_ref().is_some_and(|m| m.term == id) {
+                    self.menu = None;
+                }
+                self.model.term_exited(id, status)
+            }
             None => Vec::new(),
         }
     }

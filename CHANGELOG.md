@@ -4,6 +4,17 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.107 — 2026-10-09 · « menu contextuel : corrections »
+
+- Le texte du bandeau n'est plus imprimé par-dessus le menu : nouvelle passe `Pass::Menu` après le bandeau.
+- Menu ouvert, le curseur et le survol de la barre d'onglets ne se figent plus : dans le menu, curseur par défaut et barre non survolée ; hors du menu, comportement normal.
+- Les raccourcis affichés sont figés à l'ouverture (`ContextMenu::new`) au lieu d'être recalculés à chaque mouvement.
+- Le menu ne dépasse plus une fenêtre étroite : libellés et raccourcis sont coupés avec `…`.
+- Un clic droit hors du menu le ferme puis ouvre le nouveau menu au point cliqué.
+- Le menu se ferme quand son panneau meurt (`--hold`).
+- Le menu ne s'ouvre pas pendant une confirmation de fermeture ou un renommage.
+- Test de correspondance entrées/actions exhaustif sur les huit entrées.
+
 ## 0.1.0-alpha.106 — 2026-10-09 · « rustty img : limites HTTP franches »
 
 - Une réponse HTTP de plus de 64 Mio donne l'erreur « réponse trop volumineuse (plus de 64 Mio) » au lieu d'être tronquée en silence.

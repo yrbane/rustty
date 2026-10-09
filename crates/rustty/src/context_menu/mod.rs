@@ -1,9 +1,11 @@
 //! Le menu du clic droit dans un panneau : entrées, raccourcis affichés,
 //! placement dans la fenêtre, test de clic et dessin. Pur.
 
+mod chrome;
 mod layout;
 
-pub use layout::{MenuClick, MenuLayout, layout, menu_chrome};
+pub use chrome::menu_chrome;
+pub use layout::{MenuClick, MenuLayout, layout};
 
 use rustty_config::{Action, KeyMap, SplitAxis};
 
@@ -84,9 +86,23 @@ pub struct ContextMenu {
     pub zoomed: bool,
     /// Index dans `ENTRIES` de l'entrée survolée.
     pub hovered: Option<usize>,
+    /// Raccourcis de chaque entrée de `ENTRIES`, figés à l'ouverture.
+    pub shortcuts: Vec<Option<String>>,
 }
 
 impl ContextMenu {
+    pub fn new(term: TermId, x: u32, y: u32, can_copy: bool, zoomed: bool, keys: &KeyMap) -> Self {
+        Self {
+            term,
+            x,
+            y,
+            can_copy,
+            zoomed,
+            hovered: None,
+            shortcuts: shortcuts(keys),
+        }
+    }
+
     pub(crate) fn enabled(&self, item: MenuItem) -> bool {
         item != MenuItem::Copy || self.can_copy
     }
@@ -117,23 +133,44 @@ mod tests {
 
     #[test]
     fn entries_map_to_config_actions() {
-        assert_eq!(MenuItem::ClosePane.action(), Action::CloseWindow);
-        assert_eq!(
-            MenuItem::SplitVertical.action(),
-            Action::Split(SplitAxis::Vertical)
-        );
-        assert_eq!(
-            MenuItem::SplitHorizontal.action(),
-            Action::Split(SplitAxis::Horizontal)
-        );
-        assert_eq!(MenuItem::Copy.action(), Action::Copy);
-        assert_eq!(MenuItem::RenameTab.action(), Action::RenameTab);
-        assert!(ENTRIES.contains(&MenuEntry::Item(MenuItem::ClosePane)));
+        // `match` exhaustif : ajouter une entrée sans la lister ne compile plus.
+        for entry in ENTRIES {
+            let MenuEntry::Item(item) = entry else {
+                continue;
+            };
+            let expected = match item {
+                MenuItem::Copy => Action::Copy,
+                MenuItem::Paste => Action::Paste,
+                MenuItem::SplitVertical => Action::Split(SplitAxis::Vertical),
+                MenuItem::SplitHorizontal => Action::Split(SplitAxis::Horizontal),
+                MenuItem::ToggleZoom => Action::ToggleZoom,
+                MenuItem::RenameTab => Action::RenameTab,
+                MenuItem::NewTab => Action::NewTab,
+                MenuItem::ClosePane => Action::CloseWindow,
+            };
+            assert_eq!(item.action(), expected, "{item:?}");
+        }
+        let items = ENTRIES
+            .iter()
+            .filter(|e| matches!(e, MenuEntry::Item(_)))
+            .count();
+        assert_eq!(items, 8, "les huit entrées sont au menu");
         assert_eq!(
             ENTRIES.last(),
             Some(&MenuEntry::Item(MenuItem::ClosePane)),
             "fermer en dernier, à l'écart"
         );
+    }
+
+    #[test]
+    fn shortcuts_are_captured_at_open() {
+        let menu = ContextMenu::new(TermId(1), 10, 20, true, false, &KeyMap::defaults());
+        assert_eq!(menu.shortcuts, shortcuts(&KeyMap::defaults()));
+        assert_eq!(menu.shortcuts.len(), ENTRIES.len());
+        assert_eq!((menu.x, menu.y, menu.can_copy), (10, 20, true));
+        let bare = ContextMenu::new(TermId(1), 0, 0, false, true, &KeyMap::empty());
+        assert!(bare.shortcuts.iter().all(Option::is_none));
+        assert!(bare.zoomed && bare.hovered.is_none());
     }
 
     #[test]
