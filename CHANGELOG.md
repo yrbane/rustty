@@ -4,6 +4,46 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.80 — 2026-10-09 · « Corrections de revue »
+
+- Renommage : l'onglet s'élargit à chaque frappe (le nom n'est plus tronqué) ; l'édition s'arrête sur toute autre action, tout clic dans la barre ou dans un panneau (fini le `git push` tapé dans le nom de l'onglet, ou le mauvais onglet renommé après en avoir ouvert un).
+- Couleurs d'onglet : un fond choisi sans couleur de texte reçoit un texte lisible ; les couleurs de texte claire et sombre suivent la luminance, y compris sur un thème clair.
+- Zoom : un seul cran par événement de molette (moins de rechargements de polices) ; `ctrl+shift+0` revient aussi à la taille configurée (`0` demande shift en AZERTY).
+
+## 0.1.0-alpha.79 — 2026-10-09 · « Icône partout »
+
+- Icône `res/rustty.svg` partout : PNG 16–512, `.ico` et `.icns` générés par `scripts/icons.sh` dans `assets/icons/` ; icône de fenêtre, identifiant d'application `rustty` (Wayland `app_id`, X11 `WM_CLASS`), icône embarquée dans l'exécutable Windows (`build.rs` + `winresource`), `rustty --install-desktop` installe le lanceur et les icônes hicolor sous `~/.local/share`.
+- Journal : par défaut les dépendances ne parlent qu'en cas d'erreur (plus d'avertissement d'`arboard` au lancement sous GNOME).
+- README et `docs/e2e.md` : nouvelles options, renommage, zoom, icône.
+
+## 0.1.0-alpha.78 — 2026-10-09 · « Barres, couleurs et zoom »
+
+- `rustty` : barres de split dessinées dans l'interstice (épaisseur et couleur de `[splits]`, ou couleur tirée au sort par division ; sans barre, panneaux bord à bord), couleurs aléatoires des onglets avec texte lisible, zoom de police par `ctrl+molette`, `ctrl+plus`, `ctrl+minus`, `ctrl+0` (4 à 72 points, retour à la taille configurée), rendu extrait dans `render.rs`.
+
+## 0.1.0-alpha.77 — 2026-10-09 · « Renommage des onglets »
+
+- `rustty` : renommage des onglets au double clic ou par `ctrl+shift+alt+t` — édition dans la barre (Entrée valide, Échap annule, retour arrière), caractères de contrôle ignorés, 64 caractères au plus, nom vide = titre du shell ; le nom remplace `{title}` dans le gabarit.
+
+## 0.1.0-alpha.76 — 2026-10-09 · « Accents et titres d'onglet »
+
+- `rustty` : tirage reproductible de couleurs d'accent parmi les 12 couleurs vives de la palette (jamais deux fois de suite la même) ; chaque onglet et chaque division reçoivent la leur à la création ; un onglet peut porter un nom personnalisé.
+
+## 0.1.0-alpha.75 — 2026-10-09 · « Style de la barre d'onglets »
+
+- `rustty-render` : la barre d'onglets suit `[tabs]` — marges horizontale et verticale, espacement entre onglets, couleurs configurées — et accepte une couleur d'accent par onglet (assombrie quand l'onglet est inactif) avec un texte automatiquement contrasté (`Rgba::luminance`, `readable_on`). Rendu par défaut inchangé.
+
+## 0.1.0-alpha.74 — 2026-10-09 · « Barres de split »
+
+- `rustty-layout` : chaque division porte un identifiant stable (`SplitId`, celui de la fenêtre qu'elle a créée) et `TabLayout::dividers` rend le rectangle de chaque barre entre panneaux.
+
+## 0.1.0-alpha.73 — 2026-10-09 · « Options de personnalisation »
+
+- `rustty-config` : section `[splits]` (barre avec ou sans, épaisseur, couleur, couleur aléatoire par division), marges horizontale et verticale et espacement des onglets, section `[tabs.colors]` (couleurs d'onglet et tirage aléatoire), actions `rename_tab`, `increase_font_size`, `decrease_font_size`, `reset_font_size` avec leurs raccourcis par défaut, noms de touches `plus`, `minus`, `equal`, bornes validées.
+
+## 0.1.0-alpha.72 — 2026-10-09 · « Plan 5 : personnalisation »
+
+- Plan d'implémentation des demandes du 2026-10-09 : barre de split (avec ou sans, largeur, couleur fixe ou aléatoire par split), marges et espacement des onglets, renommage des onglets (double clic, `ctrl+shift+alt+t`), couleurs d'onglet fixes ou aléatoires avec texte contrasté, zoom de police (ctrl+molette, ctrl++, ctrl+-, ctrl+0), icône `res/rustty.svg` partout (fenêtre, barre des tâches, exécutable Windows, menus Linux), journal sans avertissements de dépendances. L'affichage d'images (`img`) fera l'objet du plan 6.
+
 ## 0.1.0-alpha.71 — 2026-10-09 · « Corrections de revue »
 
 - `rustty-pty` : la libération d'un `Pty` ne bloque plus l'appelant — le shell est tué et moissonné dans un thread détaché (SIGHUP, grâce, SIGKILL) ; le thread lecteur capture une panique du traitement et la signale par `PtyEvent::Failed` au lieu de disparaître.

@@ -1,10 +1,12 @@
 //! Bandeau d'une ligne en bas de fenêtre : erreur de configuration,
 //! confirmation de fermeture, shell terminé. Pur : produit du Chrome.
 
-use rustty_render::{
-    CellMetrics, Chrome, ChromeQuad, ChromeText, Palette, PixelRect, Rgba, TAB_BAR_PADDING,
-};
+use rustty_render::{CellMetrics, Chrome, ChromeQuad, ChromeText, Palette, PixelRect, Rgba};
 use unicode_width::UnicodeWidthStr;
+
+/// Marge verticale du bandeau : celle de la barre d'onglets par défaut,
+/// indépendante des réglages des onglets.
+const BANNER_PADDING: u32 = rustty_render::TAB_BAR_PADDING;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BannerKind {
@@ -43,7 +45,7 @@ impl Banner {
 }
 
 pub fn banner_height(metrics: CellMetrics) -> u32 {
-    metrics.height + 2 * TAB_BAR_PADDING
+    metrics.height + 2 * BANNER_PADDING
 }
 
 fn band_color(kind: BannerKind, palette: &Palette) -> Rgba {
@@ -94,7 +96,7 @@ pub fn banner_chrome(
     if !text.is_empty() {
         chrome.texts.push(ChromeText {
             x: cw,
-            y: y + TAB_BAR_PADDING,
+            y: y + BANNER_PADDING,
             text,
             color: palette.background,
         });
@@ -126,7 +128,7 @@ mod tests {
     fn height_matches_the_tab_bar() {
         assert_eq!(
             banner_height(metrics()),
-            rustty_render::tab_bar_height(metrics())
+            metrics().height + 2 * rustty_render::TAB_BAR_PADDING
         );
     }
 

@@ -83,6 +83,11 @@ impl Direction {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct WindowId(pub u64);
 
+/// Identifiant d'une division : celui de la fenêtre que `TabLayout::split`
+/// a créée avec elle. Stable tant que la division existe.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SplitId(pub u64);
+
 #[cfg(test)]
 mod tests {
     use super::*;

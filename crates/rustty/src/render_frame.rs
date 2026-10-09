@@ -1,6 +1,7 @@
 //! De l'état de la fenêtre à la `Frame` du renderer : panneaux, barre
 //! d'onglets, sélection, bandeau, fond avec opacité. Pur.
 
+use rustty_layout::SplitId;
 use rustty_render::{
     CellMetrics, Chrome, ChromeQuad, Frame, PaneFrame, PixelRect, Rgba, TabSpec, grid_geometry,
 };
@@ -24,13 +25,32 @@ pub fn background_color(background: Rgba, opacity: f32, premultiplied: bool) -> 
     }
 }
 
-pub fn tab_specs(titles: &[String], active: usize) -> Vec<TabSpec<'_>> {
+/// Une barre de split par interstice, de la couleur donnée par `color_of`.
+pub fn divider_quads(
+    dividers: &[(SplitId, PixelRect)],
+    color_of: impl Fn(SplitId) -> Rgba,
+) -> Vec<ChromeQuad> {
+    dividers
+        .iter()
+        .map(|(id, rect)| ChromeQuad {
+            rect: *rect,
+            color: color_of(*id),
+        })
+        .collect()
+}
+
+pub fn tab_specs<'a>(
+    titles: &'a [String],
+    active: usize,
+    accents: Option<&[Rgba]>,
+) -> Vec<TabSpec<'a>> {
     titles
         .iter()
         .enumerate()
         .map(|(i, t)| TabSpec {
             title: t.as_str(),
             active: i == active,
+            accent: accents.and_then(|a| a.get(i).copied()),
         })
         .collect()
 }
@@ -94,6 +114,35 @@ pub fn build_frame(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tab_specs_carry_accents() {
+        let titles = vec!["a".to_string(), "b".to_string()];
+        let accents = [Rgba::new(1.0, 0.0, 0.0, 1.0), Rgba::new(0.0, 1.0, 0.0, 1.0)];
+        let specs = tab_specs(&titles, 0, Some(&accents));
+        assert_eq!(specs[1].accent, Some(accents[1]));
+        assert_eq!(tab_specs(&titles, 0, None)[0].accent, None);
+    }
+
+    #[test]
+    fn divider_quads_take_their_color_per_split() {
+        use rustty_layout::SplitId;
+        let dividers = [
+            (SplitId(2), PixelRect::new(400, 0, 2, 100)),
+            (SplitId(3), PixelRect::new(0, 50, 400, 2)),
+        ];
+        let quads = divider_quads(&dividers, |id| {
+            if id == SplitId(2) {
+                Rgba::new(1.0, 0.0, 0.0, 1.0)
+            } else {
+                Rgba::new(0.0, 0.0, 1.0, 1.0)
+            }
+        });
+        assert_eq!(quads.len(), 2);
+        assert_eq!(quads[0].rect, PixelRect::new(400, 0, 2, 100));
+        assert_eq!(quads[0].color, Rgba::new(1.0, 0.0, 0.0, 1.0));
+        assert_eq!(quads[1].color, Rgba::new(0.0, 0.0, 1.0, 1.0));
+    }
     use crate::mouse::CellPos;
     use rustty_vt::Term;
 
@@ -120,7 +169,7 @@ mod tests {
     #[test]
     fn tab_specs_mark_the_active_tab() {
         let titles = vec!["1: sh".to_string(), "2: vim".to_string()];
-        let specs = tab_specs(&titles, 1);
+        let specs = tab_specs(&titles, 1, None);
         assert_eq!(specs.len(), 2);
         assert!(!specs[0].active && specs[1].active);
         assert_eq!(specs[1].title, "2: vim");

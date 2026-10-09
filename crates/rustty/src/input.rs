@@ -1,16 +1,20 @@
 //! Réactions aux entrées winit : clavier (raccourcis puis encodage), souris
 //! (barre d'onglets, sélection, rapports aux applications, molette), focus.
 
+use std::time::Instant;
+
 use rustty_config::{Key as ConfigKey, Mods, NamedKey as ConfigNamed};
 use rustty_render::HoverTarget;
 use rustty_vt::MouseMode;
 use winit::event::{ElementState, KeyEvent, MouseButton as WinitButton, MouseScrollDelta};
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 
+use crate::font_zoom::wheel_change;
 use crate::geometry;
 use crate::keyboard::{encode_key, key_combo, mods_from_winit};
 use crate::model::{Effect, ScrollRequest};
 use crate::mouse::{CellPos, MouseButton, MouseKind, Selection, encode_mouse};
+use crate::rename::RenameKey;
 use crate::tab::TermId;
 use crate::window_state::OsWindow;
 
@@ -25,6 +29,18 @@ impl OsWindow {
     pub fn on_key(&mut self, event: &KeyEvent) -> Vec<Effect> {
         if event.state != ElementState::Pressed {
             return Vec::new();
+        }
+        if self.model.renaming.is_some() {
+            let key = match &event.logical_key {
+                Key::Named(NamedKey::Enter) => RenameKey::Commit,
+                Key::Named(NamedKey::Escape) => RenameKey::Cancel,
+                Key::Named(NamedKey::Backspace) => RenameKey::Backspace,
+                _ => match event.text.as_deref() {
+                    Some(text) => RenameKey::Text(text.to_string()),
+                    None => return Vec::new(),
+                },
+            };
+            return self.model.rename_key(key);
         }
         if self.model.pending_close.is_some() {
             return match &event.logical_key {
@@ -151,7 +167,8 @@ impl OsWindow {
         let Some((term, rect)) = self.pane_under(x, y) else {
             return Vec::new();
         };
-        let mut effects = Vec::new();
+        // Un clic dans un panneau ramène au terminal : l'édition de nom s'arrête.
+        let mut effects = self.model.cancel_rename();
         if self.model.workspace.focused_term() != Some(term) {
             self.model.workspace.focus_term(term);
             self.update_title();
@@ -189,6 +206,11 @@ impl OsWindow {
             let target = std::mem::replace(&mut self.press_target, HoverTarget::None);
             if target != self.bar_target(x, y) {
                 return Vec::new();
+            }
+            if let (HoverTarget::Tab(i), MouseButton::Left) = (target, button)
+                && self.tab_clicks.register(i, Instant::now())
+            {
+                return self.model.start_rename(i);
             }
             let confirm = self.config.window.confirm_close_with_running_children;
             let terms = &self.terms;
@@ -231,6 +253,12 @@ impl OsWindow {
         let lines = self.wheel.lines(lines);
         if lines == 0 {
             return Vec::new();
+        }
+        if self.modifiers.contains(Mods::CTRL) {
+            return wheel_change(lines)
+                .map(Effect::FontSize)
+                .into_iter()
+                .collect();
         }
         let (x, y) = self.cursor;
         let Some((term, rect)) = self.pane_under(x, y).or_else(|| {

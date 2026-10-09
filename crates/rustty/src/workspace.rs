@@ -4,6 +4,7 @@
 use rustty_config::{FocusDirection, ResizeDir, SplitAxis};
 use rustty_layout::{Axis, Direction};
 
+use crate::accent::AccentPicker;
 use crate::tab::{Tab, TermId};
 
 /// Pas d'un redimensionnement au clavier, en fraction du parent.
@@ -14,19 +15,37 @@ pub struct Workspace {
     tabs: Vec<Tab>,
     active: usize,
     next_term: u64,
+    picker: AccentPicker,
 }
 
 impl Workspace {
     pub fn new() -> (Self, TermId) {
+        Self::with_picker(AccentPicker::from_clock())
+    }
+
+    /// Tirage reproductible des accents (tests).
+    #[cfg(test)]
+    pub fn with_seed(seed: u64) -> (Self, TermId) {
+        Self::with_picker(AccentPicker::new(seed))
+    }
+
+    fn with_picker(mut picker: AccentPicker) -> (Self, TermId) {
         let first = TermId(1);
-        (
-            Self {
-                tabs: vec![Tab::new(first)],
-                active: 0,
-                next_term: 2,
-            },
-            first,
-        )
+        let tab = Tab::new(first, picker.next());
+        let ws = Self {
+            tabs: vec![tab],
+            active: 0,
+            next_term: 2,
+            picker,
+        };
+        (ws, first)
+    }
+
+    /// Nom personnalisé de l'onglet `index` ; `None` rend le titre du shell.
+    pub fn rename(&mut self, index: usize, title: Option<String>) {
+        if let Some(tab) = self.tabs.get_mut(index) {
+            tab.custom_title = title;
+        }
     }
 
     fn alloc_term(&mut self) -> TermId {
@@ -70,7 +89,8 @@ impl Workspace {
         } else {
             self.active + 1
         };
-        self.tabs.insert(index, Tab::new(term));
+        let accent = self.picker.next();
+        self.tabs.insert(index, Tab::new(term, accent));
         self.active = index;
         term
     }
@@ -119,8 +139,9 @@ impl Workspace {
             SplitAxis::Horizontal => Axis::Horizontal,
             SplitAxis::Vertical => Axis::Vertical,
         };
+        let accent = self.picker.next();
         self.active_tab_mut()
-            .split(layout_axis, term)
+            .split(layout_axis, term, accent)
             .then_some(term)
     }
 
@@ -198,6 +219,34 @@ impl Workspace {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rustty_layout::SplitId;
+
+    #[test]
+    fn tabs_and_splits_get_accents() {
+        let (mut ws, _) = Workspace::with_seed(3);
+        let first = ws.tabs()[0].accent;
+        ws.new_tab();
+        assert_ne!(
+            ws.tabs()[1].accent,
+            first,
+            "deux onglets consécutifs diffèrent"
+        );
+        let t = ws.split_focused(SplitAxis::Vertical).unwrap();
+        let tab = ws.active_tab();
+        let window = tab.window_of(t).unwrap();
+        let accent = tab.split_accent(SplitId(window.0));
+        assert!(accent < crate::accent::ACCENT_SLOTS.len());
+    }
+
+    #[test]
+    fn rename_sets_and_clears_the_custom_title() {
+        let (mut ws, _) = Workspace::with_seed(1);
+        ws.rename(0, Some("logs".into()));
+        assert_eq!(ws.tabs()[0].custom_title.as_deref(), Some("logs"));
+        ws.rename(0, None);
+        assert_eq!(ws.tabs()[0].custom_title, None);
+        ws.rename(9, Some("hors limites".into()));
+    }
 
     #[test]
     fn starts_with_one_tab_and_one_term() {

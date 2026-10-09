@@ -1,14 +1,17 @@
 //! La barre d'onglets : disposition en pixels, rectangles cliquables, et sa
 //! traduction en quads et textes pour le renderer. Pur, sans GPU.
 
-use rustty_config::CloseButtonStyle;
+use rustty_config::{Rgb, Tabs};
 use unicode_width::UnicodeWidthStr;
 
-use crate::color::{Palette, Rgba};
+use crate::color::{Palette, Rgba, readable_on};
 use crate::font::CellMetrics;
 use crate::frame::{Chrome, ChromeQuad, ChromeText, PixelRect};
 
+/// Marge verticale par défaut de la barre d'onglets, en pixels.
 pub const TAB_BAR_PADDING: u32 = 2;
+/// Assombrissement d'un onglet inactif qui porte une couleur d'accent.
+pub const INACTIVE_ACCENT_DIM: f32 = 0.6;
 /// Cellules occupées par le bouton de fermeture : espace, ◖, ✕, ◗.
 const CLOSE_CELLS: u32 = 4;
 const NEW_TAB_CELLS: u32 = 3;
@@ -25,33 +28,89 @@ pub struct TabBarStyle {
     pub close_hover_foreground: Rgba,
     pub close_hover_background: Rgba,
     pub show_close_button: bool,
+    /// Cellules vides de chaque côté du titre.
+    pub padding_horizontal: u32,
+    /// Pixels au-dessus et au-dessous du titre.
+    pub padding_vertical: u32,
+    /// Pixels entre deux onglets.
+    pub spacing: u32,
+    /// Texte sur un fond d'accent sombre.
+    pub light_text: Rgba,
+    /// Texte sur un fond d'accent clair.
+    pub dark_text: Rgba,
 }
 
 impl TabBarStyle {
-    pub fn from_config(
-        palette: &Palette,
-        close: &CloseButtonStyle,
-        show_close_button: bool,
-    ) -> Self {
+    pub fn from_config(palette: &Palette, tabs: &Tabs) -> Self {
+        let pick =
+            |configured: Option<Rgb>, derived: Rgba| configured.map_or(derived, Rgba::from_rgb);
+        let colors = &tabs.colors;
+        let close = &tabs.close_button_style;
+        // Les deux couleurs de texte de la palette, rangées par luminance : un
+        // thème clair a un premier plan sombre.
+        let (light_text, dark_text) =
+            if palette.foreground.luminance() >= palette.background.luminance() {
+                (palette.foreground, palette.background)
+            } else {
+                (palette.background, palette.foreground)
+            };
+        // Texte d'un onglet : la couleur configurée, sinon celle de la palette,
+        // sauf si le fond a été choisi sans texte — alors une couleur lisible dessus.
+        let text = |fg: Option<Rgb>, bg: Option<Rgb>, derived: Rgba| match (fg, bg) {
+            (Some(fg), _) => Rgba::from_rgb(fg),
+            (None, Some(bg)) => readable_on(Rgba::from_rgb(bg), light_text, dark_text),
+            (None, None) => derived,
+        };
         Self {
-            background: palette.ansi[8].dim(0.5),
-            active_background: palette.background,
-            inactive_background: palette.ansi[0],
-            active_foreground: palette.foreground,
-            inactive_foreground: palette.ansi[7],
+            background: pick(colors.bar_background, palette.ansi[8].dim(0.5)),
+            active_background: pick(colors.active_background, palette.background),
+            inactive_background: pick(colors.inactive_background, palette.ansi[0]),
+            active_foreground: text(
+                colors.active_foreground,
+                colors.active_background,
+                palette.foreground,
+            ),
+            inactive_foreground: text(
+                colors.inactive_foreground,
+                colors.inactive_background,
+                palette.ansi[7],
+            ),
             close_foreground: Rgba::from_rgb(close.foreground),
             close_background: Rgba::from_rgb(close.background),
             close_hover_foreground: Rgba::from_rgb(close.hover_foreground),
             close_hover_background: Rgba::from_rgb(close.hover_background),
-            show_close_button,
+            show_close_button: tabs.close_button,
+            padding_horizontal: tabs.padding_horizontal,
+            padding_vertical: tabs.padding_vertical,
+            spacing: tabs.spacing,
+            light_text,
+            dark_text,
+        }
+    }
+
+    /// Fond et texte d'un onglet, avec son accent éventuel.
+    fn tab_colors(&self, spec: &TabSpec) -> (Rgba, Rgba) {
+        match (spec.accent, spec.active) {
+            (Some(accent), active) => {
+                let bg = if active {
+                    accent
+                } else {
+                    accent.dim(INACTIVE_ACCENT_DIM)
+                };
+                (bg, readable_on(bg, self.light_text, self.dark_text))
+            }
+            (None, true) => (self.active_background, self.active_foreground),
+            (None, false) => (self.inactive_background, self.inactive_foreground),
         }
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TabSpec<'a> {
     pub title: &'a str,
     pub active: bool,
+    /// Couleur propre à l'onglet (aléatoire ou choisie) ; `None` = style.
+    pub accent: Option<Rgba>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -96,8 +155,8 @@ impl TabBarLayout {
     }
 }
 
-pub fn tab_bar_height(metrics: CellMetrics) -> u32 {
-    metrics.height + 2 * TAB_BAR_PADDING
+pub fn tab_bar_height(metrics: CellMetrics, style: &TabBarStyle) -> u32 {
+    metrics.height + 2 * style.padding_vertical
 }
 
 fn title_cells(title: &str) -> u32 {
@@ -111,26 +170,26 @@ pub fn layout_tab_bar(
     style: &TabBarStyle,
     metrics: CellMetrics,
 ) -> TabBarLayout {
-    let (cw, bar_h) = (metrics.width, tab_bar_height(metrics));
+    let (cw, bar_h) = (metrics.width.max(1), tab_bar_height(metrics, style));
     let close_cells = if style.show_close_button {
         CLOSE_CELLS
     } else {
         0
     };
+    let pad = style.padding_horizontal;
     let mut x = 0u32;
     let mut out = Vec::new();
     for tab in tabs {
-        let max_title = (viewport_width / cw).saturating_sub(2 + close_cells);
+        let max_title = (viewport_width / cw).saturating_sub(2 * pad + close_cells);
         let title = title_cells(tab.title).min(max_title);
-        let cells = 1 + title + close_cells + 1;
-        let width = cells * cw;
-        if x + width > viewport_width {
+        let width = (2 * pad + title + close_cells) * cw;
+        if width == 0 || x.saturating_add(width) > viewport_width {
             break;
         }
         let close = style.show_close_button.then(|| {
             PixelRect::new(
-                x + (1 + title) * cw,
-                y + TAB_BAR_PADDING,
+                x + (pad + title) * cw,
+                y + style.padding_vertical,
                 close_cells * cw,
                 metrics.height,
             )
@@ -139,13 +198,13 @@ pub fn layout_tab_bar(
             rect: PixelRect::new(x, y, width, bar_h),
             close,
         });
-        x += width;
+        x += width + style.spacing;
     }
     let new_w = NEW_TAB_CELLS * cw;
-    let new_tab = if x + new_w <= viewport_width {
+    let new_tab = if x.saturating_add(new_w) <= viewport_width {
         PixelRect::new(x, y, new_w, bar_h)
     } else {
-        PixelRect::new(x, y, 0, bar_h)
+        PixelRect::new(x.min(viewport_width), y, 0, bar_h)
     };
     TabBarLayout {
         bar: PixelRect::new(0, y, viewport_width, bar_h),
@@ -185,13 +244,10 @@ pub fn tab_bar_chrome(
         }],
         texts: Vec::new(),
     };
-    let text_y = layout.bar.y + TAB_BAR_PADDING;
+    let text_y = layout.bar.y + style.padding_vertical;
+    let pad = style.padding_horizontal;
     for (i, (tab_rect, spec)) in layout.tabs.iter().zip(tabs).enumerate() {
-        let (bg, fg) = if spec.active {
-            (style.active_background, style.active_foreground)
-        } else {
-            (style.inactive_background, style.inactive_foreground)
-        };
+        let (bg, fg) = style.tab_colors(spec);
         chrome.quads.push(ChromeQuad {
             rect: tab_rect.rect,
             color: bg,
@@ -201,9 +257,9 @@ pub fn tab_bar_chrome(
         } else {
             0
         };
-        let max_title = (tab_rect.rect.width / cw).saturating_sub(2 + close_cells);
+        let max_title = (tab_rect.rect.width / cw).saturating_sub(2 * pad + close_cells);
         chrome.texts.push(ChromeText {
-            x: tab_rect.rect.x + cw,
+            x: tab_rect.rect.x + pad * cw,
             y: text_y,
             text: fit_title(spec.title, max_title),
             color: fg,
@@ -254,7 +310,40 @@ pub fn tab_bar_chrome(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rustty_config::{CloseButtonStyle, Colors};
+
+    #[test]
+    fn a_configured_background_without_text_color_gets_readable_text() {
+        let colors = TabColors {
+            active_background: Some(Rgb::new(0xf0, 0xf0, 0xf0)),
+            inactive_background: Some(Rgb::new(0x10, 0x10, 0x10)),
+            ..TabColors::default()
+        };
+        let st = style_with(Tabs {
+            colors,
+            ..Tabs::default()
+        });
+        assert_eq!(
+            st.active_foreground, st.dark_text,
+            "texte sombre sur fond clair"
+        );
+        assert_eq!(
+            st.inactive_foreground, st.light_text,
+            "texte clair sur fond sombre"
+        );
+    }
+
+    #[test]
+    fn light_and_dark_text_follow_luminance_even_on_a_light_theme() {
+        let light_theme = Colors {
+            foreground: Rgb::new(0x20, 0x20, 0x20),
+            background: Rgb::new(0xfa, 0xfa, 0xfa),
+            ..Colors::default()
+        };
+        let st =
+            TabBarStyle::from_config(&Palette::from_config(&light_theme, false), &Tabs::default());
+        assert!(st.light_text.luminance() > st.dark_text.luminance());
+    }
+    use rustty_config::{Colors, Rgb, TabColors, Tabs};
 
     fn metrics() -> CellMetrics {
         CellMetrics {
@@ -267,12 +356,19 @@ mod tests {
         }
     }
 
+    fn palette() -> Palette {
+        Palette::from_config(&Colors::default(), false)
+    }
+
+    fn style_with(tabs: Tabs) -> TabBarStyle {
+        TabBarStyle::from_config(&palette(), &tabs)
+    }
+
     fn style(show_close: bool) -> TabBarStyle {
-        TabBarStyle::from_config(
-            &Palette::from_config(&Colors::default(), false),
-            &CloseButtonStyle::default(),
-            show_close,
-        )
+        style_with(Tabs {
+            close_button: show_close,
+            ..Tabs::default()
+        })
     }
 
     fn tabs() -> Vec<TabSpec<'static>> {
@@ -280,17 +376,163 @@ mod tests {
             TabSpec {
                 title: "1: sh",
                 active: true,
+                accent: None,
             },
             TabSpec {
                 title: "2: vim",
                 active: false,
+                accent: None,
             },
         ]
     }
 
     #[test]
+    fn default_style_keeps_the_previous_geometry() {
+        let l = layout_tab_bar(400, 0, &tabs(), &style(true), metrics());
+        assert_eq!(l.tabs[0].rect, PixelRect::new(0, 0, 110, 24));
+        assert_eq!(l.tabs[0].close.unwrap().x, 60);
+        assert_eq!(l.new_tab.x, 230);
+    }
+
+    #[test]
+    fn horizontal_padding_widens_tabs() {
+        let st = style_with(Tabs {
+            padding_horizontal: 3,
+            ..Tabs::default()
+        });
+        let l = layout_tab_bar(400, 0, &tabs(), &st, metrics());
+        assert_eq!(l.tabs[0].rect.width, 150, "3 + 5 + 4 + 3 cellules");
+        assert_eq!(l.tabs[0].close.unwrap().x, 80);
+        let c = tab_bar_chrome(&l, &tabs(), &st, metrics(), HoverTarget::None);
+        let title = c.texts.iter().find(|t| t.text == "1: sh").unwrap();
+        assert_eq!(title.x, 30);
+    }
+
+    #[test]
+    fn spacing_separates_tabs() {
+        let st = style_with(Tabs {
+            spacing: 4,
+            ..Tabs::default()
+        });
+        let l = layout_tab_bar(400, 0, &tabs(), &st, metrics());
+        assert_eq!(l.tabs[1].rect.x, 114);
+        assert_eq!(l.new_tab.x, 114 + 120 + 4);
+        assert_eq!(
+            l.hit_test(112, 10),
+            HoverTarget::None,
+            "l'espace entre onglets n'est pas cliquable"
+        );
+    }
+
+    #[test]
+    fn vertical_padding_sets_the_bar_height() {
+        let st = style_with(Tabs {
+            padding_vertical: 6,
+            ..Tabs::default()
+        });
+        assert_eq!(tab_bar_height(metrics(), &st), 32);
+        let l = layout_tab_bar(400, 0, &tabs(), &st, metrics());
+        assert_eq!(l.bar.height, 32);
+        assert_eq!(l.tabs[0].close.unwrap().y, 6);
+        let c = tab_bar_chrome(&l, &tabs(), &st, metrics(), HoverTarget::None);
+        assert_eq!(c.texts.iter().find(|t| t.text == "1: sh").unwrap().y, 6);
+    }
+
+    #[test]
+    fn configured_colors_override_the_palette() {
+        let colors = TabColors {
+            bar_background: Some(Rgb::new(1, 2, 3)),
+            active_background: Some(Rgb::new(4, 5, 6)),
+            active_foreground: Some(Rgb::new(7, 8, 9)),
+            inactive_background: Some(Rgb::new(10, 11, 12)),
+            inactive_foreground: Some(Rgb::new(13, 14, 15)),
+            random: false,
+        };
+        let st = style_with(Tabs {
+            colors,
+            ..Tabs::default()
+        });
+        assert_eq!(st.background, Rgba::from_rgb(Rgb::new(1, 2, 3)));
+        assert_eq!(st.active_background, Rgba::from_rgb(Rgb::new(4, 5, 6)));
+        assert_eq!(st.active_foreground, Rgba::from_rgb(Rgb::new(7, 8, 9)));
+        assert_eq!(st.inactive_background, Rgba::from_rgb(Rgb::new(10, 11, 12)));
+        assert_eq!(st.inactive_foreground, Rgba::from_rgb(Rgb::new(13, 14, 15)));
+        let default = style(true);
+        assert_eq!(default.active_background, palette().background);
+    }
+
+    #[test]
+    fn accent_colors_the_tab_and_dims_inactive_ones() {
+        let st = style(true);
+        let accent = Rgba::from_rgb(Rgb::new(0x89, 0xb4, 0xfa));
+        let specs = [
+            TabSpec {
+                title: "a",
+                active: true,
+                accent: Some(accent),
+            },
+            TabSpec {
+                title: "b",
+                active: false,
+                accent: Some(accent),
+            },
+        ];
+        let l = layout_tab_bar(400, 0, &specs, &st, metrics());
+        let c = tab_bar_chrome(&l, &specs, &st, metrics(), HoverTarget::None);
+        let bg = |i: usize| {
+            c.quads
+                .iter()
+                .find(|q| q.rect == l.tabs[i].rect)
+                .unwrap()
+                .color
+        };
+        assert_eq!(bg(0), accent);
+        assert_eq!(bg(1), accent.dim(INACTIVE_ACCENT_DIM));
+    }
+
+    #[test]
+    fn text_contrasts_with_the_tab_color() {
+        let st = style(true);
+        let light = Rgba::from_rgb(Rgb::new(0xf9, 0xe2, 0xaf));
+        let dark = Rgba::from_rgb(Rgb::new(0x31, 0x32, 0x44));
+        let specs = [
+            TabSpec {
+                title: "clair",
+                active: true,
+                accent: Some(light),
+            },
+            TabSpec {
+                title: "sombre",
+                active: true,
+                accent: Some(dark),
+            },
+        ];
+        let l = layout_tab_bar(400, 0, &specs, &st, metrics());
+        let c = tab_bar_chrome(&l, &specs, &st, metrics(), HoverTarget::None);
+        let fg = |t: &str| c.texts.iter().find(|x| x.text == t).unwrap().color;
+        assert_eq!(fg("clair"), st.dark_text);
+        assert_eq!(fg("sombre"), st.light_text);
+    }
+
+    #[test]
+    fn huge_paddings_never_overflow() {
+        let st = style_with(Tabs {
+            padding_horizontal: 8,
+            padding_vertical: 32,
+            spacing: 64,
+            ..Tabs::default()
+        });
+        let l = layout_tab_bar(100, 0, &tabs(), &st, metrics());
+        assert!(l.tabs.is_empty());
+        let c = tab_bar_chrome(&l, &tabs(), &st, metrics(), HoverTarget::None);
+        assert_eq!(c.quads.len(), 1, "le fond de barre seulement");
+        let tiny = layout_tab_bar(0, 0, &tabs(), &st, metrics());
+        assert!(tiny.tabs.is_empty());
+    }
+
+    #[test]
     fn height_is_a_cell_plus_padding() {
-        assert_eq!(tab_bar_height(metrics()), 24);
+        assert_eq!(tab_bar_height(metrics(), &style(true)), 24);
     }
 
     #[test]
@@ -419,6 +661,7 @@ mod tests {
         let long = [TabSpec {
             title: "un titre vraiment beaucoup trop long pour la barre",
             active: true,
+            accent: None,
         }];
         let l = layout_tab_bar(200, 0, &long, &style(false), metrics());
         assert_eq!(l.tabs.len(), 1);

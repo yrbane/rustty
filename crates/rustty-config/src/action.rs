@@ -50,6 +50,12 @@ pub enum Action {
     ScrollPages(i32),
     ScrollToBottom,
     ReloadConfig,
+    /// Saisir un nouveau nom pour l'onglet actif.
+    RenameTab,
+    IncreaseFontSize,
+    DecreaseFontSize,
+    /// Revenir à la taille de police de la configuration.
+    ResetFontSize,
     /// `"none"` : retire un raccourci par défaut.
     Unbind,
 }
@@ -69,6 +75,10 @@ enum Simple {
     Paste,
     ScrollToBottom,
     ReloadConfig,
+    RenameTab,
+    IncreaseFontSize,
+    DecreaseFontSize,
+    ResetFontSize,
     None,
 }
 
@@ -125,6 +135,10 @@ impl From<Simple> for Action {
             Simple::Paste => Self::Paste,
             Simple::ScrollToBottom => Self::ScrollToBottom,
             Simple::ReloadConfig => Self::ReloadConfig,
+            Simple::RenameTab => Self::RenameTab,
+            Simple::IncreaseFontSize => Self::IncreaseFontSize,
+            Simple::DecreaseFontSize => Self::DecreaseFontSize,
+            Simple::ResetFontSize => Self::ResetFontSize,
             Simple::None => Self::Unbind,
         }
     }
@@ -172,6 +186,20 @@ impl<'de> Deserialize<'de> for Action {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rename_and_font_size_actions() {
+        assert_eq!(parse("\"rename_tab\"").unwrap(), Action::RenameTab);
+        assert_eq!(
+            parse("\"increase_font_size\"").unwrap(),
+            Action::IncreaseFontSize
+        );
+        assert_eq!(
+            parse("\"decrease_font_size\"").unwrap(),
+            Action::DecreaseFontSize
+        );
+        assert_eq!(parse("\"reset_font_size\"").unwrap(), Action::ResetFontSize);
+    }
 
     fn parse(toml_value: &str) -> Result<Action, toml::de::Error> {
         #[derive(serde::Deserialize)]

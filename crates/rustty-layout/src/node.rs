@@ -1,7 +1,7 @@
 //! Arbre binaire des divisions. Récursif et privé : la façade `TabLayout`
 //! est la seule à le manipuler.
 
-use crate::geometry::{Axis, Rect, WindowId};
+use crate::geometry::{Axis, Rect, SplitId, WindowId};
 
 /// Un panneau ne peut pas descendre sous 10 % de l'espace de sa division.
 pub const MIN_RATIO: f32 = 0.1;
@@ -11,6 +11,7 @@ pub const MAX_RATIO: f32 = 0.9;
 pub(crate) enum Node {
     Leaf(WindowId),
     Split {
+        id: SplitId,
         axis: Axis,
         ratio: f32,
         first: Box<Node>,
@@ -48,6 +49,7 @@ impl Node {
                 ratio,
                 first,
                 second,
+                ..
             } => {
                 let (a, b) = split_rect(bounds, *axis, *ratio, gap);
                 first.rects(a, gap, out);
@@ -56,12 +58,44 @@ impl Node {
         }
     }
 
+    /// L'interstice de chaque division, de la racine vers les feuilles.
+    /// Les interstices de taille nulle sont omis.
+    pub(crate) fn dividers(&self, bounds: Rect, gap: u32, out: &mut Vec<(SplitId, Rect)>) {
+        let Self::Split {
+            id,
+            axis,
+            ratio,
+            first,
+            second,
+        } = self
+        else {
+            return;
+        };
+        let (a, b) = split_rect(bounds, *axis, *ratio, gap);
+        let bar = match axis {
+            Axis::Vertical => {
+                let x = a.x + a.width;
+                Rect::new(x, bounds.y, b.x - x, bounds.height)
+            }
+            Axis::Horizontal => {
+                let y = a.y + a.height;
+                Rect::new(bounds.x, y, bounds.width, b.y - y)
+            }
+        };
+        if bar.width > 0 && bar.height > 0 {
+            out.push((*id, bar));
+        }
+        first.dividers(a, gap, out);
+        second.dividers(b, gap, out);
+    }
+
     /// Remplace la feuille `target` par une division dont elle est le premier
     /// panneau et `new_id` le second. Vrai si `target` a été trouvée.
     pub(crate) fn split_leaf(&mut self, target: WindowId, axis: Axis, new_id: WindowId) -> bool {
         match self {
             Self::Leaf(id) if *id == target => {
                 *self = Self::Split {
+                    id: SplitId(new_id.0),
                     axis,
                     ratio: 0.5,
                     first: Box::new(Self::Leaf(target)),
@@ -90,6 +124,7 @@ impl Node {
             Self::Leaf(leaf) if leaf == id => None,
             Self::Leaf(_) => Some(self),
             Self::Split {
+                id: split_id,
                 axis,
                 ratio,
                 first,
@@ -99,6 +134,7 @@ impl Node {
                     match first.remove(id) {
                         None => Some(*second),
                         Some(kept) => Some(Self::Split {
+                            id: split_id,
                             axis,
                             ratio,
                             first: Box::new(kept),
@@ -109,6 +145,7 @@ impl Node {
                     match second.remove(id) {
                         None => Some(*first),
                         Some(kept) => Some(Self::Split {
+                            id: split_id,
                             axis,
                             ratio,
                             first,
@@ -117,6 +154,7 @@ impl Node {
                     }
                 } else {
                     Some(Self::Split {
+                        id: split_id,
                         axis,
                         ratio,
                         first,
@@ -134,6 +172,7 @@ impl Node {
             ratio,
             first,
             second,
+            ..
         } = self
         else {
             return false;

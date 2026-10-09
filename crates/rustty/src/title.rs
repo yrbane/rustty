@@ -7,6 +7,21 @@ pub fn tab_title(template: &str, index: usize, title: &str) -> String {
         .replace("{title}", title)
 }
 
+/// Le titre affiché d'un onglet : en cours d'édition, le tampon et un
+/// curseur ; sinon le gabarit, avec le nom choisi à la place du titre du shell.
+pub fn display_title(
+    template: &str,
+    index: usize,
+    shell_title: &str,
+    custom: Option<&str>,
+    editing: Option<&str>,
+) -> String {
+    match editing {
+        Some(buffer) => format!("{buffer}▌"),
+        None => tab_title(template, index, custom.unwrap_or(shell_title)),
+    }
+}
+
 pub fn window_title(term_title: &str, version: &str) -> String {
     if term_title.is_empty() {
         format!("rustty {version}")
@@ -18,6 +33,30 @@ pub fn window_title(term_title: &str, version: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn custom_title_replaces_the_shell_title() {
+        assert_eq!(
+            display_title("{index}: {title}", 1, "bash", Some("logs"), None),
+            "2: logs"
+        );
+        assert_eq!(
+            display_title("{index}: {title}", 1, "bash", None, None),
+            "2: bash"
+        );
+    }
+
+    #[test]
+    fn editing_shows_the_buffer_with_a_cursor() {
+        assert_eq!(
+            display_title("{index}: {title}", 0, "bash", Some("x"), Some("nouv")),
+            "nouv▌"
+        );
+        assert_eq!(
+            display_title("{index}: {title}", 0, "bash", None, Some("")),
+            "▌"
+        );
+    }
 
     #[test]
     fn tab_title_fills_the_template() {

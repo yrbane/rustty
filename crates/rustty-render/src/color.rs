@@ -41,6 +41,11 @@ impl Rgba {
     }
 
     /// Assombrit les composantes de couleur, pas l'alpha.
+    /// Luminance relative approchée (coefficients Rec. 709 sur les composantes sRGB).
+    pub fn luminance(self) -> f32 {
+        0.2126 * self.r + 0.7152 * self.g + 0.0722 * self.b
+    }
+
     pub fn dim(self, factor: f32) -> Self {
         Self::new(self.r * factor, self.g * factor, self.b * factor, self.a)
     }
@@ -48,6 +53,16 @@ impl Rgba {
 
 /// Facteur appliqué à l'avant-plan d'une cellule « atténuée » (SGR 2).
 pub const DIM_FACTOR: f32 = 0.66;
+
+/// La couleur de texte la plus lisible sur `background` : `dark` sur un fond
+/// clair, `light` sur un fond sombre.
+pub fn readable_on(background: Rgba, light: Rgba, dark: Rgba) -> Rgba {
+    if background.luminance() > 0.5 {
+        dark
+    } else {
+        light
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Palette {
@@ -117,6 +132,26 @@ impl Palette {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn luminance_of_black_white_and_green() {
+        assert_eq!(Rgba::new(0.0, 0.0, 0.0, 1.0).luminance(), 0.0);
+        assert!((Rgba::new(1.0, 1.0, 1.0, 1.0).luminance() - 1.0).abs() < 1e-6);
+        assert!((Rgba::new(0.0, 1.0, 0.0, 1.0).luminance() - 0.7152).abs() < 1e-6);
+    }
+
+    #[test]
+    fn readable_on_picks_the_contrasting_text() {
+        let (light, dark) = (Rgba::new(1.0, 1.0, 1.0, 1.0), Rgba::new(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(
+            readable_on(Rgba::new(0.9, 0.9, 0.7, 1.0), light, dark),
+            dark
+        );
+        assert_eq!(
+            readable_on(Rgba::new(0.1, 0.1, 0.2, 1.0), light, dark),
+            light
+        );
+    }
     use rustty_config::Colors;
     use rustty_vt::{Attrs, Color, Style};
 

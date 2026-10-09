@@ -8,7 +8,9 @@ use rustty_pty::ExitStatus;
 use rustty_render::HoverTarget;
 
 use crate::banner::Banner;
+use crate::font_zoom::FontChange;
 use crate::mouse::MouseButton;
+use crate::rename::{Rename, RenameKey, RenameOutcome};
 use crate::tab::{Tab, TermId};
 use crate::workspace::Workspace;
 
@@ -27,6 +29,7 @@ pub enum Effect {
     Copy,
     Paste,
     SetOpacity(f32),
+    FontSize(FontChange),
     ReloadConfig,
     Relayout,
     Redraw,
@@ -49,6 +52,8 @@ pub struct Model {
     pub hover: HoverTarget,
     pub pending_close: Option<CloseRequest>,
     pub hold: bool,
+    /// Onglet en cours de renommage.
+    pub renaming: Option<Rename>,
     notice: Option<Banner>,
     dead: BTreeSet<TermId>,
 }
@@ -61,6 +66,7 @@ impl Model {
             opacity,
             hover: HoverTarget::None,
             pending_close: None,
+            renaming: None,
             hold,
             notice: None,
             dead: BTreeSet::new(),
@@ -89,12 +95,24 @@ impl Model {
         changed
     }
 
+    /// Abandonne une édition de nom en cours.
+    pub fn cancel_rename(&mut self) -> Vec<Effect> {
+        match self.renaming.take() {
+            Some(_) => vec![Effect::Relayout],
+            None => Vec::new(),
+        }
+    }
+
     pub fn apply(
         &mut self,
         action: Action,
         confirm_close: bool,
         running: &dyn Fn(TermId) -> bool,
     ) -> Vec<Effect> {
+        if action != Action::RenameTab {
+            // Toute autre action peut décaler les onglets : l'édition s'arrête.
+            self.renaming = None;
+        }
         match action {
             Action::NewTab => Self::spawn(Some(self.workspace.new_tab())),
             Action::Split(axis) => {
@@ -150,6 +168,10 @@ impl Model {
             Action::ScrollLines(n) => self.scroll(ScrollRequest::Lines(n)),
             Action::ScrollPages(n) => self.scroll(ScrollRequest::Pages(n)),
             Action::ScrollToBottom => self.scroll(ScrollRequest::ToBottom),
+            Action::RenameTab => self.start_rename(self.workspace.active()),
+            Action::IncreaseFontSize => vec![Effect::FontSize(FontChange::Increase)],
+            Action::DecreaseFontSize => vec![Effect::FontSize(FontChange::Decrease)],
+            Action::ResetFontSize => vec![Effect::FontSize(FontChange::Reset)],
             Action::Unbind => Vec::new(),
         }
     }
@@ -202,7 +224,39 @@ impl Model {
         self.execute_close(req)
     }
 
+    /// Ouvre l'édition du nom de l'onglet `tab`, pré-remplie avec son nom actuel.
+    pub fn start_rename(&mut self, tab: usize) -> Vec<Effect> {
+        let Some(t) = self.workspace.tabs().get(tab) else {
+            return Vec::new();
+        };
+        let current = t.custom_title.clone().unwrap_or_default();
+        self.renaming = Some(Rename::new(tab, &current));
+        vec![Effect::Redraw]
+    }
+
+    pub fn rename_key(&mut self, key: RenameKey) -> Vec<Effect> {
+        let Some(rename) = self.renaming.as_mut() else {
+            return Vec::new();
+        };
+        match rename.apply(key) {
+            // La largeur de l'onglet suit le nom tapé : mise en page complète.
+            RenameOutcome::Editing => vec![Effect::Relayout],
+            RenameOutcome::Commit(title) => {
+                let tab = rename.tab;
+                self.renaming = None;
+                self.workspace.rename(tab, title);
+                vec![Effect::Relayout]
+            }
+            RenameOutcome::Cancel => {
+                self.renaming = None;
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
     fn execute_close(&mut self, req: CloseRequest) -> Vec<Effect> {
+        // Les index d'onglet bougent : une édition en cours n'a plus de cible sûre.
+        self.renaming = None;
         let killed = match req {
             CloseRequest::Tab(i) => self.workspace.close_tab(i),
             CloseRequest::Term(t) => self
@@ -252,6 +306,7 @@ impl Model {
         confirm_close: bool,
         running: &dyn Fn(TermId) -> bool,
     ) -> Vec<Effect> {
+        self.renaming = None;
         let close_tab = |model: &mut Self, i: usize| {
             let req = CloseRequest::Tab(i);
             let needs = confirm_close && model.terms_of(req).iter().any(|t| running(*t));
@@ -299,6 +354,90 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn any_other_action_or_tab_bar_click_cancels_the_edit() {
+        let (mut m, _) = Model::new(0.9, false);
+        m.start_rename(0);
+        m.apply(Action::NewTab, false, &never_running);
+        assert!(m.renaming.is_none(), "un nouvel onglet décale les index");
+        m.start_rename(0);
+        m.tab_bar_click(
+            HoverTarget::NewTabButton,
+            MouseButton::Left,
+            false,
+            &never_running,
+        );
+        assert!(m.renaming.is_none());
+        m.start_rename(0);
+        assert_eq!(m.cancel_rename(), vec![Effect::Relayout]);
+        assert!(m.renaming.is_none());
+        assert!(m.cancel_rename().is_empty(), "rien à annuler");
+    }
+
+    #[test]
+    fn font_actions_emit_font_size_effects() {
+        let (mut m, _) = Model::new(0.9, false);
+        assert_eq!(
+            m.apply(Action::IncreaseFontSize, false, &never_running),
+            vec![Effect::FontSize(FontChange::Increase)]
+        );
+        assert_eq!(
+            m.apply(Action::DecreaseFontSize, false, &never_running),
+            vec![Effect::FontSize(FontChange::Decrease)]
+        );
+        assert_eq!(
+            m.apply(Action::ResetFontSize, false, &never_running),
+            vec![Effect::FontSize(FontChange::Reset)]
+        );
+    }
+
+    #[test]
+    fn rename_action_edits_the_active_tab() {
+        let (mut m, _) = Model::new(0.9, false);
+        m.apply(Action::NewTab, false, &never_running);
+        assert_eq!(
+            m.apply(Action::RenameTab, false, &never_running),
+            vec![Effect::Redraw]
+        );
+        assert_eq!(m.renaming.as_ref().map(|r| r.tab), Some(1));
+    }
+
+    #[test]
+    fn commit_renames_and_relayouts() {
+        let (mut m, _) = Model::new(0.9, false);
+        m.workspace.rename(0, Some("ancien".into()));
+        m.start_rename(0);
+        assert_eq!(m.renaming.as_ref().unwrap().buffer, "ancien", "pré-rempli");
+        m.rename_key(RenameKey::Backspace);
+        assert_eq!(
+            m.rename_key(RenameKey::Text("x".into())),
+            vec![Effect::Relayout]
+        );
+        assert_eq!(m.rename_key(RenameKey::Commit), vec![Effect::Relayout]);
+        assert_eq!(
+            m.workspace.tabs()[0].custom_title.as_deref(),
+            Some("anciex")
+        );
+        assert!(m.renaming.is_none());
+        m.start_rename(0);
+        assert_eq!(m.rename_key(RenameKey::Cancel), vec![Effect::Redraw]);
+        assert_eq!(
+            m.workspace.tabs()[0].custom_title.as_deref(),
+            Some("anciex")
+        );
+        assert!(m.start_rename(7).is_empty(), "onglet inexistant");
+    }
+
+    #[test]
+    fn closing_the_renamed_tab_cancels_the_edit() {
+        let (mut m, _) = Model::new(0.9, false);
+        m.apply(Action::NewTab, false, &never_running);
+        m.start_rename(1);
+        m.apply(Action::CloseTab, false, &never_running);
+        assert!(m.renaming.is_none());
+        assert!(m.rename_key(RenameKey::Commit).is_empty());
+    }
     use rustty_config::SplitAxis;
 
     fn never_running(_: TermId) -> bool {

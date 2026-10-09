@@ -89,6 +89,51 @@ pub struct Tabs {
     /// Gabarit du titre : `{index}` et `{title}` sont remplacés.
     pub title_template: String,
     pub close_button_style: CloseButtonStyle,
+    /// Cellules vides de chaque côté du titre.
+    pub padding_horizontal: u32,
+    /// Pixels au-dessus et au-dessous du titre (hauteur de la barre).
+    pub padding_vertical: u32,
+    /// Pixels entre deux onglets.
+    pub spacing: u32,
+    pub colors: TabColors,
+}
+
+/// Couleurs des onglets ; une couleur absente est dérivée de la palette.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct TabColors {
+    pub bar_background: Option<Rgb>,
+    pub active_background: Option<Rgb>,
+    pub active_foreground: Option<Rgb>,
+    pub inactive_background: Option<Rgb>,
+    pub inactive_foreground: Option<Rgb>,
+    /// Une couleur vive de la palette tirée au sort pour chaque onglet.
+    pub random: bool,
+}
+
+/// Barres entre les panneaux d'un onglet divisé.
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Splits {
+    /// Dessiner une barre entre les panneaux ; sinon ils se touchent.
+    pub border: bool,
+    /// Épaisseur de la barre en pixels.
+    pub width: u32,
+    /// Couleur de la barre ; absente = couleur 8 de la palette.
+    pub color: Option<Rgb>,
+    /// Une couleur vive de la palette tirée au sort pour chaque division.
+    pub random_colors: bool,
+}
+
+impl Default for Splits {
+    fn default() -> Self {
+        Self {
+            border: true,
+            width: 2,
+            color: None,
+            random_colors: false,
+        }
+    }
 }
 
 impl Default for Tabs {
@@ -99,6 +144,10 @@ impl Default for Tabs {
             close_button: true,
             title_template: "{index}: {title}".into(),
             close_button_style: CloseButtonStyle::default(),
+            padding_horizontal: 1,
+            padding_vertical: 2,
+            spacing: 0,
+            colors: TabColors::default(),
         }
     }
 }

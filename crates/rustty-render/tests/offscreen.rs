@@ -219,20 +219,21 @@ fn tab_bar_with_close_buttons_matches_golden() {
     let mut r = renderer(&ctx);
     let m = r.metrics();
     let palette = Palette::from_config(&Colors::default(), false);
-    let style =
-        TabBarStyle::from_config(&palette, &rustty_config::CloseButtonStyle::default(), true);
+    let style = TabBarStyle::from_config(&palette, &rustty_config::Tabs::default());
     let tabs = [
         TabSpec {
             title: "1: sh",
             active: true,
+            accent: None,
         },
         TabSpec {
             title: "2: vim",
             active: false,
+            accent: None,
         },
     ];
     let width = 30 * m.width;
-    let bar_h = tab_bar_height(m);
+    let bar_h = tab_bar_height(m, &style);
     let layout = layout_tab_bar(width, 0, &tabs, &style, m);
     let chrome = tab_bar_chrome(&layout, &tabs, &style, m, HoverTarget::CloseButton(1));
     let mut term = Term::new(30, 1, 0);

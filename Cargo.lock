@@ -2063,7 +2063,7 @@ dependencies = [
 
 [[package]]
 name = "rustty"
-version = "0.1.0-alpha.71"
+version = "0.1.0-alpha.80"
 dependencies = [
  "anyhow",
  "arboard",
@@ -2082,29 +2082,30 @@ dependencies = [
  "unicode-width",
  "wgpu",
  "winit",
+ "winresource",
 ]
 
 [[package]]
 name = "rustty-config"
-version = "0.1.0-alpha.71"
+version = "0.1.0-alpha.80"
 dependencies = [
  "bitflags 2.13.2",
  "directories",
  "serde",
  "thiserror 2.0.21",
- "toml",
+ "toml 0.9.12+spec-1.1.0",
 ]
 
 [[package]]
 name = "rustty-layout"
-version = "0.1.0-alpha.71"
+version = "0.1.0-alpha.80"
 dependencies = [
  "proptest",
 ]
 
 [[package]]
 name = "rustty-pty"
-version = "0.1.0-alpha.71"
+version = "0.1.0-alpha.80"
 dependencies = [
  "libc",
  "portable-pty",
@@ -2113,7 +2114,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-render"
-version = "0.1.0-alpha.71"
+version = "0.1.0-alpha.80"
 dependencies = [
  "bytemuck",
  "fontdb",
@@ -2129,7 +2130,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-vt"
-version = "0.1.0-alpha.71"
+version = "0.1.0-alpha.80"
 dependencies = [
  "base64",
  "bitflags 2.13.2",
@@ -2562,6 +2563,21 @@ dependencies = [
  "toml_parser",
  "toml_writer",
  "winnow 0.7.15",
+]
+
+[[package]]
+name = "toml"
+version = "1.1.7+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7874cd34dd99040fc24e30923aa64a60a81ff3ddfe2b8129ccc84ba24949deed"
+dependencies = [
+ "indexmap",
+ "serde_core",
+ "serde_spanned",
+ "toml_datetime 1.1.2+spec-1.1.0",
+ "toml_parser",
+ "toml_writer",
+ "winnow 1.0.4",
 ]
 
 [[package]]
@@ -3511,6 +3527,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "winresource"
+version = "0.1.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0986a8b1d586b7d3e4fe3d9ea39fb451ae22869dcea4aa109d287a374d866087"
+dependencies = [
+ "toml 1.1.7+spec-1.1.0",
+ "version_check",
 ]
 
 [[package]]
