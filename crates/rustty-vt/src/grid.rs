@@ -20,6 +20,16 @@ impl Grid {
         }
     }
 
+    /// Une grille faite de `lines`, mises à la largeur et complétées ou
+    /// tronquées à `rows` lignes.
+    pub fn from_lines(cols: usize, rows: usize, mut lines: Vec<Line>) -> Self {
+        for line in &mut lines {
+            line.resize(cols, Cell::default());
+        }
+        lines.resize_with(rows, || Line::new(cols));
+        Self { cols, rows, lines }
+    }
+
     pub fn cols(&self) -> usize {
         self.cols
     }
