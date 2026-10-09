@@ -6,10 +6,12 @@ use crate::graphics::ImageStrip;
 use crate::line::Line;
 
 impl Line {
+    /// Bandes de la ligne ; invariant : chaque `placement.cols` vaut au moins 1.
     pub fn images(&self) -> &[ImageStrip] {
         &self.images
     }
 
+    /// Ajoute une bande ; `strip.placement.cols` doit valoir au moins 1.
     pub fn push_image(&mut self, strip: ImageStrip) {
         self.images.push(strip);
     }

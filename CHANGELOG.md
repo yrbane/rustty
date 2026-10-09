@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.99 — 2026-10-09 · « Décodage d'images durci »
+
+- `rustty-vt` : les dimensions d'un PNG sont lues dans l'en-tête et refusées (`EFBIG`) au-delà de 8192 px avant tout décodage de pixels ; le décodeur est de plus plafonné à 256 Mio d'allocation.
+- Les images vides (largeur ou hauteur nulle, tous formats) sont rejetées (`EINVAL`).
+- Documentation des invariants de `ImageData::new` (`debug_assert` sur la longueur RGBA) et de `Line::images` / `push_image` (`cols >= 1`).
+
 ## 0.1.0-alpha.98 — 2026-10-09 · « Images décodées et bandes rattachées aux lignes »
 
 - `rustty-vt` : `graphics::decode` convertit PNG, RGB et RGBA bruts en RGBA (côté max 8192 px, longueur brute vérifiée), `ImageData` reçoit un identifiant unique au processus.

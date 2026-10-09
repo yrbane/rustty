@@ -1,6 +1,9 @@
 //! Images décodées et bandes d'image rattachées aux lignes.
 
 use std::fmt;
+use std::io::Cursor;
+
+use image::ImageDecoder;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -8,6 +11,9 @@ use super::{Format, GraphicsError};
 
 /// Côté maximal accepté pour une image (pixels).
 pub const MAX_SIDE: u32 = 8192;
+
+/// Plafond d'allocation du décodeur (octets) : 8192 × 8192 × 4 = 256 Mio.
+const MAX_ALLOC: u64 = 256 * 1024 * 1024;
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -21,7 +27,9 @@ pub struct ImageData {
 }
 
 impl ImageData {
+    /// `rgba.len()` doit valoir `width * height * 4`.
     pub fn new(width: u32, height: u32, rgba: Vec<u8>) -> Self {
+        debug_assert_eq!(rgba.len(), width as usize * height as usize * 4);
         Self {
             id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
             width,
@@ -46,12 +54,26 @@ pub fn decode(
 ) -> Result<ImageData, GraphicsError> {
     match format {
         Format::Png => {
-            let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
-                .map_err(|e| GraphicsError::Invalid(format!("PNG illisible : {e}")))?
-                .to_rgba8();
-            let (w, h) = img.dimensions();
+            let decoder =
+                image::ImageReader::with_format(Cursor::new(bytes), image::ImageFormat::Png)
+                    .into_decoder()
+                    .map_err(|e| GraphicsError::Invalid(format!("PNG illisible : {e}")))?;
+            // Dimensions lues dans l'en-tête, avant toute allocation de pixels.
+            let (w, h) = decoder.dimensions();
             if w > MAX_SIDE || h > MAX_SIDE {
                 return Err(GraphicsError::TooBig);
+            }
+            let mut limits = image::Limits::default();
+            limits.max_alloc = Some(MAX_ALLOC);
+            let mut decoder = decoder;
+            decoder
+                .set_limits(limits)
+                .map_err(|e| GraphicsError::Invalid(format!("PNG refusé : {e}")))?;
+            let img = image::DynamicImage::from_decoder(decoder)
+                .map_err(|e| GraphicsError::Invalid(format!("PNG illisible : {e}")))?
+                .to_rgba8();
+            if w == 0 || h == 0 {
+                return Err(GraphicsError::Invalid("image vide".into()));
             }
             Ok(ImageData::new(w, h, img.into_raw()))
         }
@@ -63,6 +85,9 @@ pub fn decode(
             };
             if w > MAX_SIDE || h > MAX_SIDE {
                 return Err(GraphicsError::TooBig);
+            }
+            if w == 0 || h == 0 {
+                return Err(GraphicsError::Invalid("image vide".into()));
             }
             let bpp = if format == Format::Rgb { 3 } else { 4 };
             if bytes.len() != w as usize * h as usize * bpp {
@@ -124,9 +149,49 @@ impl fmt::Debug for ImageStrip {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graphics::{Format, GraphicsError};
     use image::{ImageFormat, RgbaImage};
     use std::io::Cursor;
+
+    fn crc32(data: &[u8]) -> u32 {
+        let mut crc = !0u32;
+        for &b in data {
+            crc ^= b as u32;
+            for _ in 0..8 {
+                crc = if crc & 1 != 0 {
+                    (crc >> 1) ^ 0xEDB8_8320
+                } else {
+                    crc >> 1
+                };
+            }
+        }
+        !crc
+    }
+
+    #[test]
+    fn png_declaring_huge_width_is_too_big_without_decoding() {
+        let mut bytes = Vec::new();
+        RgbaImage::new(1, 1)
+            .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+            .unwrap();
+        // IHDR : longueur 4 + type 4 + données 13 ; la largeur débute à l'octet 16.
+        bytes[16..20].copy_from_slice(&9000u32.to_be_bytes());
+        let crc = crc32(&bytes[12..29]);
+        bytes[29..33].copy_from_slice(&crc.to_be_bytes());
+        assert_eq!(
+            decode(Format::Png, None, None, &bytes).unwrap_err(),
+            GraphicsError::TooBig
+        );
+    }
+
+    #[test]
+    fn zero_sized_raw_images_are_invalid() {
+        for f in [Format::Rgb, Format::Rgba] {
+            let e = decode(f, Some(0), Some(0), &[]).unwrap_err();
+            assert!(matches!(e, GraphicsError::Invalid(_)));
+            let e = decode(f, Some(0), Some(3), &[]).unwrap_err();
+            assert!(matches!(e, GraphicsError::Invalid(_)));
+        }
+    }
 
     #[test]
     fn png_is_decoded_to_rgba() {
