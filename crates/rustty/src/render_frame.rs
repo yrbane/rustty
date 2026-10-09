@@ -31,6 +31,7 @@ pub fn tab_specs(titles: &[String], active: usize) -> Vec<TabSpec<'_>> {
         .map(|(i, t)| TabSpec {
             title: t.as_str(),
             active: i == active,
+            accent: None,
         })
         .collect()
 }

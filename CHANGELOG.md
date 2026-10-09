@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.75 — 2026-10-09 · « Style de la barre d'onglets »
+
+- `rustty-render` : la barre d'onglets suit `[tabs]` — marges horizontale et verticale, espacement entre onglets, couleurs configurées — et accepte une couleur d'accent par onglet (assombrie quand l'onglet est inactif) avec un texte automatiquement contrasté (`Rgba::luminance`, `readable_on`). Rendu par défaut inchangé.
+
 ## 0.1.0-alpha.74 — 2026-10-09 · « Barres de split »
 
 - `rustty-layout` : chaque division porte un identifiant stable (`SplitId`, celui de la fenêtre qu'elle a créée) et `TabLayout::dividers` rend le rectangle de chaque barre entre panneaux.

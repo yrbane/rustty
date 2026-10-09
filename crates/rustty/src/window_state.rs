@@ -94,11 +94,7 @@ impl OsWindow {
             palette.clone(),
             config.window.padding,
         );
-        let tab_style = TabBarStyle::from_config(
-            &palette,
-            &config.tabs.close_button_style,
-            config.tabs.close_button,
-        );
+        let tab_style = TabBarStyle::from_config(&palette, &config.tabs);
         let (mut model, first) = Model::new(config.window.opacity, hold);
         if let Some(e) = config_error {
             model.set_notice(Some(Banner::error(format!("configuration : {e}"))));
@@ -198,7 +194,7 @@ impl OsWindow {
             tabs.position,
             self.model.workspace.tabs().len(),
             tabs.min_tabs,
-            tab_bar_height(metrics),
+            tab_bar_height(metrics, &self.tab_style),
         );
         let titles = self.tab_titles();
         let active = self.model.workspace.active();
@@ -278,7 +274,7 @@ impl OsWindow {
                 self.tab_bar.is_some() && self.config.tabs.position == TabBarPosition::Bottom;
             let reserved = banner_height(metrics)
                 + if bar_at_bottom {
-                    tab_bar_height(metrics)
+                    tab_bar_height(metrics, &self.tab_style)
                 } else {
                     0
                 };
@@ -308,11 +304,7 @@ impl OsWindow {
             || new.font.size != self.config.font.size
             || new.window.padding != self.config.window.padding;
         self.palette = Palette::from_config(&new.colors, new.font.bold_is_bright);
-        self.tab_style = TabBarStyle::from_config(
-            &self.palette,
-            &new.tabs.close_button_style,
-            new.tabs.close_button,
-        );
+        self.tab_style = TabBarStyle::from_config(&self.palette, &new.tabs);
         self.model.opacity = new.window.opacity;
         self.config = new;
         if font_changed {
