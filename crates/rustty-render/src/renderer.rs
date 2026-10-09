@@ -1,7 +1,8 @@
 //! Orchestration : du `Frame` aux passes wgpu, avec le cache de glyphes et
-//! l'atlas. Une image = un effacement, deux lots de quads, deux lots de glyphes.
+//! l'atlas. Une image = un effacement, deux lots de quads, les images des
+//! panneaux, deux lots de glyphes.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use unicode_width::UnicodeWidthChar;
 
@@ -12,7 +13,9 @@ use crate::font::{CellMetrics, FontSet, Rasterizer, Variant};
 use crate::frame::Frame;
 use crate::gpu::{GpuContext, to_wgpu_color};
 use crate::grid::{GlyphRequest, pane_instances};
+use crate::images::pane_images;
 use crate::pipeline::glyph::{AtlasTexture, GlyphInstance, GlyphPipeline};
+use crate::pipeline::image::{ImagePipeline, ImageTextures};
 use crate::pipeline::quad::{QuadInstance, QuadPipeline};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,6 +35,8 @@ struct CachedGlyph {
 pub struct Renderer {
     quads: QuadPipeline,
     glyphs: GlyphPipeline,
+    images: ImagePipeline,
+    image_textures: ImageTextures,
     atlas: AtlasTexture,
     packer: AtlasPacker,
     cache: HashMap<GlyphKey, Option<CachedGlyph>>,
@@ -65,6 +70,8 @@ impl Renderer {
         Self {
             quads: QuadPipeline::new(&ctx.device, format),
             glyphs: GlyphPipeline::new(&ctx.device, format),
+            images: ImagePipeline::new(&ctx.device, format),
+            image_textures: ImageTextures::default(),
             atlas: AtlasTexture::new(&ctx.device, atlas_size),
             packer: AtlasPacker::new(atlas_size),
             cache: HashMap::new(),
@@ -82,6 +89,12 @@ impl Renderer {
 
     pub fn fonts(&self) -> &FontSet {
         &self.fonts
+    }
+
+    /// Nombre de textures d'image en cache (tests).
+    #[doc(hidden)]
+    pub fn image_texture_count(&self) -> usize {
+        self.image_textures.len()
     }
 
     pub fn set_palette(&mut self, palette: Palette) {
@@ -111,7 +124,9 @@ impl Renderer {
         let mut backgrounds = Vec::new();
         let mut requests = Vec::new();
         let mut overlay = Vec::new();
+        let mut images = Vec::new();
         for pane in &frame.panes {
+            images.extend(pane_images(pane, metrics, self.padding));
             let inst = pane_instances(pane, metrics, &self.palette, self.padding);
             backgrounds.extend(inst.backgrounds);
             requests.extend(inst.glyphs);
@@ -146,6 +161,13 @@ impl Renderer {
         let viewport = frame.viewport;
         let bg_batch = self.quads.prepare(&ctx.device, &backgrounds, viewport);
         let overlay_batch = self.quads.prepare(&ctx.device, &overlay, viewport);
+        let image_batch = self.images.prepare(
+            &ctx.device,
+            &ctx.queue,
+            &mut self.image_textures,
+            &images,
+            viewport,
+        );
         let pane_batch = self
             .glyphs
             .prepare(&ctx.device, &self.atlas, &pane_glyphs, viewport);
@@ -174,6 +196,9 @@ impl Renderer {
             if let Some(b) = &bg_batch {
                 self.quads.draw(&mut pass, b);
             }
+            if let Some(b) = &image_batch {
+                self.images.draw(&mut pass, b, &self.image_textures);
+            }
             if let Some(b) = &pane_batch {
                 self.glyphs.draw(&mut pass, b);
             }
@@ -185,6 +210,12 @@ impl Renderer {
             }
         }
         ctx.queue.submit(Some(encoder.finish()));
+        // Seule une passe porteuse de panneaux dit quelles images sont encore
+        // à l'écran : la passe du bandeau, sans panneau, ne vide pas le cache.
+        if !frame.panes.is_empty() {
+            let used: HashSet<u64> = images.iter().map(|d| d.image.id).collect();
+            self.image_textures.retain(&used);
+        }
     }
 
     /// Les instances d'une image. Si l'atlas est reconstruit en cours de route,
@@ -283,99 +314,4 @@ impl Renderer {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::color::Rgba;
-    use crate::gpu::OFFSCREEN_FORMAT;
-    use rustty_config::Colors;
-
-    fn request(ch: char) -> GlyphRequest {
-        GlyphRequest {
-            x: 0.0,
-            y: 0.0,
-            ch,
-            variant: Variant::Regular,
-            color: Rgba::new(1.0, 1.0, 1.0, 1.0),
-            wide: false,
-        }
-    }
-
-    #[test]
-    fn instances_of_one_frame_stay_consistent_after_an_atlas_rebuild() {
-        let Ok(ctx) = GpuContext::headless() else {
-            eprintln!("test GPU ignoré");
-            return;
-        };
-        let palette = Palette::from_config(&Colors::default(), false);
-        let mut r = Renderer::with_atlas_size(
-            &ctx,
-            OFFSCREEN_FORMAT,
-            FontSet::embedded(16.0),
-            palette,
-            0,
-            80,
-        );
-        let first: Vec<_> = "abcdefghijklmnopqrstuvwxyz".chars().map(request).collect();
-        let second: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().map(request).collect();
-        let (a, _) = r.build_glyphs(&ctx, &first, &[]);
-        assert_eq!(a.len(), 26);
-        let (b, _) = r.build_glyphs(&ctx, &second, &[]);
-        assert!(r.rebuilds >= 1, "un atlas de 80 px ne tient pas 52 glyphes");
-        let rebuilds = r.rebuilds;
-        for (req, inst) in second.iter().zip(&b) {
-            assert_eq!(r.glyph_instance(&ctx, req), Some(*inst), "{:?}", req.ch);
-        }
-        assert_eq!(
-            r.rebuilds, rebuilds,
-            "toutes les instances de l'image pointaient dans l'atlas final"
-        );
-    }
-
-    #[test]
-    fn atlas_overflow_is_recovered() {
-        let Ok(ctx) = GpuContext::headless() else {
-            eprintln!("test GPU ignoré");
-            return;
-        };
-        let mut r = Renderer::with_atlas_size(
-            &ctx,
-            OFFSCREEN_FORMAT,
-            FontSet::embedded(16.0),
-            Palette::from_config(&Colors::default(), false),
-            0,
-            64,
-        );
-        let mut instances = Vec::new();
-        for ch in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
-            let req = GlyphRequest {
-                x: 0.0,
-                y: 0.0,
-                ch,
-                variant: Variant::Regular,
-                color: Rgba::new(1.0, 1.0, 1.0, 1.0),
-                wide: false,
-            };
-            if let Some(i) = r.glyph_instance(&ctx, &req) {
-                instances.push(i);
-            }
-        }
-        assert_eq!(
-            instances.len(),
-            36,
-            "chaque glyphe a été placé, au prix de reconstructions"
-        );
-        assert!(r.rebuilds >= 1, "un atlas de 64 px déborde forcément");
-        let again = r.glyph_instance(
-            &ctx,
-            &GlyphRequest {
-                x: 0.0,
-                y: 0.0,
-                ch: 'a',
-                variant: Variant::Regular,
-                color: Rgba::new(1.0, 1.0, 1.0, 1.0),
-                wide: false,
-            },
-        );
-        assert!(again.is_some());
-    }
-}
+mod tests;

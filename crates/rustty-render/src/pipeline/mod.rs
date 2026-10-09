@@ -1,6 +1,7 @@
-//! Les deux pipelines wgpu : quads colorés et quads texturés par l'atlas.
+//! Les pipelines wgpu : quads colorés, quads texturés par l'atlas et images.
 
 pub mod glyph;
+pub mod image;
 pub mod quad;
 
 use bytemuck::{Pod, Zeroable};

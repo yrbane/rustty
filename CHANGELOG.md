@@ -4,6 +4,14 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.103 — 2026-10-09 · « Dessin des images dans les panneaux »
+
+- `rustty-render` : les bandes d'image des lignes visibles sont dessinées juste après les fonds de cellule, sous le texte. `images::pane_images` (pur) traduit chaque bande en rectangle pixels et coordonnées de texture : une bande couvre au plus une cellule de haut, la dernière d'une image de hauteur fractionnaire est partielle ; une bande qui déborde à droite du panneau est rognée (texture comprise), une bande qui commence au-delà est ignorée, les lignes hors de la grille du panneau aussi.
+- Nouveau pipeline `ImagePipeline` (`shaders/image.wgsl`) : un quad instancié par bande, texture de l'image entière en `Rgba8Unorm` (octets passés tels quels comme les couleurs de la palette), échantillonnage linéaire, alpha droit mélangé comme les glyphes couleur.
+- Cache `ImageTextures` par identifiant d'image : chaque texture est envoyée une fois, puis oubliée dès qu'une passe porteuse de panneaux ne dessine plus l'image (la passe du bandeau, sans panneau, ne vide pas le cache). `Renderer::image_texture_count` (caché) pour les tests.
+- Tests : géométrie des bandes (bandes fractionnaires, rognage à droite, bandes hors panneau, lignes sous la grille), image de référence `image_strip` (PNG 4×2 étiré sur 4×2 cellules) avec contrôle des quatre couleurs, libération des textures.
+- Les tests hors écran partagent leurs aides (`tests/support`) ; les tests internes du renderer passent dans `renderer/tests.rs`.
+
 ## 0.1.0-alpha.102 — 2026-10-09 · « Curseur sauvegardé périmé sans effet sur le reflow »
 
 - `rustty-vt` : un curseur DECSC périmé (laissé en bas par une application plein écran, puis `clear`) n'étend plus les rangées reprises par le reflow ; seuls le contenu, les images et le curseur vivant les bornent, l'invite n'est plus poussée dans l'historique quand la hauteur diminue en même temps. Un curseur sauvegardé hors de ces rangées est seulement borné, comme avant.
