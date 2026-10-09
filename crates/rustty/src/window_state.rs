@@ -53,6 +53,8 @@ pub struct OsWindow {
     pub titles: HashMap<TermId, String>,
     pub modifiers: Mods,
     pub cursor: (f64, f64),
+    /// Faux tant que la souris n'est pas entrée (ou après sa sortie).
+    pub cursor_inside: bool,
     pub selection: Option<(TermId, Selection)>,
     pub dragging: bool,
     pub held: Option<MouseButton>,
@@ -134,6 +136,7 @@ impl OsWindow {
             titles: HashMap::new(),
             modifiers: Mods::empty(),
             cursor: (0.0, 0.0),
+            cursor_inside: false,
             selection: None,
             dragging: false,
             held: None,

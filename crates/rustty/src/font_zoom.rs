@@ -22,12 +22,12 @@ pub fn wheel_change(lines: i32) -> Option<FontChange> {
 
 /// La nouvelle taille en points ; `base` est celle de la configuration.
 pub fn next_size(current: f32, base: f32, change: FontChange) -> f32 {
-    let wanted = match change {
-        FontChange::Increase => current + 1.0,
-        FontChange::Decrease => current - 1.0,
-        FontChange::Reset => base,
-    };
-    wanted.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE)
+    // Une taille configurée hors bornes ne doit jamais aller à contre-sens.
+    match change {
+        FontChange::Increase => (current + 1.0).min(MAX_FONT_SIZE).max(current),
+        FontChange::Decrease => (current - 1.0).max(MIN_FONT_SIZE).min(current),
+        FontChange::Reset => base.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE),
+    }
 }
 
 #[cfg(test)]
@@ -68,6 +68,12 @@ mod tests {
             MAX_FONT_SIZE - 1.0,
             "un cran suffit pour redescendre"
         );
+    }
+
+    #[test]
+    fn zoom_never_moves_against_its_direction() {
+        assert_eq!(next_size(80.0, 80.0, FontChange::Increase), 80.0);
+        assert_eq!(next_size(2.0, 2.0, FontChange::Decrease), 2.0);
     }
 
     #[test]

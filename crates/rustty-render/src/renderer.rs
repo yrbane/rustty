@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use unicode_width::UnicodeWidthChar;
 
-use crate::atlas::{AtlasPacker, AtlasRegion, DEFAULT_ATLAS_SIZE};
+use crate::atlas::{AtlasPacker, AtlasRegion, atlas_size_for};
 use crate::builtin::builtin_glyph;
 use crate::color::Palette;
 use crate::font::{CellMetrics, FontSet, Rasterizer, Variant};
@@ -56,7 +56,8 @@ impl Renderer {
         palette: Palette,
         padding: u32,
     ) -> Self {
-        Self::with_atlas_size(ctx, format, fonts, palette, padding, DEFAULT_ATLAS_SIZE)
+        let size = atlas_size_for(fonts.metrics());
+        Self::with_atlas_size(ctx, format, fonts, palette, padding, size)
     }
 
     pub(crate) fn with_atlas_size(

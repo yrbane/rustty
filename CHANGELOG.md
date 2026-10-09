@@ -4,6 +4,14 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.108 — 2026-10-09 · « Zoom, molette et sélection plus justes »
+
+- Zoom de police : une taille configurée hors de 4–72 pt ne va plus à contre-sens (80 pt ne rétrécit plus sur « agrandir »).
+- Le zoom clavier ignore la dernière position de la souris quand elle est sortie de la fenêtre : il vise le panneau focalisé.
+- Molette du pavé tactile : le défilement en pixels se mesure à la hauteur de cellule du panneau visé, plus à celle de la taille de base.
+- Atlas de glyphes dimensionné selon la cellule (512 à 2048 px, puissance de deux) : fini les 16 Mio de VRAM par taille de police.
+- La sélection est effacée quand la grille de son terminal change (reflow ou zoom).
+
 ## 0.1.0-alpha.107 — 2026-10-09 · « menu contextuel : corrections »
 
 - Le texte du bandeau n'est plus imprimé par-dessus le menu : nouvelle passe `Pass::Menu` après le bandeau.

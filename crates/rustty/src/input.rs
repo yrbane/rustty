@@ -122,6 +122,7 @@ impl OsWindow {
 
     pub fn on_cursor_moved(&mut self, x: f64, y: f64) -> Vec<Effect> {
         self.cursor = (x, y);
+        self.cursor_inside = true;
         let mut menu_effects = Vec::new();
         if let Some(effects) = self.menu_hover(x, y) {
             menu_effects = effects;
@@ -176,6 +177,7 @@ impl OsWindow {
     }
 
     pub fn on_cursor_left(&mut self) -> Vec<Effect> {
+        self.cursor_inside = false;
         if self.model.hover_changed(HoverTarget::None) {
             vec![Effect::Redraw]
         } else {

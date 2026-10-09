@@ -36,8 +36,11 @@ impl OsWindow {
                     // Seul le panneau survolé (sinon le focalisé) change de taille.
                     let (x, y) = self.cursor;
                     let hovered = self.pane_under(x, y).map(|(term, _)| term);
-                    if let Some(term) = zoom_target(hovered, self.model.workspace.focused_term())
-                        && self.pane_fonts.apply(term, change)
+                    if let Some(term) = zoom_target(
+                        hovered,
+                        self.cursor_inside,
+                        self.model.workspace.focused_term(),
+                    ) && self.pane_fonts.apply(term, change)
                     {
                         self.relayout();
                     }
