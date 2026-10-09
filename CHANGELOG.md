@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.97 — 2026-10-09 · « Action graphique par défaut alignée sur kitty »
+
+- `rustty-vt` : sans `a=`, une commande graphique est désormais `Transmit` (comme kitty) et non `TransmitAndPut`.
+- Test ajouté : un premier morceau rejeté avec `m=1` voit ses suites écartées sans erreur parasite, et la transmission suivante aboutit.
+
 ## 0.1.0-alpha.96 — 2026-10-09 · « Images : analyse du protocole graphique »
 
 - `rustty-vt` : nouveau module public `graphics` (commandes APC `G…` du protocole graphique kitty), sans effet tant que le hook `Term::apc` n'est pas branché.

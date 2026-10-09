@@ -199,6 +199,21 @@ mod tests {
     }
 
     #[test]
+    fn rejected_first_chunk_swallows_its_continuations() {
+        let mut c = Chunks::default();
+        assert!(matches!(
+            push(&mut c, b"Gt=f,m=1;QUJD"),
+            ChunkResult::Error(_, GraphicsError::Invalid(_))
+        ));
+        assert_eq!(push(&mut c, b"Gm=1;QUJD"), ChunkResult::Pending);
+        assert_eq!(push(&mut c, b"Gm=0;QUJD"), ChunkResult::Pending);
+        match push(&mut c, b"Gf=100;QUJD") {
+            ChunkResult::Complete(_, data) => assert_eq!(data, b"ABC"),
+            other => panic!("inattendu : {other:?}"),
+        }
+    }
+
+    #[test]
     fn error_codes() {
         assert_eq!(GraphicsError::TooBig.code(), "EFBIG");
         assert_eq!(GraphicsError::NotFound.code(), "ENOENT");

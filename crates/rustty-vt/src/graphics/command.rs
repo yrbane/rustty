@@ -3,9 +3,9 @@
 /// Action demandée (`a=`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
-    /// `a=t` : transmettre sans afficher.
+    /// `a=t` : transmettre sans afficher (défaut, comme kitty).
     Transmit,
-    /// `a=T` : transmettre puis afficher (défaut).
+    /// `a=T` : transmettre puis afficher.
     TransmitAndPut,
     /// `a=p` : afficher une image déjà transmise.
     Put,
@@ -56,7 +56,7 @@ pub struct GraphicsCommand {
 impl Default for GraphicsCommand {
     fn default() -> Self {
         Self {
-            action: Action::TransmitAndPut,
+            action: Action::Transmit,
             format: Format::Rgba,
             id: None,
             width: None,
@@ -140,9 +140,9 @@ mod tests {
     }
 
     #[test]
-    fn defaults_are_transmit_and_put_rgba_direct() {
+    fn defaults_are_transmit_rgba_direct() {
         let (cmd, payload) = parse(b"G;").unwrap();
-        assert_eq!(cmd.action, Action::TransmitAndPut);
+        assert_eq!(cmd.action, Action::Transmit);
         assert_eq!(cmd.format, Format::Rgba);
         assert_eq!(cmd.medium, 'd');
         assert_eq!(cmd.delete, 'a');
