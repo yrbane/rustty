@@ -6,6 +6,9 @@ mod edit;
 mod graphics;
 #[cfg(test)]
 mod graphics_tests;
+mod image_budget;
+#[cfg(test)]
+mod image_budget_tests;
 mod mode_ops;
 mod movement;
 mod osc;
@@ -55,6 +58,8 @@ pub struct Term {
     pub(crate) images: ImageStore,
     /// Taille d'une cellule en pixels (largeur, hauteur), pour dimensionner les images.
     pub(crate) cell_pixels: (u32, u32),
+    /// Plafond d'octets des images posées (`PLACED_BUDGET`, réduit en test).
+    pub(crate) placed_budget: usize,
     parser: Parser,
     apc: ApcSplitter,
 }
@@ -81,6 +86,7 @@ impl Term {
             chunks: Chunks::default(),
             images: ImageStore::default(),
             cell_pixels: (10, 20),
+            placed_budget: image_budget::PLACED_BUDGET,
             parser: Parser::new(),
             apc: ApcSplitter::default(),
         }

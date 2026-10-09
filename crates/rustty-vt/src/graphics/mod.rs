@@ -6,6 +6,7 @@
 
 mod chunks;
 mod command;
+mod downscale;
 mod image;
 mod placement;
 mod store;
@@ -15,5 +16,6 @@ pub(crate) mod test_support;
 pub use self::image::{ImageData, ImageStrip, MAX_SIDE, Placement, decode};
 pub use chunks::{ChunkResult, Chunks, GraphicsError, MAX_PAYLOAD};
 pub use command::{Action, Format, GraphicsCommand, parse};
+pub use downscale::{DISPLAY_MARGIN, display_pixels, fit_display};
 pub use placement::extent;
 pub use store::{ImageStore, QUOTA};

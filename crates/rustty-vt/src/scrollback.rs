@@ -57,6 +57,15 @@ impl Scrollback {
         self.lines.get(len - 1 - idx_from_newest)
     }
 
+    /// Lignes de la plus ancienne à la plus récente.
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &Line> {
+        self.lines.iter()
+    }
+
+    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut Line> {
+        self.lines.iter_mut()
+    }
+
     pub fn clear(&mut self) {
         self.lines.clear();
     }

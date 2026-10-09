@@ -4,6 +4,14 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.115 — 2026-10-09 · « Mémoire des images posées bornée »
+
+- Protocole graphique : au placement, l'image est réduite à sa taille affichée en pixels (colonnes × largeur de cellule, rangées × hauteur, marge ×2 pour le zoom, jamais agrandie, `graphics::fit_display`) ; une petite image garde le même `ImageData` que le magasin.
+- Budget de 320 Mio (`PLACED_BUDGET`) d'images posées par terminal, écran et historique : au-delà, les placements absents de l'écran sont retirés du plus ancien au plus récent, puis ceux de l'écran ; le placement le plus récent reste toujours affiché. Chaque image n'est comptée qu'une fois.
+- `ImageData::source` rattache une copie réduite à son image d'origine : `a=d,d=i` retire aussi les placements réduits.
+- Boucles `img` sur de grandes photos ou PNG 8192² répétés avec `c=1,r=1` ne font plus gonfler la mémoire sans limite.
+- README : taille conservée et budget des images posées.
+
 ## 0.1.0-alpha.114 — 2026-10-09 · « Hauteur des images bornée »
 
 - Protocole graphique : l'emprise d'un placement est bornée à la largeur du terminal et à 4 écrans de haut (`MAX_SCREENS_PER_IMAGE`), rapport d'aspect conservé ; `c=1,r=65535` ou une image très haute n'inondent plus l'historique.

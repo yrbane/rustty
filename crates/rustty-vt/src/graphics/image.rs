@@ -21,6 +21,8 @@ static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 pub struct ImageData {
     /// Identifiant unique au processus (clé de cache côté rendu).
     pub id: u64,
+    /// Identifiant de l'image d'origine (`id` lui-même, sauf copie réduite).
+    pub source: u64,
     pub width: u32,
     pub height: u32,
     pub rgba: Vec<u8>,
@@ -29,9 +31,21 @@ pub struct ImageData {
 impl ImageData {
     /// `rgba.len()` doit valoir `width * height * 4`.
     pub fn new(width: u32, height: u32, rgba: Vec<u8>) -> Self {
+        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+        Self::with_ids(id, id, width, height, rgba)
+    }
+
+    /// Image tirée de `source` (copie réduite) : nouvel `id`, même origine.
+    pub fn derived(source: u64, width: u32, height: u32, rgba: Vec<u8>) -> Self {
+        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+        Self::with_ids(id, source, width, height, rgba)
+    }
+
+    fn with_ids(id: u64, source: u64, width: u32, height: u32, rgba: Vec<u8>) -> Self {
         debug_assert_eq!(rgba.len(), width as usize * height as usize * 4);
         Self {
-            id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
+            id,
+            source,
             width,
             height,
             rgba,

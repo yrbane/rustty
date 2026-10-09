@@ -75,6 +75,10 @@ elle défile avec le texte, suit le zoom de police et disparaît avec `clear`.
 Formats : PNG, JPEG, GIF (première image), WebP, BMP. Les images de plus de
 2048 px de côté sont réduites avant l'envoi. `rustty img` marche aussi dans kitty.
 
+Côté terminal, chaque image posée est conservée à sa taille affichée (marge ×2
+pour le zoom) et les images posées (écran et historique) ne dépassent pas 320 Mio
+par terminal : au-delà, les plus anciennes de l'historique disparaissent d'abord.
+
 ## Objectifs de la v0.1
 
 - Fenêtre rendue par le GPU via `wgpu`, sur Linux (Wayland et X11), macOS et Windows.

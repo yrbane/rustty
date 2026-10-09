@@ -6,7 +6,7 @@ use std::sync::Arc;
 use super::Term;
 use crate::graphics::{
     Action, ChunkResult, GraphicsCommand, GraphicsError, ImageData, ImageStrip, Placement, decode,
-    extent, parse,
+    display_pixels, extent, fit_display, parse,
 };
 
 /// Plafond de hauteur d'un placement, en écrans : `r=65535` n'inonde pas
@@ -69,8 +69,9 @@ impl Term {
             cols,
             rows,
         );
+        let shown = display_pixels((width_cells, height_cells), self.cell_pixels);
         let placement = Arc::new(Placement {
-            image,
+            image: fit_display(&image, shown),
             cols: c,
             rows: r,
             width_cells,
@@ -91,6 +92,7 @@ impl Term {
                 .line_mut(cursor_row)
                 .push_image(strip);
         }
+        self.enforce_placed_budget(&placement);
         let end = start_col + usize::from(c);
         self.cursor.col = end.min(self.cols() - 1);
         self.cursor.pending_wrap = end >= self.cols();
@@ -105,7 +107,7 @@ impl Term {
                     .ok_or_else(|| GraphicsError::Invalid("i= requis pour d=i".into()))?;
                 if let Some(image) = self.images.get(id) {
                     let target = image.id;
-                    self.drop_strips(|s| s.placement.image.id == target);
+                    self.drop_strips(|s| s.placement.image.source == target);
                 }
                 self.images.remove(id);
             }
