@@ -47,7 +47,7 @@ configuration se recharge à chaud.
 cargo run -p rustty                      # fenêtre avec le shell par défaut
 cargo run -p rustty -- --config ~/r.toml # autre fichier de configuration
 cargo run -p rustty -- --hold            # garder le panneau quand le shell sort
-RUSTTY_LOG=debug cargo run -p rustty     # journal détaillé
+RUSTTY_LOG=rustty=debug cargo run -p rustty  # journal détaillé
 cargo run -p rustty -- --install-desktop # Linux : lanceur + icône dans les menus et la barre des tâches
 ```
 
@@ -89,7 +89,9 @@ Nouveautés de personnalisation : `[splits]` (barre entre panneaux avec ou
 sans, épaisseur, couleur fixe ou tirée au sort pour chaque division),
 `[tabs]` `padding_horizontal`, `padding_vertical`, `spacing`, et `[tabs.colors]`
 (couleurs des onglets, ou `random = true` pour une couleur vive tirée au sort
-par onglet, texte automatiquement lisible).
+par onglet, texte automatiquement lisible), et `[window] osc52_clipboard`
+(`true` par défaut ; `false` empêche les programmes d'écrire dans le
+presse-papiers par la séquence OSC 52).
 
 Fichier TOML, `~/.config/rustty/rustty.toml` sur Linux (équivalents macOS et
 Windows). Toutes les clés sont optionnelles ; le fichier d'exemple

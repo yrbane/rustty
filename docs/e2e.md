@@ -69,6 +69,34 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 - [ ] `clear` : l'image disparaît de l'écran.
 - [ ] Rétrécir le panneau (split ou fenêtre) : l'image est rognée à la largeur, sans panique.
 
+## Correctifs des tâches 8 à 11 (plan 8)
+Menu contextuel
+- [ ] Un bandeau (erreur de config, confirmation) reste visible sous le menu ouvert, qui ne le recouvre pas.
+- [ ] Menu ouvert : le curseur de la souris et la surbrillance de l'entrée survolée suivent le pointeur.
+- [ ] Fenêtre très étroite : les libellés du menu sont tronqués avec `…`, sans débordement.
+- [ ] Menu ouvert, clic droit ailleurs dans la fenêtre : le menu se rouvre à la nouvelle position.
+- [ ] Pendant une confirmation de fermeture (programme en cours), le clic droit n'ouvre aucun menu.
+- [ ] `--hold` : ouvrir le menu, laisser le shell sortir (`exit` dans un autre panneau n'est pas suffisant, tuer le shell du panneau) ; le menu se ferme à la mort du panneau.
+
+Zoom et sélection
+- [ ] `font.size = 80`, puis `ctrl+plus` : la police ne rétrécit pas (plafond respecté).
+- [ ] Souris hors de la fenêtre, `ctrl+plus` / `ctrl+minus` : le panneau focalisé est zoomé.
+- [ ] Panneau zoomé (`ctrl+plus`), défilement au pavé tactile : le défilement reste fluide et proportionné.
+- [ ] Sélectionner du texte, puis redimensionner la fenêtre ou zoomer : la sélection est effacée.
+- [ ] Sélectionner du texte, puis défiler à la molette : la sélection est effacée.
+
+Souris et clavier
+- [ ] Dans une application qui capte la souris (`htop`, ou vim avec `:set mouse=a`), appuyer dans le panneau, relâcher hors du panneau : le relâchement est transmis, aucun bouton « collé ».
+- [ ] `ctrl+1` et `ctrl+9` envoient le chiffre au programme (`cat -v`, puis les touches) ; `alt+1`…`alt+5` changent toujours d'onglet.
+
+Configuration et fichiers
+- [ ] `cargo run -p rustty -- --config /nonexistent` : bandeau « /nonexistent introuvable », la config par défaut s'applique.
+- [ ] `--init-config` et `--install-desktop` : aucun fichier `*.tmp` ne reste dans `~/.config/rustty` ni `~/.local/share`.
+- [ ] `[window] osc52_clipboard = false` : `printf '\e]52;c;%s\a' $(echo -n hi | base64)` ne modifie pas le presse-papiers ; avec `true`, il contient `hi`.
+
+Barre d'onglets
+- [ ] Ouvrir beaucoup d'onglets puis réduire la fenêtre : le dernier onglet visible est tronqué avec `…` (au moins 3 cellules de titre), sinon il est omis.
+
 ## Robustesse
 - [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique.
 - [ ] `cargo run -p rustty` : rien sur la sortie d'erreur pendant le parcours ; `RUSTTY_LOG=rustty=debug` pour le détail.

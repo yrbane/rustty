@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.112 — 2026-10-09 · « Onglets tronqués, modules découpés, parcours e2e »
+
+- Barre d'onglets : `fit_title` renvoie `""` à 0 cellule et `…` à 1 cellule (plus de débordement) ; le dernier onglet est tronqué à la place restante (au moins 3 cellules de titre) au lieu d'être abandonné.
+- Découpage sans changement de comportement : `chrome.rs` devient `chrome/` (`title_fit.rs`, `tests.rs`), tests de `model`, `grid` et `workspace` déplacés dans des fichiers `*_tests.rs`, fermeture et renommage extraits de `model.rs` vers `model/close.rs`.
+- `docs/e2e.md` : parcours des correctifs des tâches 8 à 11 (menu, zoom, sélection, souris, configuration, OSC 52).
+- README : `RUSTTY_LOG=rustty=debug`, option `[window] osc52_clipboard`.
+
 ## 0.1.0-alpha.111 — 2026-10-09 · « Lanceur et surface : finitions »
 
 - `Exec=` du `.desktop` : deuxième couche d'échappement du type « string » (`\\`, `\n`, `\t`, `\r`) après la citation, une valeur ne s'étend plus sur plusieurs lignes.
