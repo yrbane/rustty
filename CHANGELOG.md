@@ -4,6 +4,23 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.93 — 2026-10-09 · « Menu : clics dans le menu »
+
+- Un clic sur un séparateur, sur une entrée grisée ou dans la marge du menu le laisse ouvert au lieu de le fermer ; seul un clic hors du menu le ferme.
+
+## 0.1.0-alpha.92 — 2026-10-09 · « Menu contextuel »
+
+- `rustty` : menu au clic droit dans les panneaux — copier (grisé sans sélection), coller, diviser verticalement ou horizontalement, agrandir/réduire, renommer l'onglet, nouvel onglet, fermer le panneau cliqué (confirmation comprise), raccourcis affichés ; `shift`+clic droit dans les applications qui captent la souris ; fermeture par Échap, clic ailleurs, perte du focus ou redimensionnement ; dessiné au-dessus de tout.
+- README et `docs/e2e.md`.
+
+## 0.1.0-alpha.91 — 2026-10-09 · « Menu contextuel, modèle »
+
+- `rustty` : modèle pur du menu contextuel — entrées (copier, coller, diviser, agrandir/réduire, renommer l'onglet, nouvel onglet, fermer le panneau) reliées aux actions de la configuration, raccourci le plus court affiché, placement borné à la fenêtre, test de clic (séparateurs et entrées grisées inactifs) et dessin.
+
+## 0.1.0-alpha.90 — 2026-10-09 · « Plan 7 : menu contextuel »
+
+- Plan d'implémentation du menu au clic droit dans les panneaux (copier, coller, diviser, agrandir, renommer l'onglet, nouvel onglet, fermer le panneau). Les images (`img`) passent au plan 8.
+
 ## 0.1.0-alpha.89 — 2026-10-09 · « Corrections de revue »
 
 - Reflow quinze fois plus rapide (10 000 lignes d'historique : 5,6 ms au lieu de 82 ms) : les lignes qui tiennent déjà sont seulement mises à la largeur, plus de saccade en glissant une barre.

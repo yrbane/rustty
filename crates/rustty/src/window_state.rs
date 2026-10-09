@@ -18,6 +18,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::{CursorIcon, Icon, Window, WindowAttributes};
 
 use crate::banner::Banner;
+use crate::context_menu::ContextMenu;
 use crate::events::Waker;
 use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
@@ -66,6 +67,8 @@ pub struct OsWindow {
     /// Barre de split en cours de glisser.
     pub drag: Option<SplitId>,
     pub cursor_icon: CursorIcon,
+    /// Menu du clic droit ouvert.
+    pub menu: Option<ContextMenu>,
     pub focused: bool,
     pub clipboard: Option<arboard::Clipboard>,
     pub shell: Shell,
@@ -143,6 +146,7 @@ impl OsWindow {
             content: Rect::new(0, 0, 0, 0),
             drag: None,
             cursor_icon: CursorIcon::Default,
+            menu: None,
             focused: true,
             clipboard,
             shell: Shell::default_for_platform(),
