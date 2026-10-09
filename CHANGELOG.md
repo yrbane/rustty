@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.90 — 2026-10-09 · « Plan 7 : menu contextuel »
+
+- Plan d'implémentation du menu au clic droit dans les panneaux (copier, coller, diviser, agrandir, renommer l'onglet, nouvel onglet, fermer le panneau). Les images (`img`) passent au plan 8.
+
 ## 0.1.0-alpha.89 — 2026-10-09 · « Corrections de revue »
 
 - Reflow quinze fois plus rapide (10 000 lignes d'historique : 5,6 ms au lieu de 82 ms) : les lignes qui tiennent déjà sont seulement mises à la largeur, plus de saccade en glissant une barre.
