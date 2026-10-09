@@ -15,6 +15,7 @@ mod view;
 
 use vte::Parser;
 
+use crate::apc::{ApcSplitter, Chunk};
 use crate::cell::Cell;
 use crate::charset::Charsets;
 use crate::cursor::{Cursor, CursorShape, SavedCursor};
@@ -42,6 +43,7 @@ pub struct Term {
     pub(crate) display_offset: usize,
     pub(crate) outbox: Outbox,
     parser: Parser,
+    apc: ApcSplitter,
 }
 
 impl Term {
@@ -64,15 +66,27 @@ impl Term {
             display_offset: 0,
             outbox: Outbox::default(),
             parser: Parser::new(),
+            apc: ApcSplitter::default(),
         }
     }
 
     /// Interprète des octets venus du PTY.
     pub fn input(&mut self, bytes: &[u8]) {
         let mut parser = std::mem::take(&mut self.parser);
-        parser.advance(self, bytes);
+        let mut chunks = Vec::new();
+        self.apc.feed(bytes, &mut chunks);
+        for chunk in chunks {
+            match chunk {
+                Chunk::Bytes(b) => parser.advance(self, b),
+                Chunk::Owned(b) => parser.advance(self, &b),
+                Chunk::Apc(payload) => self.apc(&payload),
+            }
+        }
         self.parser = parser;
     }
+
+    /// Charge d'une séquence APC complète (hook, rempli par les tâches suivantes).
+    fn apc(&mut self, _payload: &[u8]) {}
 
     pub fn grid(&self) -> &Grid {
         self.active_grid()

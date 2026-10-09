@@ -36,6 +36,8 @@ pub use outbox::{Outbox, TermEvent};
 pub use region::ScrollRegion;
 pub use tabs::TabStops;
 
+mod apc;
+
 pub mod term;
 
 pub use term::Term;

@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.95 — 2026-10-09 · « Images : filtre APC »
+
+- `rustty-vt` : nouveau module `apc` qui extrait les chaînes APC (`ESC _ … ESC \`) avant `vte`, qui les avalait silencieusement.
+- Reconstitution d'une APC répartie sur plusieurs lectures ; un ESC isolé en fin de lecture est retenu puis rendu à `vte`, sans perte.
+- Une APC dépassant 96 Mio est abandonnée jusqu'à son terminateur ; un ESC suivi d'autre chose que `\` dans une APC l'interrompt.
+- Hook interne `Term::apc`, vide pour l'instant (rempli par les tâches suivantes du plan 8).
+
 ## 0.1.0-alpha.94 — 2026-10-09 · « Plan 8 : images et corrections différées »
 
 - Plan `docs/superpowers/plans/2026-10-09-images.md` : protocole graphique kitty dans `rustty-vt` (filtre APC, bandes d'image rattachées aux lignes), dessin des images dans `rustty-render`, commande `rustty img <chemin|url>`.
