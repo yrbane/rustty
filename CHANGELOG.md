@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.60 — 2026-10-09 · « Rapports souris »
+
+- `rustty` : encodage des événements souris pour les applications (modes X10, normal, bouton, tous mouvements ; legacy et SGR ; modificateurs ; molette).
+
 ## 0.1.0-alpha.59 — 2026-10-09 · « Encodage clavier »
 
 - `rustty` : encodage xterm des touches (contrôle, alt, touches nommées, F1–F12, paramètre de modificateurs, mode curseur application) et collage assaini avec encadrement (mode 2004).

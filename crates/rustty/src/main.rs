@@ -4,6 +4,9 @@ mod cli;
 // Consommé par app.rs (tâche 14).
 #[allow(unused)]
 mod keyboard;
+// Consommé par app.rs (tâche 14).
+#[allow(unused)]
+mod mouse;
 
 use std::process::ExitCode;
 
