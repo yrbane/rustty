@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.72 — 2026-10-09 · « Plan 5 : personnalisation »
+
+- Plan d'implémentation des demandes du 2026-10-09 : barre de split (avec ou sans, largeur, couleur fixe ou aléatoire par split), marges et espacement des onglets, renommage des onglets (double clic, `ctrl+shift+alt+t`), couleurs d'onglet fixes ou aléatoires avec texte contrasté, zoom de police (ctrl+molette, ctrl++, ctrl+-, ctrl+0), icône `res/rustty.svg` partout (fenêtre, barre des tâches, exécutable Windows, menus Linux), journal sans avertissements de dépendances. L'affichage d'images (`img`) fera l'objet du plan 6.
+
 ## 0.1.0-alpha.71 — 2026-10-09 · « Corrections de revue »
 
 - `rustty-pty` : la libération d'un `Pty` ne bloque plus l'appelant — le shell est tué et moissonné dans un thread détaché (SIGHUP, grâce, SIGKILL) ; le thread lecteur capture une panique du traitement et la signale par `PtyEvent::Failed` au lieu de disparaître.
