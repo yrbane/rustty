@@ -12,7 +12,11 @@ mod mouse;
 mod geometry;
 // Consommés par app.rs (tâche 14).
 #[allow(unused)]
+mod banner;
+#[allow(unused)]
 mod tab;
+#[allow(unused)]
+mod title;
 #[allow(unused)]
 mod workspace;
 

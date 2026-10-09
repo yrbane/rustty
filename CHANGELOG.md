@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.64 — 2026-10-09 · « Titres et bandeau »
+
+- `rustty` : gabarit des titres d'onglet, titre de fenêtre avec la version, bandeau d'une ligne (erreur, information, confirmation) rendu en chrome.
+
 ## 0.1.0-alpha.63 — 2026-10-09 · « Onglets et panneaux »
 
 - `rustty` : `Tab` (arbre de panneaux ↔ terminaux) et `Workspace` (onglets, actif, nouveau/fermer/suivant/précédent/numéro, split, focus directionnel, redimensionnement, rotation, zoom), purs et testés.
