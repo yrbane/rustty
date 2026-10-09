@@ -24,6 +24,14 @@ pub struct ImageInstance {
 #[derive(Default)]
 pub struct ImageTextures {
     entries: HashMap<u64, (wgpu::Texture, wgpu::BindGroup)>,
+    /// Images trop grandes pour le GPU, déjà signalées une fois.
+    rejected: HashSet<u64>,
+}
+
+/// Une texture `width × height` est-elle acceptée par un GPU dont le côté
+/// maximal est `max_side` ? Une image vide ne l'est jamais.
+pub fn fits_device(width: u32, height: u32, max_side: u32) -> bool {
+    width > 0 && height > 0 && width <= max_side && height <= max_side
 }
 
 impl ImageTextures {
@@ -38,6 +46,7 @@ impl ImageTextures {
     /// Oublie les textures des images absentes de `used`.
     pub fn retain(&mut self, used: &HashSet<u64>) {
         self.entries.retain(|id, _| used.contains(id));
+        self.rejected.retain(|id| used.contains(id));
     }
 }
 
@@ -140,10 +149,26 @@ impl ImagePipeline {
         draws: &[ImageDraw],
         viewport: (u32, u32),
     ) -> Option<ImageBatch> {
+        // Une image plus grande que ce que le GPU accepte (GL/GLES descend
+        // sous 8192) ferait paniquer wgpu : elle n'est pas dessinée.
+        let max_side = device.limits().max_texture_dimension_2d;
+        let draws: Vec<&ImageDraw> = draws
+            .iter()
+            .filter(|d| {
+                let fits = fits_device(d.image.width, d.image.height, max_side);
+                if !fits && textures.rejected.insert(d.image.id) {
+                    eprintln!(
+                        "image {}×{} ignorée : le GPU limite les textures à {max_side} px de côté",
+                        d.image.width, d.image.height
+                    );
+                }
+                fits
+            })
+            .collect();
         if draws.is_empty() {
             return None;
         }
-        for d in draws {
+        for d in &draws {
             if let Entry::Vacant(slot) = textures.entries.entry(d.image.id) {
                 slot.insert(self.upload(device, queue, &d.image));
             }
@@ -253,5 +278,28 @@ impl ImagePipeline {
             ],
         });
         (texture, group)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn images_within_the_device_limit_fit() {
+        assert!(fits_device(4096, 4096, 4096));
+        assert!(fits_device(1, 1, 2048));
+    }
+
+    #[test]
+    fn images_beyond_the_device_limit_do_not_fit() {
+        assert!(!fits_device(8192, 10, 4096));
+        assert!(!fits_device(10, 8192, 4096));
+    }
+
+    #[test]
+    fn empty_images_do_not_fit() {
+        assert!(!fits_device(0, 10, 4096));
+        assert!(!fits_device(10, 0, 4096));
     }
 }

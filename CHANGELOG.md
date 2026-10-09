@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.104 — 2026-10-09 · « Images trop grandes pour le GPU ignorées »
+
+- `rustty-render` : une image dont un côté dépasse `max_texture_dimension_2d` du GPU (inférieur à 8192 sur les moteurs GL/GLES) n'est plus envoyée à wgpu, qui paniquait sur l'erreur de validation : elle n'est simplement pas dessinée, et un message le signale une seule fois par image. Une sortie de terminal hostile ne peut plus faire tomber le rendu.
+- Nouvelle fonction pure `fits_device(largeur, hauteur, côté_max)` (image vide refusée), testée.
+
 ## 0.1.0-alpha.103 — 2026-10-09 · « Dessin des images dans les panneaux »
 
 - `rustty-render` : les bandes d'image des lignes visibles sont dessinées juste après les fonds de cellule, sous le texte. `images::pane_images` (pur) traduit chaque bande en rectangle pixels et coordonnées de texture : une bande couvre au plus une cellule de haut, la dernière d'une image de hauteur fractionnaire est partielle ; une bande qui déborde à droite du panneau est rognée (texture comprise), une bande qui commence au-delà est ignorée, les lignes hors de la grille du panneau aussi.
