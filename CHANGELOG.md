@@ -4,6 +4,16 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.110 — 2026-10-09 · « Démarrage, presse-papiers et lanceur plus robustes »
+
+- `--config` vers un fichier inexistant n'est plus silencieux : bandeau « introuvable : valeurs par défaut ».
+- `--init-config` écrit via un temporaire puis un lien dur : jamais de fichier à moitié écrit, jamais d'écrasement, temporaire toujours nettoyé.
+- `--install-desktop` écrit chaque fichier via un temporaire puis un renommage atomique.
+- `Exec=` du `.desktop` conforme à la spécification : `%` doublé, guillemets et échappements pour les caractères réservés.
+- Surface perdue ou périmée : reconfigurée puis redessin immédiat demandé (plus d'image sautée jusqu'au prochain événement).
+- Nouvelle option `[window] osc52_clipboard` (défaut `true`) pour refuser l'écriture dans le presse-papiers par OSC 52.
+- `build.rs` : avertissement explicite quand l'icône Windows n'est pas embarquée (compilation croisée) ; `--install-desktop` dit « rien à installer hors de Linux » sur macOS.
+
 ## 0.1.0-alpha.109 — 2026-10-09 · « Souris et clavier, cas limites »
 
 - Le relâchement d'un bouton est désormais rapporté au terminal qui a reçu l'appui, même si la souris a quitté le panneau (cellule bornée à la grille) : plus de bouton « resté enfoncé » côté application.

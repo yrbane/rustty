@@ -8,15 +8,20 @@ use rustty_render::{Chrome, tab_bar_chrome, tab_bar_height};
 
 use crate::appearance;
 use crate::banner::{banner_chrome, banner_height};
-use crate::gpu_surface::Surface;
+use crate::gpu_surface::{Acquire, Surface};
 use crate::pane_fonts::SizeKey;
 use crate::render_frame::{self, PaneView, Pass};
 use crate::window_state::{OsWindow, SELECTION_ALPHA};
 
 impl OsWindow {
     pub fn render(&mut self) {
-        let Some(texture) = self.surface.acquire(&self.ctx) else {
-            return;
+        let texture = match self.surface.acquire(&self.ctx) {
+            Acquire::Frame(texture) => texture,
+            Acquire::Retry => {
+                self.window.request_redraw();
+                return;
+            }
+            Acquire::Skip => return,
         };
         let view = Surface::view(&texture, self.surface.view_format());
         let (w, h) = self.surface.size();

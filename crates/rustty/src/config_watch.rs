@@ -13,11 +13,18 @@ pub enum ReloadOutcome {
     Rejected(String),
 }
 
-/// Recharge la configuration ; un fichier absent donne les défauts.
+/// Recharge la configuration. Sans chemin explicite, un fichier absent donne
+/// les défauts ; un chemin explicite absent est signalé (et les défauts
+/// s'appliquent côté appelant).
 pub fn reload(path: Option<&Path>) -> ReloadOutcome {
     let result = match path {
         Some(p) if p.exists() => Config::load(p),
-        Some(_) => Ok(Config::default()),
+        Some(p) => {
+            return ReloadOutcome::Rejected(format!(
+                "{} introuvable : valeurs par défaut",
+                p.display()
+            ));
+        }
         None => Config::load_default(),
     };
     match result {
@@ -27,17 +34,20 @@ pub fn reload(path: Option<&Path>) -> ReloadOutcome {
 }
 
 /// Écrit la configuration d'exemple complète et commentée à `path`, jamais
-/// par-dessus un fichier existant (`ErrorKind::AlreadyExists`).
+/// par-dessus un fichier existant (`ErrorKind::AlreadyExists`). L'écriture
+/// passe par un temporaire puis un lien dur (atomique, et qui échoue si la
+/// destination existe) : jamais de fichier à moitié écrit.
 pub fn init_config(path: &Path) -> std::io::Result<()> {
-    use std::io::Write as _;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
-    let mut file = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(path)?;
-    file.write_all(rustty_config::DEFAULT_TOML.as_bytes())
+    let mut tmp = path.as_os_str().to_owned();
+    tmp.push(".tmp");
+    let tmp = PathBuf::from(tmp);
+    let result = std::fs::write(&tmp, rustty_config::DEFAULT_TOML)
+        .and_then(|()| std::fs::hard_link(&tmp, path));
+    let _ = std::fs::remove_file(&tmp);
+    result
 }
 
 pub struct ConfigWatcher {
@@ -101,6 +111,50 @@ mod tests {
         assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists);
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "# à moi\n");
     }
+    #[test]
+    fn init_config_leaves_no_temp_file() {
+        let dir = temp_dir("init-tmp");
+        init_config(&dir.join("rustty.toml")).unwrap();
+        let existing = dir.join("rustty.toml");
+        std::fs::write(&existing, "# à moi\n").unwrap();
+        assert!(init_config(&existing).is_err());
+        let names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(names, vec![std::ffi::OsString::from("rustty.toml")]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unwritable_directory_is_an_error() {
+        use std::os::unix::fs::PermissionsExt as _;
+        // Root ignore les permissions : le test n'aurait aucun sens.
+        if unsafe { libc::geteuid() } == 0 {
+            return;
+        }
+        let dir = temp_dir("readonly");
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o555)).unwrap();
+        let result = init_config(&dir.join("rustty.toml"));
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(result.is_err());
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn missing_explicit_config_is_reported() {
+        let dir = temp_dir("explicit-missing");
+        match reload(Some(&dir.join("absent.toml"))) {
+            ReloadOutcome::Rejected(m) => {
+                assert!(
+                    m.contains("absent.toml") && m.contains("introuvable"),
+                    "{m}"
+                )
+            }
+            ReloadOutcome::Applied(_) => panic!("un chemin explicite absent doit être signalé"),
+        }
+    }
+
     use std::sync::Arc;
     use std::sync::mpsc::channel;
     use std::time::Duration;
@@ -131,17 +185,6 @@ mod tests {
         match reload(Some(&path)) {
             ReloadOutcome::Rejected(message) => assert!(message.contains("opacity"), "{message}"),
             ReloadOutcome::Applied(_) => panic!("une opacité de 7 doit être refusée"),
-        }
-    }
-
-    #[test]
-    fn missing_file_means_defaults_without_banner() {
-        let dir = temp_dir("missing");
-        match reload(Some(&dir.join("absent.toml"))) {
-            ReloadOutcome::Applied(c) => {
-                assert_eq!(c.window.opacity, Config::default().window.opacity)
-            }
-            ReloadOutcome::Rejected(e) => panic!("{e}"),
         }
     }
 

@@ -21,6 +21,8 @@ padding = 4
 scrollback_lines = 10000
 # Demander confirmation avant de fermer une fenêtre dont le shell a des enfants.
 confirm_close_with_running_children = true
+# Laisser les programmes écrire dans le presse-papiers (séquence OSC 52).
+osc52_clipboard = true
 
 [tabs]
 # Position de la barre d'onglets : "top", "bottom" ou "hidden".
@@ -165,6 +167,7 @@ mod tests {
             "padding",
             "scrollback_lines",
             "confirm_close_with_running_children",
+            "osc52_clipboard",
             "[tabs]",
             "position",
             "min_tabs",

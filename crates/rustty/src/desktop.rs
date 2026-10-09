@@ -19,14 +19,30 @@ const ICON_PNGS: [&[u8]; 7] = [
 ];
 const ICON_SVG: &[u8] = include_bytes!("../../../assets/icon.svg");
 
+/// L'argument `Exec=` selon la spécification desktop-entry : `%` doublé,
+/// guillemets si le chemin contient un caractère réservé, et `\"`, `` ` ``,
+/// `$`, `\` précédés d'un `\` à l'intérieur des guillemets.
+fn exec_argument(exec: &Path) -> String {
+    let raw = exec.display().to_string().replace('%', "%%");
+    let reserved = |c: char| " \t\n\"'\\><~|&;$*?#()`".contains(c);
+    if !raw.contains(reserved) {
+        return raw;
+    }
+    let mut quoted = String::with_capacity(raw.len() + 2);
+    quoted.push('"');
+    for c in raw.chars() {
+        if matches!(c, '"' | '`' | '$' | '\\') {
+            quoted.push('\\');
+        }
+        quoted.push(c);
+    }
+    quoted.push('"');
+    quoted
+}
+
 /// Le fichier `.desktop` qui lance `exec`.
 pub fn desktop_entry(exec: &Path) -> String {
-    let exec = exec.display().to_string();
-    let exec = if exec.contains(' ') {
-        format!("\"{exec}\"")
-    } else {
-        exec
-    };
+    let exec = exec_argument(exec);
     format!(
         "[Desktop Entry]\n\
          Type=Application\n\
@@ -73,7 +89,16 @@ fn write_file(path: &Path, bytes: &[u8]) -> io::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(with_path)?;
     }
-    std::fs::write(path, bytes).map_err(with_path)
+    // Écriture dans un temporaire puis renommage : jamais de fichier tronqué.
+    let mut tmp = path.as_os_str().to_owned();
+    tmp.push(".tmp");
+    let tmp = PathBuf::from(tmp);
+    std::fs::write(&tmp, bytes)
+        .and_then(|()| std::fs::rename(&tmp, path))
+        .inspect_err(|_| {
+            let _ = std::fs::remove_file(&tmp);
+        })
+        .map_err(with_path)
 }
 
 /// `$XDG_DATA_HOME`, sinon `~/.local/share`.
@@ -116,6 +141,48 @@ mod tests {
     fn exec_paths_with_spaces_are_quoted() {
         let entry = desktop_entry(Path::new("/home/a b/rustty"));
         assert!(entry.contains("Exec=\"/home/a b/rustty\""), "{entry}");
+    }
+
+    #[test]
+    fn exec_escapes_percent() {
+        let entry = desktop_entry(Path::new("/opt/100%/rustty"));
+        assert!(entry.contains("Exec=/opt/100%%/rustty\n"), "{entry}");
+    }
+
+    #[test]
+    fn exec_quotes_and_escapes_reserved_characters() {
+        for (path, exec) in [
+            ("/a\"b/r", "Exec=\"/a\\\"b/r\""),
+            ("/a$b/r", "Exec=\"/a\\$b/r\""),
+            ("/a`b/r", "Exec=\"/a\\`b/r\""),
+            ("/a\\b/r", "Exec=\"/a\\\\b/r\""),
+            ("/a'b/r", "Exec=\"/a'b/r\""),
+            ("/a b%/r", "Exec=\"/a b%%/r\""),
+        ] {
+            let entry = desktop_entry(Path::new(path));
+            assert!(entry.contains(&format!("{exec}\n")), "{path} -> {entry}");
+        }
+    }
+
+    #[test]
+    fn install_leaves_no_temp_files() {
+        let home = temp_dir("tmp");
+        let written = install(&home, Path::new("/usr/bin/rustty")).unwrap();
+        let mut count = 0;
+        let mut stack = vec![home.clone()];
+        while let Some(dir) = stack.pop() {
+            for e in std::fs::read_dir(dir).unwrap() {
+                let p = e.unwrap().path();
+                if p.is_dir() {
+                    stack.push(p);
+                } else {
+                    count += 1;
+                    assert_ne!(p.extension().and_then(|x| x.to_str()), Some("tmp"), "{p:?}");
+                }
+            }
+        }
+        assert_eq!(count, written.len());
+        let _ = std::fs::remove_dir_all(&home);
     }
 
     #[test]

@@ -126,7 +126,11 @@ fn show_image(source: &str) -> ExitCode {
 /// Installe le lanceur et les icônes pour l'utilisateur courant.
 fn install_desktop() -> ExitCode {
     if !cfg!(target_os = "linux") {
-        println!("Rien à installer : l'icône est déjà embarquée dans l'exécutable sur ce système.");
+        if cfg!(windows) {
+            println!("Rien à installer : l'icône est déjà embarquée dans l'exécutable.");
+        } else {
+            println!("Rien à installer hors de Linux (bundle .app non fourni).");
+        }
         return ExitCode::SUCCESS;
     }
     let (Some(home), Ok(exec)) = (desktop::data_home(), std::env::current_exe()) else {

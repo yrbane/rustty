@@ -37,6 +37,8 @@ pub struct Window {
     pub scrollback_lines: usize,
     /// Demander confirmation avant de fermer une fenêtre dont le shell a des enfants.
     pub confirm_close_with_running_children: bool,
+    /// Laisser les programmes écrire dans le presse-papiers (séquence OSC 52).
+    pub osc52_clipboard: bool,
 }
 
 impl Default for Window {
@@ -46,6 +48,7 @@ impl Default for Window {
             padding: 4,
             scrollback_lines: 10_000,
             confirm_close_with_running_children: true,
+            osc52_clipboard: true,
         }
     }
 }

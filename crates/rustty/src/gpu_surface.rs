@@ -52,6 +52,31 @@ pub fn init_gpu(window: Arc<Window>) -> anyhow::Result<(GpuContext, wgpu::Surfac
     Ok((ctx, surface))
 }
 
+/// Ce qu'il faut faire d'une tentative d'acquisition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AcquireKind {
+    Frame,
+    /// Surface reconfigurée : redessiner aussitôt.
+    Retry,
+    /// Rien à dessiner pour cette image.
+    Skip,
+}
+
+pub enum Acquire {
+    Frame(wgpu::SurfaceTexture),
+    Retry,
+    Skip,
+}
+
+pub fn classify(current: &wgpu::CurrentSurfaceTexture) -> AcquireKind {
+    use wgpu::CurrentSurfaceTexture as C;
+    match current {
+        C::Success(_) | C::Suboptimal(_) => AcquireKind::Frame,
+        C::Outdated | C::Lost => AcquireKind::Retry,
+        C::Timeout | C::Occluded | C::Validation => AcquireKind::Skip,
+    }
+}
+
 pub struct Surface {
     surface: wgpu::Surface<'static>,
     config: wgpu::SurfaceConfiguration,
@@ -107,18 +132,18 @@ impl Surface {
         self.config.alpha_mode == CompositeAlphaMode::PreMultiplied
     }
 
-    /// L'image à dessiner, ou `None` si cette image doit être sautée.
-    pub fn acquire(&mut self, ctx: &GpuContext) -> Option<wgpu::SurfaceTexture> {
-        match self.surface.get_current_texture() {
+    /// L'image à dessiner, de quoi réessayer tout de suite, ou la sauter.
+    pub fn acquire(&mut self, ctx: &GpuContext) -> Acquire {
+        let current = self.surface.get_current_texture();
+        let kind = classify(&current);
+        if kind == AcquireKind::Retry {
+            self.surface.configure(&ctx.device, &self.config);
+        }
+        match current {
             wgpu::CurrentSurfaceTexture::Success(t)
-            | wgpu::CurrentSurfaceTexture::Suboptimal(t) => Some(t),
-            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
-                self.surface.configure(&ctx.device, &self.config);
-                None
-            }
-            wgpu::CurrentSurfaceTexture::Timeout
-            | wgpu::CurrentSurfaceTexture::Occluded
-            | wgpu::CurrentSurfaceTexture::Validation => None,
+            | wgpu::CurrentSurfaceTexture::Suboptimal(t) => Acquire::Frame(t),
+            _ if kind == AcquireKind::Retry => Acquire::Retry,
+            _ => Acquire::Skip,
         }
     }
 
@@ -134,6 +159,16 @@ impl Surface {
 mod tests {
     use super::*;
     use wgpu::{CompositeAlphaMode as A, TextureFormat as F};
+
+    #[test]
+    fn lost_and_outdated_surfaces_are_retried() {
+        use wgpu::CurrentSurfaceTexture as C;
+        assert_eq!(classify(&C::Outdated), AcquireKind::Retry);
+        assert_eq!(classify(&C::Lost), AcquireKind::Retry);
+        assert_eq!(classify(&C::Timeout), AcquireKind::Skip);
+        assert_eq!(classify(&C::Occluded), AcquireKind::Skip);
+        assert_eq!(classify(&C::Validation), AcquireKind::Skip);
+    }
 
     #[test]
     fn non_srgb_formats_are_preferred_as_is() {
