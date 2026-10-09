@@ -212,6 +212,13 @@ mod tests {
     }
 
     #[test]
+    fn osc52_clipboard_defaults_to_true_and_can_be_disabled() {
+        assert!(Config::default().window.osc52_clipboard);
+        let c = Config::from_str("[window]\nosc52_clipboard = false\n").unwrap();
+        assert!(!c.window.osc52_clipboard);
+    }
+
+    #[test]
     fn partial_sections_override_only_what_they_name() {
         let c = Config::from_str(
             "[font]\nsize = 14.5\n\n[window]\nopacity = 0.9\n\n[tabs]\nposition = \"bottom\"\n",

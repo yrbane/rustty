@@ -4,11 +4,19 @@
 
 use rustty_render::{layout_tab_bar, tab_bar_height};
 
+use crate::divider_drag::drag_still_valid;
 use crate::geometry;
 use crate::pane_fonts::SizeKey;
 use crate::render_frame;
 use crate::renderers::RendererSpec;
+use crate::tab::TermId;
 use crate::window_state::OsWindow;
+
+/// La sélection survit sauf si la grille de son terminal vient de changer
+/// (reflow ou zoom) : ses coordonnées ne désignent plus les mêmes cellules.
+pub fn selection_survives(selected: Option<TermId>, resized: &[TermId]) -> bool {
+    selected.is_none_or(|t| !resized.contains(&t))
+}
 
 impl OsWindow {
     /// Recalcule barre d'onglets, rectangles des panneaux et tailles des terminaux.
@@ -38,6 +46,7 @@ impl OsWindow {
         if self.model.workspace.is_empty() {
             self.pane_rects.clear();
             self.dividers.clear();
+            self.cancel_stale_drag();
             return;
         }
         let padding = self.config.window.padding;
@@ -56,6 +65,7 @@ impl OsWindow {
         self.pane_rects = geometry::pane_rects(&tab.layout, g.content, gap);
         self.dividers = geometry::divider_rects(&tab.layout, g.content, gap);
         self.content = g.content;
+        let mut resized = Vec::new();
         for (wid, rect) in &self.pane_rects {
             if let Some(term) = tab.term_at(*wid)
                 && let Some(tw) = self.terms.get_mut(&term)
@@ -64,9 +74,44 @@ impl OsWindow {
                     .renderers
                     .metrics(SizeKey::of(self.pane_fonts.size_of(term)));
                 let (cols, rows) = geometry::grid_size(*rect, metrics, padding);
-                tw.resize(cols, rows, (rect.width, rect.height));
+                if tw.resize(
+                    cols,
+                    rows,
+                    (rect.width, rect.height),
+                    (metrics.width, metrics.height),
+                ) {
+                    resized.push(term);
+                }
             }
         }
+        if !selection_survives(self.selection.as_ref().map(|(t, _)| *t), &resized) {
+            self.selection = None;
+        }
+        self.cancel_stale_drag();
         self.update_title();
+    }
+
+    /// Une barre disparue (onglet changé, panneau fermé) met fin au glisser.
+    fn cancel_stale_drag(&mut self) {
+        let still = drag_still_valid(self.drag, &self.dividers);
+        if still != self.drag {
+            self.drag = still;
+            self.update_cursor_icon(self.cursor.0, self.cursor.1);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn selection_is_cleared_when_its_grid_changes() {
+        assert!(selection_survives(None, &[TermId(1)]));
+        assert!(selection_survives(Some(TermId(1)), &[TermId(2)]));
+        assert!(!selection_survives(
+            Some(TermId(1)),
+            &[TermId(2), TermId(1)]
+        ));
     }
 }

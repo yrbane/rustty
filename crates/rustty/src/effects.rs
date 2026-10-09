@@ -24,6 +24,9 @@ impl OsWindow {
                 }
                 Effect::CloseTerm(id) => self.close_term(id),
                 Effect::Scroll(id, request) => {
+                    if scroll_clears_selection(self.selection.as_ref().map(|(t, _)| *t), id) {
+                        self.selection = None;
+                    }
                     if let Some(tw) = self.terms.get(&id) {
                         tw.scroll(request);
                     }
@@ -36,8 +39,11 @@ impl OsWindow {
                     // Seul le panneau survolé (sinon le focalisé) change de taille.
                     let (x, y) = self.cursor;
                     let hovered = self.pane_under(x, y).map(|(term, _)| term);
-                    if let Some(term) = zoom_target(hovered, self.model.workspace.focused_term())
-                        && self.pane_fonts.apply(term, change)
+                    if let Some(term) = zoom_target(
+                        hovered,
+                        self.cursor_inside,
+                        self.model.workspace.focused_term(),
+                    ) && self.pane_fonts.apply(term, change)
                     {
                         self.relayout();
                     }
@@ -110,7 +116,13 @@ impl OsWindow {
             return Vec::new();
         };
         match tw.poll_exit() {
-            Some(status) => self.model.term_exited(id, status),
+            Some(status) => {
+                // Avec --hold le panneau mort reste : le menu ne doit pas le viser.
+                if self.menu.as_ref().is_some_and(|m| m.term == id) {
+                    self.menu = None;
+                }
+                self.model.term_exited(id, status)
+            }
             None => Vec::new(),
         }
     }
@@ -127,5 +139,23 @@ impl OsWindow {
                 self.window.request_redraw();
             }
         }
+    }
+}
+
+/// Le défilement d'un terminal efface sa sélection : les cellules sélectionnées
+/// ne désignent plus les mêmes lignes (effacer coûte moins que décaler).
+pub fn scroll_clears_selection(selected: Option<TermId>, scrolled: TermId) -> bool {
+    selected == Some(scrolled)
+}
+
+#[cfg(test)]
+mod scroll_tests {
+    use super::*;
+
+    #[test]
+    fn scrolling_clears_only_that_terms_selection() {
+        assert!(scroll_clears_selection(Some(TermId(1)), TermId(1)));
+        assert!(!scroll_clears_selection(Some(TermId(1)), TermId(2)));
+        assert!(!scroll_clears_selection(None, TermId(1)));
     }
 }

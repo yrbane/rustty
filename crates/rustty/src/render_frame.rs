@@ -114,18 +114,20 @@ pub fn build_frame(
 
 /// Une passe de rendu : la base (efface, panneaux à la taille configurée,
 /// décor), une par taille zoomée, puis le décor qui doit rester au-dessus
-/// de tout (bandeau).
+/// de tout (bandeau), puis le menu contextuel seul au-dessus du bandeau.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pass {
     Base,
     Size(SizeKey),
     Overlay,
+    Menu,
 }
 
 pub fn pass_order(base: SizeKey, keys: impl IntoIterator<Item = SizeKey>) -> Vec<Pass> {
     let mut passes = vec![Pass::Base];
     passes.extend(keys.into_iter().filter(|k| *k != base).map(Pass::Size));
     passes.push(Pass::Overlay);
+    passes.push(Pass::Menu);
     passes
 }
 
@@ -134,20 +136,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn menu_pass_comes_after_the_overlay() {
+        let base = SizeKey::of(11.0);
+        let passes = pass_order(base, [SizeKey::of(14.0)]);
+        let pos = |p: Pass| passes.iter().position(|x| *x == p).unwrap();
+        assert!(pos(Pass::Menu) > pos(Pass::Overlay));
+        assert_eq!(passes.last(), Some(&Pass::Menu));
+    }
+
+    #[test]
     fn overlay_pass_comes_last() {
         let base = SizeKey::of(11.0);
         let passes = pass_order(base, [SizeKey::of(14.0), SizeKey::of(9.0)]);
         assert_eq!(passes.first(), Some(&Pass::Base));
         assert_eq!(
             passes.last(),
-            Some(&Pass::Overlay),
-            "le bandeau passe au-dessus des panneaux zoomés"
+            Some(&Pass::Menu),
+            "le menu passe au-dessus du bandeau"
         );
-        assert_eq!(passes.len(), 4);
+        assert!(passes.contains(&Pass::Overlay));
+        assert_eq!(passes.len(), 5);
         assert!(passes.contains(&Pass::Size(SizeKey::of(9.0))));
         assert_eq!(
             pass_order(base, [base]),
-            vec![Pass::Base, Pass::Overlay],
+            vec![Pass::Base, Pass::Overlay, Pass::Menu],
             "la base n'est pas dessinée deux fois"
         );
     }

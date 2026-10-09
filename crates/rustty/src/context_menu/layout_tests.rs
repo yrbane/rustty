@@ -1,9 +1,12 @@
 //! Tests du placement, du test de clic et du dessin du menu.
 
+use super::super::chrome::truncate_to_cells;
+use super::super::menu_chrome;
 use super::*;
 use crate::context_menu::MenuItem;
 use crate::tab::TermId;
 use rustty_config::Colors;
+use rustty_render::Palette;
 
 fn metrics() -> CellMetrics {
     CellMetrics {
@@ -24,11 +27,8 @@ fn menu(x: u32, y: u32) -> ContextMenu {
         can_copy: true,
         zoomed: false,
         hovered: None,
+        shortcuts: vec![None; ENTRIES.len()],
     }
-}
-
-fn no_shortcuts() -> Vec<Option<String>> {
-    vec![None; ENTRIES.len()]
 }
 
 fn item_index(item: MenuItem) -> usize {
@@ -42,7 +42,7 @@ fn item_index(item: MenuItem) -> usize {
 fn clicks_inside_the_menu_never_close_it_by_accident() {
     let mut m = menu(100, 50);
     m.can_copy = false;
-    let l = layout(&m, (800, 600), metrics(), &no_shortcuts());
+    let l = layout(&m, (800, 600), metrics());
     let sep = ENTRIES
         .iter()
         .position(|e| *e == MenuEntry::Separator)
@@ -75,7 +75,7 @@ fn clicks_inside_the_menu_never_close_it_by_accident() {
 
 #[test]
 fn menu_opens_at_the_click() {
-    let l = layout(&menu(100, 50), (800, 600), metrics(), &no_shortcuts());
+    let l = layout(&menu(100, 50), (800, 600), metrics());
     assert_eq!((l.rect.x, l.rect.y), (100, 50));
     assert_eq!(l.rows.len(), ENTRIES.len());
     assert!(
@@ -92,13 +92,13 @@ fn menu_opens_at_the_click() {
 
 #[test]
 fn menu_stays_inside_the_window() {
-    let l = layout(&menu(790, 590), (800, 600), metrics(), &no_shortcuts());
+    let l = layout(&menu(790, 590), (800, 600), metrics());
     assert!(
         l.rect.x + l.rect.width <= 800 && l.rect.y + l.rect.height <= 600,
         "{:?}",
         l.rect
     );
-    let tiny = layout(&menu(5, 5), (40, 30), metrics(), &no_shortcuts());
+    let tiny = layout(&menu(5, 5), (40, 30), metrics());
     assert_eq!(
         (tiny.rect.x, tiny.rect.y),
         (0, 0),
@@ -109,7 +109,7 @@ fn menu_stays_inside_the_window() {
 #[test]
 fn hit_finds_items_by_row() {
     let m = menu(100, 50);
-    let l = layout(&m, (800, 600), metrics(), &no_shortcuts());
+    let l = layout(&m, (800, 600), metrics());
     let close = item_index(MenuItem::ClosePane);
     let row = l.rows[close].1;
     assert_eq!(
@@ -123,7 +123,7 @@ fn hit_finds_items_by_row() {
 fn separators_and_disabled_items_are_not_clickable() {
     let mut m = menu(100, 50);
     m.can_copy = false;
-    let l = layout(&m, (800, 600), metrics(), &no_shortcuts());
+    let l = layout(&m, (800, 600), metrics());
     let sep = ENTRIES
         .iter()
         .position(|e| *e == MenuEntry::Separator)
@@ -148,10 +148,9 @@ fn chrome_highlights_the_hovered_item_and_greys_disabled_ones() {
     m.can_copy = false;
     let close = item_index(MenuItem::ClosePane);
     m.hovered = Some(close);
-    let mut shortcuts = no_shortcuts();
-    shortcuts[close] = Some("ctrl+shift+w".into());
-    let l = layout(&m, (800, 600), metrics(), &shortcuts);
-    let c = menu_chrome(&m, &l, &shortcuts, &palette, metrics());
+    m.shortcuts[close] = Some("ctrl+shift+w".into());
+    let l = layout(&m, (800, 600), metrics());
+    let c = menu_chrome(&m, &l, &palette, metrics());
     assert!(
         c.quads
             .iter()
@@ -172,4 +171,40 @@ fn chrome_highlights_the_hovered_item_and_greys_disabled_ones() {
         hint.x + 12 * 10 <= l.rect.x + l.rect.width,
         "raccourci dans le menu"
     );
+}
+
+#[test]
+fn contains_is_true_inside_only() {
+    let l = layout(&menu(100, 50), (800, 600), metrics());
+    let r = l.rect;
+    assert!(l.contains(f64::from(r.x), f64::from(r.y)));
+    assert!(l.contains(f64::from(r.x + r.width - 1), f64::from(r.y + r.height - 1)));
+    assert!(!l.contains(f64::from(r.x + r.width), f64::from(r.y)));
+    assert!(!l.contains(f64::from(r.x), f64::from(r.y + r.height)));
+    assert!(!l.contains(f64::from(r.x) - 1.0, f64::from(r.y)));
+}
+
+#[test]
+fn menu_never_exceeds_a_narrow_window() {
+    let mut m = menu(5, 5);
+    m.shortcuts[item_index(MenuItem::ClosePane)] = Some("ctrl+shift+w".into());
+    let palette = Palette::from_config(&Colors::default(), false);
+    let l = layout(&m, (150, 600), metrics());
+    assert!(l.rect.x + l.rect.width <= 150, "{:?}", l.rect);
+    let c = menu_chrome(&m, &l, &palette, metrics());
+    for t in &c.texts {
+        let end = t.x + t.text.width() as u32 * 10;
+        assert!(end <= l.rect.x + l.rect.width, "{} dépasse", t.text);
+        assert!(t.x >= l.rect.x, "{} déborde à gauche", t.text);
+    }
+}
+
+#[test]
+fn labels_are_truncated_with_an_ellipsis() {
+    assert_eq!(truncate_to_cells("Copier", 10), "Copier");
+    assert_eq!(truncate_to_cells("Copier", 6), "Copier");
+    assert_eq!(truncate_to_cells("Copier", 4), "Cop…");
+    assert_eq!(truncate_to_cells("Copier", 1), "…");
+    assert_eq!(truncate_to_cells("Copier", 0), "");
+    assert_eq!(truncate_to_cells("日本語", 4), "日…");
 }

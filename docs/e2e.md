@@ -60,6 +60,44 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 - [ ] `[splits] width = 6`, puis `random_colors = true` : chaque nouveau split a sa barre colorée ; `border = false` : panneaux bord à bord.
 - [ ] `[tabs] padding_horizontal = 3`, `padding_vertical = 6`, `spacing = 4` : la barre s'élargit et s'aère ; `[tabs.colors] random = true` : chaque onglet a sa couleur, texte lisible.
 
+## Images
+- [ ] `rustty img assets/logo.png` dans un panneau : l'image s'affiche, le curseur se place dessous.
+- [ ] `rustty img https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png` : l'image distante s'affiche (test réseau manuel).
+- [ ] `rustty img /inexistant.png` : message d'erreur français sur stderr, rien d'affiché, code de sortie 1 ; `rustty img` seul : erreur d'usage.
+- [ ] Afficher plusieurs images puis défiler dans l'historique (`shift+page_up`) : les images défilent avec le texte et reviennent au retour en bas.
+- [ ] `ctrl+molette` sur le panneau : l'image suit la taille de la police (autant de cellules, proportions conservées).
+- [ ] `clear` : l'image disparaît de l'écran.
+- [ ] Rétrécir le panneau (split ou fenêtre) : l'image est rognée à la largeur, sans panique.
+
+## Correctifs des tâches 8 à 11 (plan 8)
+Menu contextuel
+- [ ] Un bandeau (erreur de config, confirmation) reste visible sous le menu ouvert, qui ne le recouvre pas.
+- [ ] Menu ouvert : le curseur de la souris et la surbrillance de l'entrée survolée suivent le pointeur.
+- [ ] Fenêtre très étroite : les libellés du menu sont tronqués avec `…`, sans débordement.
+- [ ] Menu ouvert, clic droit ailleurs dans la fenêtre : le menu se rouvre à la nouvelle position.
+- [ ] Pendant une confirmation de fermeture (programme en cours), le clic droit n'ouvre aucun menu.
+- [ ] `--hold` : ouvrir le menu, laisser le shell sortir (`exit` dans un autre panneau n'est pas suffisant, tuer le shell du panneau) ; le menu se ferme à la mort du panneau.
+
+Zoom et sélection
+- [ ] `font.size = 80`, puis `ctrl+plus` : la police ne rétrécit pas (plafond respecté).
+- [ ] Souris hors de la fenêtre, `ctrl+plus` / `ctrl+minus` : le panneau focalisé est zoomé.
+- [ ] Panneau zoomé (`ctrl+plus`), défilement au pavé tactile : le défilement reste fluide et proportionné.
+- [ ] Sélectionner du texte, puis redimensionner la fenêtre ou zoomer : la sélection est effacée.
+- [ ] Sélectionner du texte, puis défiler à la molette : la sélection est effacée.
+
+Souris et clavier
+- [ ] Dans une application qui capte la souris (`htop`, ou vim avec `:set mouse=a`), appuyer dans le panneau, relâcher hors du panneau : le relâchement est transmis, aucun bouton « collé ».
+- [ ] Même application : appuyer dans le panneau, alt-tab vers une autre fenêtre, relâcher, revenir et bouger la souris : aucun glisser n'est envoyé (le relâchement part à la perte du focus).
+- [ ] `ctrl+1` et `ctrl+9` envoient le chiffre au programme (`cat -v`, puis les touches) ; `alt+1`…`alt+5` changent toujours d'onglet.
+
+Configuration et fichiers
+- [ ] `cargo run -p rustty -- --config /nonexistent` : bandeau « /nonexistent introuvable », la config par défaut s'applique.
+- [ ] `--init-config` et `--install-desktop` : aucun fichier `*.tmp` ne reste dans `~/.config/rustty` ni `~/.local/share`.
+- [ ] `[window] osc52_clipboard = false` : `printf '\e]52;c;%s\a' $(echo -n hi | base64)` ne modifie pas le presse-papiers ; avec `true`, il contient `hi`.
+
+Barre d'onglets
+- [ ] Ouvrir beaucoup d'onglets puis réduire la fenêtre : le dernier onglet visible est tronqué avec `…` (au moins 3 cellules de titre), sinon il est omis.
+
 ## Robustesse
 - [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique.
 - [ ] `cargo run -p rustty` : rien sur la sortie d'erreur pendant le parcours ; `RUSTTY_LOG=rustty=debug` pour le détail.

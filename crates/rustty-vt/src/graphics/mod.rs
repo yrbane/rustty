@@ -1,0 +1,21 @@
+//! Protocole graphique kitty : analyse des commandes APC `G…` et
+//! réassemblage des charges utiles fragmentées en morceaux.
+//!
+//! Module pur (aucune E/S) : les étapes suivantes y branchent le décodage
+//! d'image et le stockage.
+
+mod chunks;
+mod command;
+mod downscale;
+mod image;
+mod placement;
+mod store;
+#[cfg(test)]
+pub(crate) mod test_support;
+
+pub use self::image::{ImageData, ImageStrip, MAX_SIDE, Placement, decode};
+pub use chunks::{ChunkResult, Chunks, GraphicsError, MAX_PAYLOAD};
+pub use command::{Action, Format, GraphicsCommand, parse};
+pub use downscale::{DISPLAY_MARGIN, display_pixels, fit_display};
+pub use placement::extent;
+pub use store::{ImageStore, QUOTA};

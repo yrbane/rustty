@@ -14,12 +14,25 @@ use crate::window_state::OsWindow;
 /// Lignes défilées par cran de molette.
 const WHEEL_LINES: f64 = 3.0;
 
+/// Lignes défilées par un événement ; le pavé tactile (pixels) se mesure
+/// à la hauteur de cellule du panneau concerné.
+pub fn wheel_lines(delta: MouseScrollDelta, cell_height: u32) -> f64 {
+    match delta {
+        MouseScrollDelta::LineDelta(_, y) => f64::from(y) * WHEEL_LINES,
+        MouseScrollDelta::PixelDelta(p) => p.y / f64::from(cell_height.max(1)),
+    }
+}
+
 impl OsWindow {
     pub fn on_wheel(&mut self, delta: MouseScrollDelta) -> Vec<Effect> {
-        let lines = match delta {
-            MouseScrollDelta::LineDelta(_, y) => f64::from(y) * WHEEL_LINES,
-            MouseScrollDelta::PixelDelta(p) => p.y / f64::from(self.metrics().height.max(1)),
-        };
+        let (x, y) = self.cursor;
+        let target = self
+            .pane_under(x, y)
+            .map(|(term, _)| term)
+            .or_else(|| self.model.workspace.focused_term());
+        let cell_height =
+            target.map_or_else(|| self.metrics().height, |t| self.metrics_of(t).height);
+        let lines = wheel_lines(delta, cell_height);
         let lines = self.wheel.lines(lines);
         if lines == 0 {
             return Vec::new();
@@ -30,7 +43,6 @@ impl OsWindow {
                 .into_iter()
                 .collect();
         }
-        let (x, y) = self.cursor;
         let Some((term, rect)) = self.pane_under(x, y).or_else(|| {
             self.model
                 .workspace
@@ -84,6 +96,13 @@ impl OsWindow {
         self.focused = focused;
         if !focused {
             self.menu = None;
+            // Plus de souris à suivre : le glisser de barre s'arrête.
+            if self.drag.take().is_some() {
+                self.update_cursor_icon(self.cursor.0, self.cursor.1);
+            }
+            // Le relâchement du bouton tenu ne nous parviendra pas : on
+            // l'envoie maintenant, sinon vim ou tmux verraient un glisser.
+            self.release_held(self.cursor.0, self.cursor.1);
         }
         if let Some(term) = self.model.workspace.focused_term()
             && let Some(tw) = self.terms.get(&term)
@@ -96,5 +115,19 @@ impl OsWindow {
             });
         }
         vec![Effect::Redraw]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use winit::dpi::PhysicalPosition;
+
+    #[test]
+    fn pixel_delta_uses_the_pane_cell_height() {
+        let px = |y| MouseScrollDelta::PixelDelta(PhysicalPosition::new(0.0, y));
+        assert_eq!(wheel_lines(px(40.0), 20), 2.0);
+        assert_eq!(wheel_lines(px(40.0), 40), 1.0);
+        assert_eq!(wheel_lines(MouseScrollDelta::LineDelta(0.0, 1.0), 20), 3.0);
     }
 }

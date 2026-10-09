@@ -4,6 +4,184 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.119 — 2026-10-09 · « Compatibilité avec clippy récent »
+
+- Tests et décodage RGB : `chunks_exact` à taille constante remplacé par `as_chunks::<N>()` (`graphics/image.rs`, `graphics/downscale.rs`, `term/image_budget_tests.rs`), exigé par le clippy de la CI.
+
+## 0.1.0-alpha.118 — 2026-10-09 · « Photos remises d'aplomb »
+
+- `rustty img` : l'orientation EXIF est appliquée après décodage (`ImageDecoder::orientation` puis `DynamicImage::apply_orientation`) ; les photos de téléphone prises en portrait ne s'affichent plus couchées. Un EXIF illisible laisse l'image telle quelle.
+- `img::decode` : décodage au format deviné, testé avec un JPEG portant un segment EXIF construit à la volée.
+- README : mention de l'orientation EXIF.
+
+## 0.1.0-alpha.117 — 2026-10-09 · « Plus de bouton collé après alt-tab »
+
+- Souris : à la perte du focus, le bouton tenu est relâché auprès du terminal qui a reçu l'appui (cellule bornée à son panneau) et le filtre de mouvement est remis à zéro ; après un alt-tab, vim ou tmux ne reçoivent plus de glisser fantôme.
+- `mouse_input::take_held`, fonction pure partagée par le relâchement et la perte du focus.
+- `docs/e2e.md` : parcours alt-tab avec un bouton tenu.
+
+## 0.1.0-alpha.116 — 2026-10-09 · « L'atlas de glyphes s'agrandit au lieu de se vider »
+
+- Rendu : un atlas de glyphes plein double de taille (512 → 1024 → 2048) au lieu d'être reconstruit à taille égale ; il n'est vidé qu'à 2048. Une page CJK pleine en petite police n'entraîne plus une reconstruction à chaque image ni des glyphes faux.
+- La construction des glyphes d'une image fait jusqu'à 4 passes (deux agrandissements, un vidage à la taille maximale, la passe finale) pour que toutes les instances pointent dans l'atlas final.
+- Découpage sans changement de comportement : le cache de glyphes (`build_glyphs`, `glyph_instance`, `load_glyph`, `rebuild_atlas`) passe de `renderer.rs` à `renderer/glyph_cache.rs`.
+
+## 0.1.0-alpha.115 — 2026-10-09 · « Mémoire des images posées bornée »
+
+- Protocole graphique : au placement, l'image est réduite à sa taille affichée en pixels (colonnes × largeur de cellule, rangées × hauteur, marge ×2 pour le zoom, jamais agrandie, `graphics::fit_display`) ; une petite image garde le même `ImageData` que le magasin.
+- Budget de 320 Mio (`PLACED_BUDGET`) d'images posées par terminal, écran et historique : au-delà, les placements absents de l'écran sont retirés du plus ancien au plus récent, puis ceux de l'écran ; le placement le plus récent reste toujours affiché. Chaque image n'est comptée qu'une fois.
+- `ImageData::source` rattache une copie réduite à son image d'origine : `a=d,d=i` retire aussi les placements réduits.
+- Boucles `img` sur de grandes photos ou PNG 8192² répétés avec `c=1,r=1` ne font plus gonfler la mémoire sans limite.
+- README : taille conservée et budget des images posées.
+
+## 0.1.0-alpha.114 — 2026-10-09 · « Hauteur des images bornée »
+
+- Protocole graphique : l'emprise d'un placement est bornée à la largeur du terminal et à 4 écrans de haut (`MAX_SCREENS_PER_IMAGE`), rapport d'aspect conservé ; `c=1,r=65535` ou une image très haute n'inondent plus l'historique.
+- `graphics::extent` prend désormais le maximum `(colonnes, rangées)` au lieu de la seule largeur.
+
+## 0.1.0-alpha.113 — 2026-10-09 · « Transferts graphiques interrompus abandonnés »
+
+- Protocole graphique : un morceau dont la partie contrôle porte d'autres clés que `m=`, `q=` et `i=`, ou un `i=` différent, ouvre une nouvelle commande et abandonne la transmission interrompue (`m=1` sans `m=0`) au lieu d'y être avalé ; `a=p` et `a=d` ne sont donc jamais ajoutés à un transfert en attente.
+- Après une erreur en cours de transmission, seuls les morceaux de suite (même `i=` ou aucun) sont écartés ; une commande complète est de nouveau exécutée.
+- RIS (`ESC c`) remet l'accumulateur de morceaux à zéro et vide le magasin d'images, comme kitty.
+
+## 0.1.0-alpha.112 — 2026-10-09 · « Onglets tronqués, modules découpés, parcours e2e »
+
+- Barre d'onglets : `fit_title` renvoie `""` à 0 cellule et `…` à 1 cellule (plus de débordement) ; le dernier onglet est tronqué à la place restante (au moins 3 cellules de titre) au lieu d'être abandonné.
+- Découpage sans changement de comportement : `chrome.rs` devient `chrome/` (`title_fit.rs`, `tests.rs`), tests de `model`, `grid` et `workspace` déplacés dans des fichiers `*_tests.rs`, fermeture et renommage extraits de `model.rs` vers `model/close.rs`.
+- `docs/e2e.md` : parcours des correctifs des tâches 8 à 11 (menu, zoom, sélection, souris, configuration, OSC 52).
+- README : `RUSTTY_LOG=rustty=debug`, option `[window] osc52_clipboard`.
+
+## 0.1.0-alpha.111 — 2026-10-09 · « Lanceur et surface : finitions »
+
+- `Exec=` du `.desktop` : deuxième couche d'échappement du type « string » (`\\`, `\n`, `\t`, `\r`) après la citation, une valeur ne s'étend plus sur plusieurs lignes.
+- Surface perdue de façon durable : un seul redessin immédiat par série d'échecs, puis saut jusqu'à une image réussie (plus de boucle à 100 % de processeur).
+- `--init-config` : repli sur une création exclusive quand le système de fichiers n'accepte pas les liens durs (jamais d'écrasement).
+- Bandeau d'un `--config` introuvable : message neutre (« <chemin> introuvable »), exact au démarrage comme au rechargement à chaud.
+
+## 0.1.0-alpha.110 — 2026-10-09 · « Démarrage, presse-papiers et lanceur plus robustes »
+
+- `--config` vers un fichier inexistant n'est plus silencieux : bandeau « introuvable : valeurs par défaut ».
+- `--init-config` écrit via un temporaire puis un lien dur : jamais de fichier à moitié écrit, jamais d'écrasement, temporaire toujours nettoyé.
+- `--install-desktop` écrit chaque fichier via un temporaire puis un renommage atomique.
+- `Exec=` du `.desktop` conforme à la spécification : `%` doublé, guillemets et échappements pour les caractères réservés.
+- Surface perdue ou périmée : reconfigurée puis redessin immédiat demandé (plus d'image sautée jusqu'au prochain événement).
+- Nouvelle option `[window] osc52_clipboard` (défaut `true`) pour refuser l'écriture dans le presse-papiers par OSC 52.
+- `build.rs` : avertissement explicite quand l'icône Windows n'est pas embarquée (compilation croisée) ; `--install-desktop` dit « rien à installer hors de Linux » sur macOS.
+
+## 0.1.0-alpha.109 — 2026-10-09 · « Souris et clavier, cas limites »
+
+- Le relâchement d'un bouton est désormais rapporté au terminal qui a reçu l'appui, même si la souris a quitté le panneau (cellule bornée à la grille) : plus de bouton « resté enfoncé » côté application.
+- Rapports de mouvement filtrés : un seul par cellule traversée au lieu d'un par pixel (`MotionFilter`).
+- Le défilement de l'affichage d'un terminal efface sa sélection, qui ne désignait plus les mêmes lignes.
+- Le glisser d'une barre de split est annulé (curseur remis) quand la barre disparaît (changement d'onglet, panneau fermé) ou que la fenêtre perd le focus.
+- `ctrl+1`, `ctrl+9` et `ctrl+0` envoient le chiffre lui-même, comme xterm.
+- `cell_at` et `cell_at_clamped` déplacés dans `cell_hit.rs` ; relâchement et mouvement dans `mouse_input.rs`.
+
+## 0.1.0-alpha.108 — 2026-10-09 · « Zoom, molette et sélection plus justes »
+
+- Zoom de police : une taille configurée hors de 4–72 pt ne va plus à contre-sens (80 pt ne rétrécit plus sur « agrandir »).
+- Le zoom clavier ignore la dernière position de la souris quand elle est sortie de la fenêtre : il vise le panneau focalisé.
+- Molette du pavé tactile : le défilement en pixels se mesure à la hauteur de cellule du panneau visé, plus à celle de la taille de base.
+- Atlas de glyphes dimensionné selon la cellule (512 à 2048 px, puissance de deux) : fini les 16 Mio de VRAM par taille de police.
+- La sélection est effacée quand la grille de son terminal change (reflow ou zoom).
+
+## 0.1.0-alpha.107 — 2026-10-09 · « menu contextuel : corrections »
+
+- Le texte du bandeau n'est plus imprimé par-dessus le menu : nouvelle passe `Pass::Menu` après le bandeau.
+- Menu ouvert, le curseur et le survol de la barre d'onglets ne se figent plus : dans le menu, curseur par défaut et barre non survolée ; hors du menu, comportement normal.
+- Les raccourcis affichés sont figés à l'ouverture (`ContextMenu::new`) au lieu d'être recalculés à chaque mouvement.
+- Le menu ne dépasse plus une fenêtre étroite : libellés et raccourcis sont coupés avec `…`.
+- Un clic droit hors du menu le ferme puis ouvre le nouveau menu au point cliqué.
+- Le menu se ferme quand son panneau meurt (`--hold`).
+- Le menu ne s'ouvre pas pendant une confirmation de fermeture ou un renommage.
+- Test de correspondance entrées/actions exhaustif sur les huit entrées.
+
+## 0.1.0-alpha.106 — 2026-10-09 · « rustty img : limites HTTP franches »
+
+- Une réponse HTTP de plus de 64 Mio donne l'erreur « réponse trop volumineuse (plus de 64 Mio) » au lieu d'être tronquée en silence.
+- Un statut HTTP d'erreur s'affiche en français (« code HTTP 404 ») et le téléchargement a un délai global de 30 s.
+- L'encodage PNG en mémoire remonte une erreur au lieu de paniquer.
+
+## 0.1.0-alpha.105 — 2026-10-09 · « rustty img : afficher une image »
+
+- Nouvelle commande `rustty img <source>` : lit un fichier local ou une URL `http(s)://` (corps limité à 64 Mio), décode (PNG, JPEG, GIF, WebP, BMP), réduit à 2048 px de côté au plus (Lanczos3) et l'émet en séquences graphiques kitty (`a=T`, PNG, base64 par morceaux de 4096 caractères). Fonctionne aussi dans kitty. Rien n'est écrit en cas d'erreur (message en français, code de sortie 1).
+- `TermWindow::resize` transmet désormais la taille d'une cellule au `Term` (par panneau, selon sa police), même quand la grille ne change pas, pour calculer les cellules couvertes par une image ; il renvoie vrai quand la grille change.
+- Dépendances : `ureq` 3 (HTTP), `base64`, et décodeurs `image` jpeg/gif/webp/bmp.
+- Usage et README mis à jour (« Afficher une image »), parcours manuel dans `docs/e2e.md`.
+
+## 0.1.0-alpha.104 — 2026-10-09 · « Images trop grandes pour le GPU ignorées »
+
+- `rustty-render` : une image dont un côté dépasse `max_texture_dimension_2d` du GPU (inférieur à 8192 sur les moteurs GL/GLES) n'est plus envoyée à wgpu, qui paniquait sur l'erreur de validation : elle n'est simplement pas dessinée, et un message le signale une seule fois par image. Une sortie de terminal hostile ne peut plus faire tomber le rendu.
+- Nouvelle fonction pure `fits_device(largeur, hauteur, côté_max)` (image vide refusée), testée.
+
+## 0.1.0-alpha.103 — 2026-10-09 · « Dessin des images dans les panneaux »
+
+- `rustty-render` : les bandes d'image des lignes visibles sont dessinées juste après les fonds de cellule, sous le texte. `images::pane_images` (pur) traduit chaque bande en rectangle pixels et coordonnées de texture : une bande couvre au plus une cellule de haut, la dernière d'une image de hauteur fractionnaire est partielle ; une bande qui déborde à droite du panneau est rognée (texture comprise), une bande qui commence au-delà est ignorée, les lignes hors de la grille du panneau aussi.
+- Nouveau pipeline `ImagePipeline` (`shaders/image.wgsl`) : un quad instancié par bande, texture de l'image entière en `Rgba8Unorm` (octets passés tels quels comme les couleurs de la palette), échantillonnage linéaire, alpha droit mélangé comme les glyphes couleur.
+- Cache `ImageTextures` par identifiant d'image : chaque texture est envoyée une fois, puis oubliée dès qu'une passe porteuse de panneaux ne dessine plus l'image (la passe du bandeau, sans panneau, ne vide pas le cache). `Renderer::image_texture_count` (caché) pour les tests.
+- Tests : géométrie des bandes (bandes fractionnaires, rognage à droite, bandes hors panneau, lignes sous la grille), image de référence `image_strip` (PNG 4×2 étiré sur 4×2 cellules) avec contrôle des quatre couleurs, libération des textures.
+- Les tests hors écran partagent leurs aides (`tests/support`) ; les tests internes du renderer passent dans `renderer/tests.rs`.
+
+## 0.1.0-alpha.102 — 2026-10-09 · « Curseur sauvegardé périmé sans effet sur le reflow »
+
+- `rustty-vt` : un curseur DECSC périmé (laissé en bas par une application plein écran, puis `clear`) n'étend plus les rangées reprises par le reflow ; seuls le contenu, les images et le curseur vivant les bornent, l'invite n'est plus poussée dans l'historique quand la hauteur diminue en même temps. Un curseur sauvegardé hors de ces rangées est seulement borné, comme avant.
+- `reflow` : seul le premier curseur (le vivant) retient les blancs de fin ; un curseur sauvegardé dans la queue blanche ou au-delà de la ligne se pose en fin de texte, sans multiplier les lignes vides.
+- Les rangées d'écran faites d'espaces colorées sans attribut comptent comme vides, avec la même règle que le reflow (`reflow::is_blank`).
+- Tests ajoutés : plusieurs curseurs sur une même ligne logique, curseur sur une ligne absente (`None`), DECSC périmé, rangées blanches colorées.
+
+## 0.1.0-alpha.101 — 2026-10-09 · « Reflow des images, du curseur sauvegardé et de l'historique plein »
+
+- `rustty-vt` : les bandes d'image survivent au reflow ; sur le chemin rapide la ligne garde toutes ses bandes (même au-delà de la nouvelle largeur, le rendu rogne), et les bandes de toutes les lignes source d'une ligne logique enroulée vont à sa première ligne produite, colonne conservée.
+- `reflow` accepte plusieurs curseurs (`&[(ligne, colonne)]`) et rend leurs positions dans le même ordre ; sur l'écran principal, le curseur sauvegardé par `ESC 7` suit son caractère comme le curseur vivant (`ESC 8` y revient après un redimensionnement), retour à la ligne en attente compris.
+- Historique plein : après le reflow, les lignes en trop sont retirées en tête jusqu'au début d'une ligne logique, plus aucune ligne d'historique ne commence par la suite d'une ligne enroulée.
+- Une espace sans attribut compte comme blanc quelle que soit sa couleur : une queue à fond coloré ne fabrique plus de lignes vides au reflow (son fond est perdu) ; une seconde moitié de caractère large n'est jamais un blanc.
+- Les rangées d'écran portant une image sous le curseur ne sont plus perdues au reflow.
+- `reset.rs` repassé sous 300 lignes : le redimensionnement vit dans `term/resize.rs` (tests dans `term/resize_tests.rs`), les tests du reflow dans `reflow/tests.rs` et `reflow/perf.rs`.
+
+## 0.1.0-alpha.100 — 2026-10-09 · « Affichage des images du protocole kitty »
+
+- `rustty-vt` : `Term` exécute les commandes graphiques APC (`a=t`, `a=T`, `a=p`, `a=d`) ; l'image est posée à partir du curseur, une bande par rangée, avec défilement de l'écran et passage dans l'historique comme n'importe quelle ligne.
+- Nouveau `ImageStore` (quota 256 Mio, oubli des plus anciennes) pour les images transmises avec `i=`, et `placement::extent` pour calculer l'emprise en cellules (taille naturelle, `c=` / `r=`, réduction à la largeur du terminal).
+- Réponses `OK` / erreur (`ENOENT`, `EINVAL`…) selon `i=` et `q=` ; `d=a` / `d=i` retirent les bandes de la grille active ; `Term::set_cell_pixels` règle la taille de cellule (10×20 par défaut).
+
+## 0.1.0-alpha.99 — 2026-10-09 · « Décodage d'images durci »
+
+- `rustty-vt` : les dimensions d'un PNG sont lues dans l'en-tête et refusées (`EFBIG`) au-delà de 8192 px avant tout décodage de pixels ; le décodeur est de plus plafonné à 256 Mio d'allocation.
+- Les images vides (largeur ou hauteur nulle, tous formats) sont rejetées (`EINVAL`).
+- Documentation des invariants de `ImageData::new` (`debug_assert` sur la longueur RGBA) et de `Line::images` / `push_image` (`cols >= 1`).
+
+## 0.1.0-alpha.98 — 2026-10-09 · « Images décodées et bandes rattachées aux lignes »
+
+- `rustty-vt` : `graphics::decode` convertit PNG, RGB et RGBA bruts en RGBA (côté max 8192 px, longueur brute vérifiée), `ImageData` reçoit un identifiant unique au processus.
+- `Placement` et `ImageStrip` (partagés par `Arc`, égalité par pointeur) décrivent une image posée et sa tranche par ligne ; `Line` porte `images()` / `push_image()`.
+- Les bandes sont retirées par `reset`, `erase_range`, `insert_blank` et `delete` quand elles coupent la plage, et par `resize` si elles débordent ; écrire du texte par-dessus les conserve.
+- Dépendance `image` (PNG seulement) ajoutée à `rustty-vt` ; rien n'est encore branché dans `Term`.
+
+## 0.1.0-alpha.97 — 2026-10-09 · « Action graphique par défaut alignée sur kitty »
+
+- `rustty-vt` : sans `a=`, une commande graphique est désormais `Transmit` (comme kitty) et non `TransmitAndPut`.
+- Test ajouté : un premier morceau rejeté avec `m=1` voit ses suites écartées sans erreur parasite, et la transmission suivante aboutit.
+
+## 0.1.0-alpha.96 — 2026-10-09 · « Images : analyse du protocole graphique »
+
+- `rustty-vt` : nouveau module public `graphics` (commandes APC `G…` du protocole graphique kitty), sans effet tant que le hook `Term::apc` n'est pas branché.
+- `parse` extrait les clés `a f i s v c r m q d t o` et la charge base64 ; clés inconnues ignorées, nombres invalides ramenés à `None`, `a`/`f` inconnus signalés par `invalid`.
+- `Chunks` réassemble les morceaux (`m=1` … `m=0`), décode le base64 en une fois, refuse `t≠d` et `o=z`, et plafonne la charge à 64 Mio (`EFBIG`) ; les morceaux restants après une erreur sont écartés.
+- `GraphicsError::code()` : `EINVAL`, `EFBIG`, `ENODATA`, `ENOENT`.
+
+## 0.1.0-alpha.95 — 2026-10-09 · « Images : filtre APC »
+
+- `rustty-vt` : nouveau module `apc` qui extrait les chaînes APC (`ESC _ … ESC \`) avant `vte`, qui les avalait silencieusement.
+- Reconstitution d'une APC répartie sur plusieurs lectures ; un ESC isolé en fin de lecture est retenu puis rendu à `vte`, sans perte.
+- Une APC dépassant 96 Mio est abandonnée jusqu'à son terminateur ; un ESC suivi d'autre chose que `\` dans une APC l'interrompt.
+- Hook interne `Term::apc`, vide pour l'instant (rempli par les tâches suivantes du plan 8).
+
+## 0.1.0-alpha.94 — 2026-10-09 · « Plan 8 : images et corrections différées »
+
+- Plan `docs/superpowers/plans/2026-10-09-images.md` : protocole graphique kitty dans `rustty-vt` (filtre APC, bandes d'image rattachées aux lignes), dessin des images dans `rustty-render`, commande `rustty img <chemin|url>`.
+- Le même plan reprend les mineurs différés des revues des plans 4 à 7 : menu contextuel, zoom, molette, souris, reflow, démarrage, lanceur, presse-papiers OSC 52, titres d'onglets.
+
 ## 0.1.0-alpha.93 — 2026-10-09 · « Menu : clics dans le menu »
 
 - Un clic sur un séparateur, sur une entrée grisée ou dans la marge du menu le laisse ouvert au lieu de le fermer ; seul un clic hors du menu le ferme.

@@ -1,7 +1,20 @@
 //! Placement des bitmaps de glyphes dans une texture carrée, par étagères :
 //! simple, rapide, et suffisant pour des glyphes de hauteurs proches.
 
+use crate::font::CellMetrics;
+
 pub const DEFAULT_ATLAS_SIZE: u32 = 2048;
+const MIN_ATLAS_SIZE: u32 = 512;
+
+/// Côté de l'atlas pour une taille de cellule : de quoi loger ~16 glyphes de
+/// large (deux fois la plus grande dimension, pour les glyphes larges),
+/// en puissance de deux, borné. Évite 16 Mio de VRAM par taille de police.
+pub fn atlas_size_for(metrics: CellMetrics) -> u32 {
+    let wanted = 16 * metrics.width.max(metrics.height) * 2;
+    wanted
+        .next_power_of_two()
+        .clamp(MIN_ATLAS_SIZE, DEFAULT_ATLAS_SIZE)
+}
 
 /// Marge entre deux régions, pour que l'échantillonnage ne bave pas.
 const PADDING: u32 = 1;
@@ -117,6 +130,27 @@ impl AtlasPacker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn cell(width: u32, height: u32) -> CellMetrics {
+        CellMetrics {
+            width,
+            height,
+            baseline: 0,
+            underline_y: 0,
+            underline_thickness: 1,
+            strike_y: 0,
+        }
+    }
+
+    #[test]
+    fn atlas_is_small_for_small_fonts() {
+        assert_eq!(atlas_size_for(cell(8, 16)), 512);
+    }
+
+    #[test]
+    fn atlas_is_capped() {
+        assert_eq!(atlas_size_for(cell(80, 160)), 2048);
+    }
 
     #[test]
     fn regions_do_not_overlap_and_stay_inside() {

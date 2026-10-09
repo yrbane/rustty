@@ -3,6 +3,12 @@
 //! `perform.rs` ne fait que du dispatch.
 
 mod edit;
+mod graphics;
+#[cfg(test)]
+mod graphics_tests;
+mod image_budget;
+#[cfg(test)]
+mod image_budget_tests;
 mod mode_ops;
 mod movement;
 mod osc;
@@ -10,14 +16,19 @@ mod perform;
 mod print;
 mod reports;
 mod reset;
+mod resize;
+#[cfg(test)]
+mod resize_tests;
 mod scroll;
 mod view;
 
 use vte::Parser;
 
+use crate::apc::{ApcSplitter, Chunk};
 use crate::cell::Cell;
 use crate::charset::Charsets;
 use crate::cursor::{Cursor, CursorShape, SavedCursor};
+use crate::graphics::{Chunks, ImageStore};
 use crate::grid::Grid;
 use crate::modes::Modes;
 use crate::outbox::{Outbox, TermEvent};
@@ -41,7 +52,16 @@ pub struct Term {
     /// Décalage d'affichage dans le scrollback : 0 = écran vivant.
     pub(crate) display_offset: usize,
     pub(crate) outbox: Outbox,
+    /// Morceaux graphiques en cours de réassemblage.
+    pub(crate) chunks: Chunks,
+    /// Images transmises avec un identifiant.
+    pub(crate) images: ImageStore,
+    /// Taille d'une cellule en pixels (largeur, hauteur), pour dimensionner les images.
+    pub(crate) cell_pixels: (u32, u32),
+    /// Plafond d'octets des images posées (`PLACED_BUDGET`, réduit en test).
+    pub(crate) placed_budget: usize,
     parser: Parser,
+    apc: ApcSplitter,
 }
 
 impl Term {
@@ -63,14 +83,27 @@ impl Term {
             title: String::new(),
             display_offset: 0,
             outbox: Outbox::default(),
+            chunks: Chunks::default(),
+            images: ImageStore::default(),
+            cell_pixels: (10, 20),
+            placed_budget: image_budget::PLACED_BUDGET,
             parser: Parser::new(),
+            apc: ApcSplitter::default(),
         }
     }
 
     /// Interprète des octets venus du PTY.
     pub fn input(&mut self, bytes: &[u8]) {
         let mut parser = std::mem::take(&mut self.parser);
-        parser.advance(self, bytes);
+        let mut chunks = Vec::new();
+        self.apc.feed(bytes, &mut chunks);
+        for chunk in chunks {
+            match chunk {
+                Chunk::Bytes(b) => parser.advance(self, b),
+                Chunk::Owned(b) => parser.advance(self, &b),
+                Chunk::Apc(payload) => self.apc(&payload),
+            }
+        }
         self.parser = parser;
     }
 

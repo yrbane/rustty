@@ -4,6 +4,7 @@ mod accent;
 mod app;
 mod appearance;
 mod banner;
+mod cell_hit;
 mod cli;
 mod config_watch;
 mod context_menu;
@@ -14,11 +15,14 @@ mod events;
 mod font_zoom;
 mod geometry;
 mod gpu_surface;
+mod img;
+mod img_fetch;
 mod input;
 mod keyboard;
 mod menu_input;
 mod model;
 mod mouse;
+mod mouse_input;
 mod pane_fonts;
 mod relayout;
 mod rename;
@@ -47,7 +51,7 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    match args.command {
+    match &args.command {
         Some(cli::Command::Version) => {
             println!("rustty {VERSION}");
             return ExitCode::SUCCESS;
@@ -58,6 +62,7 @@ fn main() -> ExitCode {
         }
         Some(cli::Command::InstallDesktop) => return install_desktop(),
         Some(cli::Command::InitConfig) => return init_config(args.config.as_deref()),
+        Some(cli::Command::Img(source)) => return show_image(source),
         None => {}
     }
     init_tracing();
@@ -107,10 +112,25 @@ fn init_config(path: Option<&std::path::Path>) -> ExitCode {
     }
 }
 
+/// Affiche une image dans le terminal courant (protocole graphique kitty).
+fn show_image(source: &str) -> ExitCode {
+    match img::run(source, &mut std::io::stdout().lock()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("rustty : {e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
 /// Installe le lanceur et les icônes pour l'utilisateur courant.
 fn install_desktop() -> ExitCode {
     if !cfg!(target_os = "linux") {
-        println!("Rien à installer : l'icône est déjà embarquée dans l'exécutable sur ce système.");
+        if cfg!(windows) {
+            println!("Rien à installer : l'icône est déjà embarquée dans l'exécutable.");
+        } else {
+            println!("Rien à installer hors de Linux (bundle .app non fourni).");
+        }
         return ExitCode::SUCCESS;
     }
     let (Some(home), Ok(exec)) = (desktop::data_home(), std::env::current_exe()) else {

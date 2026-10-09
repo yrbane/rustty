@@ -114,6 +114,10 @@ impl ApplicationHandler<UserEvent> for App {
                 tracing::debug!("cloche dans {id:?}");
                 Vec::new()
             }
+            UserEvent::SetClipboard(_) if !clipboard_write_allowed(&w.config) => {
+                tracing::debug!("OSC 52 ignoré : window.osc52_clipboard = false");
+                Vec::new()
+            }
             UserEvent::SetClipboard(text) => {
                 if let Some(cb) = w.clipboard.as_mut()
                     && let Err(e) = cb.set_text(text)
@@ -183,5 +187,22 @@ pub fn run(
     match app.failure.take() {
         Some(e) => Err(e),
         None => Ok(()),
+    }
+}
+
+/// Le terminal a-t-il le droit d'écrire dans le presse-papiers (OSC 52) ?
+pub(crate) fn clipboard_write_allowed(config: &Config) -> bool {
+    config.window.osc52_clipboard
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn osc52_writes_follow_the_config() {
+        assert!(clipboard_write_allowed(&Config::default()));
+        let denied = Config::from_str("[window]\nosc52_clipboard = false\n").unwrap();
+        assert!(!clipboard_write_allowed(&denied));
     }
 }

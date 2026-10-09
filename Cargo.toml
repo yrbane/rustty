@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0-alpha.93"
+version = "0.1.0-alpha.119"
 edition = "2024"
 license = "GPL-3.0-only"
 repository = "https://github.com/yrbane/rustty"
@@ -14,6 +14,7 @@ vte = "0.15"
 unicode-width = "0.2"
 bitflags = "2"
 base64 = "0.22"
+ureq = "3"
 insta = "1"
 proptest = "1"
 serde = { version = "1", features = ["derive"] }

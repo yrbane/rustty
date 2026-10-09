@@ -20,6 +20,8 @@ pub struct TermWindow {
     pub cols: usize,
     pub rows: usize,
     pub exit: Option<ExitStatus>,
+    /// Dernière taille de cellule transmise au `Term`, en pixels.
+    cell: (u32, u32),
     pty: Pty,
 }
 
@@ -71,6 +73,7 @@ impl TermWindow {
             cols,
             rows,
             exit: None,
+            cell: (0, 0),
             pty,
         })
     }
@@ -87,9 +90,22 @@ impl TermWindow {
         self.writer.send(bytes);
     }
 
-    pub fn resize(&mut self, cols: usize, rows: usize, pixels: (u32, u32)) {
+    /// Redimensionne la grille et transmet la taille d'une cellule au `Term`
+    /// (elle sert à compter les cellules couvertes par une image). Vrai si la
+    /// grille a changé ; un changement de pixels seul ne touche pas le PTY.
+    pub fn resize(
+        &mut self,
+        cols: usize,
+        rows: usize,
+        pixels: (u32, u32),
+        cell: (u32, u32),
+    ) -> bool {
+        if cell != self.cell {
+            self.cell = cell;
+            self.term.lock().set_cell_pixels(cell.0, cell.1);
+        }
         if (cols, rows) == (self.cols, self.rows) {
-            return;
+            return false;
         }
         self.cols = cols;
         self.rows = rows;
@@ -98,6 +114,7 @@ impl TermWindow {
         if let Err(e) = self.pty.resize(size) {
             tracing::warn!("resize du pty : {e}");
         }
+        true
     }
 
     pub fn scroll(&self, request: ScrollRequest) {
@@ -125,6 +142,7 @@ impl TermWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::Engine;
     use std::sync::mpsc::{Receiver, channel};
     use std::time::{Duration, Instant};
 
@@ -212,7 +230,7 @@ mod tests {
         };
         let mut tw =
             TermWindow::spawn(TermId(3), &shell, 40, 5, (400, 100), 100, Arc::new(tx)).unwrap();
-        tw.resize(60, 10, (600, 200));
+        assert!(tw.resize(60, 10, (600, 200), (10, 20)));
         assert_eq!((tw.cols, tw.rows), (60, 10));
         assert_eq!(tw.snapshot().cols, 60);
         tw.write(b"echo marqueur-tw\r\n".to_vec());
@@ -221,5 +239,23 @@ mod tests {
         tw.scroll(ScrollRequest::ToBottom);
         assert_eq!(tw.snapshot().display_offset, 0);
         drop(tw);
+    }
+
+    #[test]
+    fn pixel_only_change_reaches_the_term() {
+        let (tx, _rx) = channel();
+        let shell = if cfg!(windows) {
+            Shell::new("cmd.exe", Vec::new())
+        } else {
+            Shell::new("/bin/sh", Vec::new())
+        };
+        let mut tw =
+            TermWindow::spawn(TermId(4), &shell, 40, 5, (400, 100), 100, Arc::new(tx)).unwrap();
+        assert!(!tw.resize(40, 5, (480, 120), (12, 24)), "grille inchangée");
+        // 24×48 pixels : 2 colonnes à 12 px par cellule (3 avec les 10 px par défaut).
+        let data = base64::engine::general_purpose::STANDARD.encode(vec![0u8; 24 * 48 * 3]);
+        let apc = format!("\x1b_Ga=T,f=24,s=24,v=48;{data}\x1b\\");
+        tw.term.lock().input(apc.as_bytes());
+        assert_eq!(tw.term.lock().cursor().col, 2);
     }
 }

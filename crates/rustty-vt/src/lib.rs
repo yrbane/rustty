@@ -11,6 +11,7 @@ pub use cell::{Attrs, Cell, Style};
 pub use color::Color;
 
 pub mod line;
+mod line_images;
 
 pub use line::Line;
 
@@ -35,6 +36,9 @@ pub use modes::{Modes, MouseMode};
 pub use outbox::{Outbox, TermEvent};
 pub use region::ScrollRegion;
 pub use tabs::TabStops;
+
+mod apc;
+pub mod graphics;
 
 pub mod term;
 

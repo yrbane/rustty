@@ -4,6 +4,10 @@ use std::path::PathBuf;
 
 pub const USAGE: &str = "\
 Usage : rustty [OPTIONS]
+        rustty img <source>
+
+Commande :
+  img <source>        afficher une image (fichier ou URL http(s)) dans le terminal
 
 Options :
   --config <chemin>   fichier de configuration TOML (défaut : ~/.config/rustty/rustty.toml)
@@ -21,12 +25,14 @@ pub struct Args {
     pub command: Option<Command>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Command {
     Version,
     Help,
     InstallDesktop,
     InitConfig,
+    /// `rustty img <source>` : affiche une image dans le terminal courant.
+    Img(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -52,6 +58,10 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Args, CliError> {
             "--help" | "-h" => out.command = Some(Command::Help),
             "--install-desktop" => out.command = Some(Command::InstallDesktop),
             "--init-config" => out.command = Some(Command::InitConfig),
+            "img" => {
+                let source = it.next().ok_or(CliError::MissingValue("img"))?;
+                out.command = Some(Command::Img(source));
+            }
             other => match other.strip_prefix("--config=") {
                 Some(value) if !value.is_empty() => out.config = Some(PathBuf::from(value)),
                 Some(_) => return Err(CliError::MissingValue("--config")),
@@ -73,6 +83,23 @@ mod tests {
             Some(Command::InitConfig)
         );
         assert!(USAGE.contains("--init-config"));
+    }
+
+    #[test]
+    fn img_takes_a_source() {
+        assert_eq!(
+            parse_strs(&["img", "photo.png"]).unwrap().command,
+            Some(Command::Img("photo.png".into()))
+        );
+        assert!(USAGE.contains("img <source>"));
+    }
+
+    #[test]
+    fn img_without_source_is_an_error() {
+        assert_eq!(
+            parse_strs(&["img"]).unwrap_err(),
+            CliError::MissingValue("img")
+        );
     }
 
     #[test]

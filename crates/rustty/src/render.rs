@@ -8,15 +8,20 @@ use rustty_render::{Chrome, tab_bar_chrome, tab_bar_height};
 
 use crate::appearance;
 use crate::banner::{banner_chrome, banner_height};
-use crate::gpu_surface::Surface;
+use crate::gpu_surface::{Acquire, Surface};
 use crate::pane_fonts::SizeKey;
 use crate::render_frame::{self, PaneView, Pass};
 use crate::window_state::{OsWindow, SELECTION_ALPHA};
 
 impl OsWindow {
     pub fn render(&mut self) {
-        let Some(texture) = self.surface.acquire(&self.ctx) else {
-            return;
+        let texture = match self.surface.acquire(&self.ctx) {
+            Acquire::Frame(texture) => texture,
+            Acquire::Retry => {
+                self.window.request_redraw();
+                return;
+            }
+            Acquire::Skip => return,
         };
         let view = Surface::view(&texture, self.surface.view_format());
         let (w, h) = self.surface.size();
@@ -103,10 +108,7 @@ impl OsWindow {
             overlay.quads.extend(b.quads);
             overlay.texts.extend(b.texts);
         }
-        if let Some(menu) = self.context_menu_chrome() {
-            overlay.quads.extend(menu.quads);
-            overlay.texts.extend(menu.texts);
-        }
+        let menu_chrome = self.context_menu_chrome().unwrap_or_default();
         let background = render_frame::background_color(
             self.palette.background,
             self.model.opacity,
@@ -114,12 +116,17 @@ impl OsWindow {
         );
         let mut base_pass = Some((panes, chrome));
         let mut overlay = Some(overlay);
+        let mut menu_chrome = Some(menu_chrome);
         let keys: Vec<SizeKey> = groups.keys().copied().collect();
         for pass in render_frame::pass_order(base_key, keys) {
             let (key, (panes, chrome)) = match pass {
                 Pass::Base => (base_key, base_pass.take().unwrap_or_default()),
                 Pass::Size(key) => (key, groups.remove(&key).unwrap_or_default()),
                 Pass::Overlay => (base_key, (Vec::new(), overlay.take().unwrap_or_default())),
+                Pass::Menu => (
+                    base_key,
+                    (Vec::new(), menu_chrome.take().unwrap_or_default()),
+                ),
             };
             let frame = render_frame::build_frame((w, h), background, &panes, chrome);
             let Some(renderer) = self.renderers.get_mut(key) else {

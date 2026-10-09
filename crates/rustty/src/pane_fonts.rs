@@ -72,9 +72,14 @@ impl PaneFonts {
     }
 }
 
-/// Le panneau à zoomer : celui sous la souris, sinon le focalisé.
-pub fn zoom_target(hovered: Option<TermId>, focused: Option<TermId>) -> Option<TermId> {
-    hovered.or(focused)
+/// Le panneau à zoomer : celui sous la souris (si elle est dans la fenêtre,
+/// sinon la dernière position est périmée), sinon le focalisé.
+pub fn zoom_target(
+    hovered: Option<TermId>,
+    inside: bool,
+    focused: Option<TermId>,
+) -> Option<TermId> {
+    hovered.filter(|_| inside).or(focused)
 }
 
 #[cfg(test)]
@@ -164,10 +169,19 @@ mod tests {
     #[test]
     fn zoom_target_prefers_the_hovered_pane() {
         assert_eq!(
-            zoom_target(Some(TermId(2)), Some(TermId(1))),
+            zoom_target(Some(TermId(2)), true, Some(TermId(1))),
             Some(TermId(2))
         );
-        assert_eq!(zoom_target(None, Some(TermId(1))), Some(TermId(1)));
-        assert_eq!(zoom_target(None, None), None);
+        assert_eq!(zoom_target(None, true, Some(TermId(1))), Some(TermId(1)));
+        assert_eq!(zoom_target(None, true, None), None);
+    }
+
+    #[test]
+    fn zoom_target_ignores_a_stale_hover() {
+        assert_eq!(
+            zoom_target(Some(TermId(2)), false, Some(TermId(1))),
+            Some(TermId(1)),
+            "souris hors fenêtre : le panneau focalisé"
+        );
     }
 }

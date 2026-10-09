@@ -51,6 +51,8 @@ fn control_char(c: char) -> Option<u8> {
         '^' | '6' => 0x1e,
         '_' | '7' => 0x1f,
         '?' | '8' => 0x7f,
+        // Sans contrôle associé, xterm envoie le chiffre tel quel.
+        '0' | '1' | '9' => c as u8,
         _ => return None,
     })
 }
@@ -167,6 +169,19 @@ mod tests {
             enc(named(N::Space, Mods::CTRL), Some(" "), Mods::CTRL),
             vec![0x00]
         );
+    }
+
+    #[test]
+    fn ctrl_digits_without_a_control_send_the_digit() {
+        for d in ['0', '1', '9'] {
+            assert_eq!(
+                enc(ch(d, Mods::CTRL), None, Mods::CTRL),
+                vec![d as u8],
+                "ctrl+{d}"
+            );
+        }
+        assert_eq!(enc(ch('2', Mods::CTRL), None, Mods::CTRL), vec![0x00]);
+        assert_eq!(enc(ch('8', Mods::CTRL), None, Mods::CTRL), vec![0x7f]);
     }
 
     #[test]

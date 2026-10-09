@@ -8,6 +8,7 @@ use rustty_render::HoverTarget;
 use rustty_vt::MouseMode;
 use winit::event::{ElementState, KeyEvent, MouseButton as WinitButton};
 use winit::keyboard::{Key, ModifiersState, NamedKey};
+use winit::window::CursorIcon;
 
 use crate::geometry;
 use crate::keyboard::{encode_key, key_combo, mods_from_winit};
@@ -121,14 +122,31 @@ impl OsWindow {
 
     pub fn on_cursor_moved(&mut self, x: f64, y: f64) -> Vec<Effect> {
         self.cursor = (x, y);
+        self.cursor_inside = true;
+        let mut menu_effects = Vec::new();
         if let Some(effects) = self.menu_hover(x, y) {
-            return effects;
+            menu_effects = effects;
+            let inside = self
+                .menu
+                .as_ref()
+                .is_some_and(|m| self.menu_layout(m).contains(x, y));
+            if inside {
+                // Le menu capte la souris : curseur ordinaire, barre non survolée.
+                if self.cursor_icon != CursorIcon::Default {
+                    self.cursor_icon = CursorIcon::Default;
+                    self.window.set_cursor(CursorIcon::Default);
+                }
+                if self.model.hover_changed(HoverTarget::None) {
+                    menu_effects.push(Effect::Redraw);
+                }
+                return menu_effects;
+            }
         }
         self.update_cursor_icon(x, y);
         if let Some(effects) = self.drag_divider_to(x, y) {
             return effects;
         }
-        let mut effects = Vec::new();
+        let mut effects = menu_effects;
         if self.model.hover_changed(self.bar_target(x, y)) {
             effects.push(Effect::Redraw);
         }
@@ -144,21 +162,12 @@ impl OsWindow {
             sel.extend(CellPos { col, row });
             effects.push(Effect::Redraw);
         }
-        if let Some(tw) = self.terms.get(&term)
-            && let Some(bytes) = encode_mouse(
-                MouseKind::Motion,
-                self.held,
-                cell,
-                self.modifiers,
-                &tw.modes(),
-            )
-        {
-            tw.write(bytes);
-        }
+        self.report_motion(term, cell);
         effects
     }
 
     pub fn on_cursor_left(&mut self) -> Vec<Effect> {
+        self.cursor_inside = false;
         if self.model.hover_changed(HoverTarget::None) {
             vec![Effect::Redraw]
         } else {
@@ -213,7 +222,7 @@ impl OsWindow {
             {
                 tw.write(bytes);
             }
-            self.held = Some(button);
+            self.hold(term, button);
             return effects;
         }
         match button {
@@ -253,19 +262,7 @@ impl OsWindow {
             };
             return self.model.tab_bar_click(target, button, confirm, &running);
         }
-        if let Some(held) = self.held.take() {
-            if let Some((term, rect)) = self.pane_under(x, y)
-                && let Some(tw) = self.terms.get(&term)
-                && let Some(bytes) = encode_mouse(
-                    MouseKind::Release,
-                    Some(held),
-                    self.cell_under(term, rect, x, y),
-                    self.modifiers,
-                    &tw.modes(),
-                )
-            {
-                tw.write(bytes);
-            }
+        if self.release_held(x, y) {
             return Vec::new();
         }
         if self.dragging && button == MouseButton::Left {

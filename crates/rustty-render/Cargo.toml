@@ -19,6 +19,7 @@ unicode-width.workspace = true
 wgpu.workspace = true
 
 [dev-dependencies]
+base64.workspace = true
 image.workspace = true
 wgpu.workspace = true
 
