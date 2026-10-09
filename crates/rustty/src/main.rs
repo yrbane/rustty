@@ -50,6 +50,7 @@ fn main() -> ExitCode {
             return ExitCode::SUCCESS;
         }
         Some(cli::Command::InstallDesktop) => return install_desktop(),
+        Some(cli::Command::InitConfig) => return init_config(args.config.as_deref()),
         None => {}
     }
     init_tracing();
@@ -69,6 +70,35 @@ fn main() -> ExitCode {
 /// Les dépendances ne parlent qu'en cas d'erreur (arboard prévient par exemple
 /// à chaque démarrage sous GNOME qu'il se replie sur le presse-papiers X11).
 const DEFAULT_LOG_FILTER: &str = "error,rustty=warn";
+
+/// Écrit la configuration d'exemple au chemin demandé ou par défaut.
+fn init_config(path: Option<&std::path::Path>) -> ExitCode {
+    let Some(path) = path
+        .map(std::path::Path::to_path_buf)
+        .or_else(Config::default_path)
+    else {
+        eprintln!("rustty : impossible de déterminer le dossier de configuration");
+        return ExitCode::from(1);
+    };
+    match config_watch::init_config(&path) {
+        Ok(()) => {
+            println!("{}", path.display());
+            println!("Configuration écrite : les raccourcis sont dans la section [keys].");
+            ExitCode::SUCCESS
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+            eprintln!(
+                "rustty : {} existe déjà, rien n'a été écrit",
+                path.display()
+            );
+            ExitCode::from(1)
+        }
+        Err(e) => {
+            eprintln!("rustty : impossible d'écrire {} : {e}", path.display());
+            ExitCode::from(1)
+        }
+    }
+}
 
 /// Installe le lanceur et les icônes pour l'utilisateur courant.
 fn install_desktop() -> ExitCode {

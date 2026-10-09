@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.82 — 2026-10-09 · « ctrl+tab et --init-config »
+
+- `ctrl+tab` / `ctrl+shift+tab` changent d'onglet (déliables par `"none"`).
+- `rustty --init-config` écrit la configuration d'exemple complète et commentée (raccourcis compris) au chemin par défaut ou à celui de `--config`, sans jamais écraser un fichier existant.
+
 ## 0.1.0-alpha.81 — 2026-10-09 · « Plan 6 : panneaux »
 
 - Plan d'implémentation de la deuxième salve de demandes : `rustty --init-config` pour éditer les raccourcis, `ctrl+tab` / `ctrl+shift+tab`, glisser les barres de split à la souris, reflow des lignes au redimensionnement, zoom de police propre au panneau survolé (barre d'onglets inchangée), installation documentée par `cargo install`. Les images (`img`) passent au plan 7.

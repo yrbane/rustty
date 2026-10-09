@@ -8,6 +8,7 @@ Usage : rustty [OPTIONS]
 Options :
   --config <chemin>   fichier de configuration TOML (défaut : ~/.config/rustty/rustty.toml)
   --hold              garder le panneau ouvert quand le shell se termine
+  --init-config       écrire la configuration d'exemple (raccourcis compris) pour l'éditer
   --install-desktop   installer le lanceur et l'icône (Linux, ~/.local/share)
   -V, --version       afficher la version
   -h, --help          afficher cette aide
@@ -25,6 +26,7 @@ pub enum Command {
     Version,
     Help,
     InstallDesktop,
+    InitConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -49,6 +51,7 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Args, CliError> {
             "--version" | "-V" => out.command = Some(Command::Version),
             "--help" | "-h" => out.command = Some(Command::Help),
             "--install-desktop" => out.command = Some(Command::InstallDesktop),
+            "--init-config" => out.command = Some(Command::InitConfig),
             other => match other.strip_prefix("--config=") {
                 Some(value) if !value.is_empty() => out.config = Some(PathBuf::from(value)),
                 Some(_) => return Err(CliError::MissingValue("--config")),
@@ -62,6 +65,15 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Args, CliError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn init_config_flag() {
+        assert_eq!(
+            parse_strs(&["--init-config"]).unwrap().command,
+            Some(Command::InitConfig)
+        );
+        assert!(USAGE.contains("--init-config"));
+    }
 
     #[test]
     fn install_desktop_flag() {
