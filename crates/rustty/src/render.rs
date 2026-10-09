@@ -1,12 +1,15 @@
 //! Une image de la fenêtre : panneaux, sélection, barres de split, barre
 //! d'onglets, bandeau, fond avec opacité, puis présentation.
 
+use std::collections::BTreeMap;
+
 use rustty_config::TabBarPosition;
 use rustty_render::{Chrome, tab_bar_chrome, tab_bar_height};
 
 use crate::appearance;
 use crate::banner::{banner_chrome, banner_height};
 use crate::gpu_surface::Surface;
+use crate::pane_fonts::SizeKey;
 use crate::render_frame::{self, PaneView};
 use crate::window_state::{OsWindow, SELECTION_ALPHA};
 
@@ -19,8 +22,10 @@ impl OsWindow {
         let (w, h) = self.surface.size();
         let metrics = self.metrics();
         let padding = self.config.window.padding;
-        let mut panes = Vec::new();
-        let mut chrome = Chrome::default();
+        let base_key = self.renderers.base_key();
+        // Panneaux (et leur sélection) regroupés par taille de police : une
+        // passe de rendu par taille, la base en premier.
+        let mut groups: BTreeMap<SizeKey, (Vec<PaneView>, Chrome)> = BTreeMap::new();
         if !self.model.workspace.is_empty() {
             let tab = self.model.workspace.active_tab();
             let focused_window = tab.layout.focused();
@@ -31,6 +36,8 @@ impl OsWindow {
                 let Some(tw) = self.terms.get(&term) else {
                     continue;
                 };
+                let key = SizeKey::of(self.pane_fonts.size_of(term));
+                let (panes, chrome) = groups.entry(key).or_default();
                 panes.push(PaneView {
                     rect: *rect,
                     snapshot: tw.snapshot(),
@@ -41,12 +48,18 @@ impl OsWindow {
                     && !sel.is_empty()
                 {
                     let color = self.palette.selection.with_alpha(SELECTION_ALPHA);
+                    let pane_metrics = self.renderers.metrics(key);
                     chrome.quads.extend(render_frame::selection_quads(
-                        sel, *rect, metrics, padding, color,
+                        sel,
+                        *rect,
+                        pane_metrics,
+                        padding,
+                        color,
                     ));
                 }
             }
         }
+        let (panes, mut chrome) = groups.remove(&base_key).unwrap_or_default();
         if !self.model.workspace.is_empty() {
             let tab = self.model.workspace.active_tab();
             let (splits, palette) = (&self.config.splits, &self.palette);
@@ -95,7 +108,15 @@ impl OsWindow {
             self.surface.premultiplied(),
         );
         let frame = render_frame::build_frame((w, h), background, &panes, chrome);
-        self.renderer.render(&self.ctx, &view, &frame);
+        if let Some(base) = self.renderers.get_mut(base_key) {
+            base.render(&self.ctx, &view, &frame);
+        }
+        for (key, (panes, chrome)) in groups {
+            let frame = render_frame::build_frame((w, h), background, &panes, chrome);
+            if let Some(renderer) = self.renderers.get_mut(key) {
+                renderer.render_onto(&self.ctx, &view, &frame);
+            }
+        }
         self.ctx.queue.present(texture);
     }
 }

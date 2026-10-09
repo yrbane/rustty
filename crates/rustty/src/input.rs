@@ -93,15 +93,27 @@ impl OsWindow {
     }
 
     /// Le terminal et le rectangle du panneau sous le point, dans l'onglet actif.
-    fn pane_under(&self, x: f64, y: f64) -> Option<(TermId, rustty_render::PixelRect)> {
+    pub(crate) fn pane_under(&self, x: f64, y: f64) -> Option<(TermId, rustty_render::PixelRect)> {
         let wid = geometry::pane_at(&self.pane_rects, x, y)?;
         let rect = self.pane_rects.iter().find(|(w, _)| *w == wid)?.1;
         let term = self.model.workspace.active_tab().term_at(wid)?;
         Some((term, rect))
     }
 
-    fn cell_under(&self, rect: rustty_render::PixelRect, x: f64, y: f64) -> Option<(usize, usize)> {
-        geometry::cell_at(rect, self.metrics(), self.config.window.padding, x, y)
+    fn cell_under(
+        &self,
+        term: TermId,
+        rect: rustty_render::PixelRect,
+        x: f64,
+        y: f64,
+    ) -> Option<(usize, usize)> {
+        geometry::cell_at(
+            rect,
+            self.metrics_of(term),
+            self.config.window.padding,
+            x,
+            y,
+        )
     }
 
     pub fn on_cursor_moved(&mut self, x: f64, y: f64) -> Vec<Effect> {
@@ -113,7 +125,7 @@ impl OsWindow {
         let Some((term, rect)) = self.pane_under(x, y) else {
             return effects;
         };
-        let cell = self.cell_under(rect, x, y);
+        let cell = self.cell_under(term, rect, x, y);
         if self.dragging
             && let Some((sel_term, sel)) = &mut self.selection
             && *sel_term == term
@@ -174,7 +186,7 @@ impl OsWindow {
             self.update_title();
             effects.push(Effect::Redraw);
         }
-        let cell = self.cell_under(rect, x, y);
+        let cell = self.cell_under(term, rect, x, y);
         let Some(tw) = self.terms.get(&term) else {
             return effects;
         };
@@ -227,7 +239,7 @@ impl OsWindow {
                 && let Some(bytes) = encode_mouse(
                     MouseKind::Release,
                     Some(held),
-                    self.cell_under(rect, x, y),
+                    self.cell_under(term, rect, x, y),
                     self.modifiers,
                     &tw.modes(),
                 )
@@ -280,7 +292,7 @@ impl OsWindow {
             } else {
                 MouseButton::WheelDown
             };
-            let cell = self.cell_under(rect, x, y);
+            let cell = self.cell_under(term, rect, x, y);
             for _ in 0..steps {
                 if let Some(bytes) =
                     encode_mouse(MouseKind::Press, Some(button), cell, self.modifiers, &modes)
