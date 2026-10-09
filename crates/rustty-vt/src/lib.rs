@@ -37,6 +37,7 @@ pub use region::ScrollRegion;
 pub use tabs::TabStops;
 
 mod apc;
+pub mod graphics;
 
 pub mod term;
 

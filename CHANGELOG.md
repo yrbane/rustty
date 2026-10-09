@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.96 — 2026-10-09 · « Images : analyse du protocole graphique »
+
+- `rustty-vt` : nouveau module public `graphics` (commandes APC `G…` du protocole graphique kitty), sans effet tant que le hook `Term::apc` n'est pas branché.
+- `parse` extrait les clés `a f i s v c r m q d t o` et la charge base64 ; clés inconnues ignorées, nombres invalides ramenés à `None`, `a`/`f` inconnus signalés par `invalid`.
+- `Chunks` réassemble les morceaux (`m=1` … `m=0`), décode le base64 en une fois, refuse `t≠d` et `o=z`, et plafonne la charge à 64 Mio (`EFBIG`) ; les morceaux restants après une erreur sont écartés.
+- `GraphicsError::code()` : `EINVAL`, `EFBIG`, `ENODATA`, `ENOENT`.
+
 ## 0.1.0-alpha.95 — 2026-10-09 · « Images : filtre APC »
 
 - `rustty-vt` : nouveau module `apc` qui extrait les chaînes APC (`ESC _ … ESC \`) avant `vte`, qui les avalait silencieusement.
