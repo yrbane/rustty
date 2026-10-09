@@ -21,8 +21,10 @@ fn placed_image_keeps_only_its_display_pixels() {
     assert!(
         p.image
             .rgba
-            .chunks_exact(4)
-            .all(|px| px == [200, 30, 30, 255])
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .all(|px| *px == [200, 30, 30, 255])
     );
 }
 

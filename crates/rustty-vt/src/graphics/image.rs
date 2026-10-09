@@ -113,7 +113,9 @@ pub fn decode(
                 bytes.to_vec()
             } else {
                 bytes
-                    .chunks_exact(3)
+                    .as_chunks::<3>()
+                    .0
+                    .iter()
                     .flat_map(|p| [p[0], p[1], p[2], 255])
                     .collect()
             };

@@ -56,7 +56,14 @@ mod tests {
         let small = fit_display(&big, (200, 100));
         assert_eq!((small.width, small.height), (200, 100));
         assert_eq!(small.rgba.len(), 200 * 100 * 4);
-        assert!(small.rgba.chunks_exact(4).all(|p| p == [200, 30, 30, 255]));
+        assert!(
+            small
+                .rgba
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .all(|p| *p == [200, 30, 30, 255])
+        );
         assert_ne!(small.id, big.id, "nouvelle clé de cache côté rendu");
         assert_eq!(small.source, big.id, "rattachée à l'image d'origine");
     }

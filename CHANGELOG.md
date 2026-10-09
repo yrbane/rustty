@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.119 — 2026-10-09 · « Compatibilité avec clippy récent »
+
+- Tests et décodage RGB : `chunks_exact` à taille constante remplacé par `as_chunks::<N>()` (`graphics/image.rs`, `graphics/downscale.rs`, `term/image_budget_tests.rs`), exigé par le clippy de la CI.
+
 ## 0.1.0-alpha.118 — 2026-10-09 · « Photos remises d'aplomb »
 
 - `rustty img` : l'orientation EXIF est appliquée après décodage (`ImageDecoder::orientation` puis `DynamicImage::apply_orientation`) ; les photos de téléphone prises en portrait ne s'affichent plus couchées. Un EXIF illisible laisse l'image telle quelle.
