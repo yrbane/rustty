@@ -7,6 +7,9 @@ mod keyboard;
 // Consommé par app.rs (tâche 14).
 #[allow(unused)]
 mod mouse;
+// Consommé par app.rs (tâche 14).
+#[allow(unused)]
+mod geometry;
 
 use std::process::ExitCode;
 

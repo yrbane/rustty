@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.62 — 2026-10-09 · « Géométrie de fenêtre »
+
+- `rustty` : barre d'onglets (haut, bas, cachée, seuil `min_tabs`), zone de contenu, rectangles des panneaux avec interstice, cellule et panneau sous la souris.
+
 ## 0.1.0-alpha.61 — 2026-10-09 · « Sélection »
 
 - `rustty` : sélection en cellules (ancre, tête, ordre de lecture) et extraction du texte depuis un instantané (caractères larges, lignes repliées, fins de ligne nettoyées).
