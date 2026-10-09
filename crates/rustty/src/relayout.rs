@@ -64,7 +64,12 @@ impl OsWindow {
                     .renderers
                     .metrics(SizeKey::of(self.pane_fonts.size_of(term)));
                 let (cols, rows) = geometry::grid_size(*rect, metrics, padding);
-                tw.resize(cols, rows, (rect.width, rect.height));
+                tw.resize(
+                    cols,
+                    rows,
+                    (rect.width, rect.height),
+                    (metrics.width, metrics.height),
+                );
             }
         }
         self.update_title();

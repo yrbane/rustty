@@ -60,6 +60,15 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 - [ ] `[splits] width = 6`, puis `random_colors = true` : chaque nouveau split a sa barre colorée ; `border = false` : panneaux bord à bord.
 - [ ] `[tabs] padding_horizontal = 3`, `padding_vertical = 6`, `spacing = 4` : la barre s'élargit et s'aère ; `[tabs.colors] random = true` : chaque onglet a sa couleur, texte lisible.
 
+## Images
+- [ ] `rustty img assets/logo.png` dans un panneau : l'image s'affiche, le curseur se place dessous.
+- [ ] `rustty img https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png` : l'image distante s'affiche (test réseau manuel).
+- [ ] `rustty img /inexistant.png` : message d'erreur français sur stderr, rien d'affiché, code de sortie 1 ; `rustty img` seul : erreur d'usage.
+- [ ] Afficher plusieurs images puis défiler dans l'historique (`shift+page_up`) : les images défilent avec le texte et reviennent au retour en bas.
+- [ ] `ctrl+molette` sur le panneau : l'image suit la taille de la police (autant de cellules, proportions conservées).
+- [ ] `clear` : l'image disparaît de l'écran.
+- [ ] Rétrécir le panneau (split ou fenêtre) : l'image est rognée à la largeur, sans panique.
+
 ## Robustesse
 - [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique.
 - [ ] `cargo run -p rustty` : rien sur la sortie d'erreur pendant le parcours ; `RUSTTY_LOG=rustty=debug` pour le détail.

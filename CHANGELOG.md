@@ -4,6 +4,14 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.105 — 2026-10-09 · « rustty img : afficher une image »
+
+- Nouvelle commande `rustty img <source>` : lit un fichier local ou une URL `http(s)://` (corps limité à 64 Mio), décode (PNG, JPEG, GIF, WebP, BMP), réduit à 2048 px de côté au plus (Lanczos3) et l'émet en séquences graphiques kitty (`a=T`, PNG, base64 par morceaux de 4096 caractères). Fonctionne aussi dans kitty. Rien n'est écrit en cas d'erreur (message en français, code de sortie 1).
+- `TermWindow::resize` transmet la taille d'une cellule au `Term` (par panneau, selon sa police) pour calculer les cellules couvertes par une image, et renvoie vrai quand la grille change.
+- Correction : un redimensionnement qui ne change que les pixels n'était plus ignoré par `TermWindow::resize`.
+- Dépendances : `ureq` 3 (HTTP), `base64`, et décodeurs `image` jpeg/gif/webp/bmp.
+- Usage et README mis à jour (« Afficher une image »), parcours manuel dans `docs/e2e.md`.
+
 ## 0.1.0-alpha.104 — 2026-10-09 · « Images trop grandes pour le GPU ignorées »
 
 - `rustty-render` : une image dont un côté dépasse `max_texture_dimension_2d` du GPU (inférieur à 8192 sur les moteurs GL/GLES) n'est plus envoyée à wgpu, qui paniquait sur l'erreur de validation : elle n'est simplement pas dessinée, et un message le signale une seule fois par image. Une sortie de terminal hostile ne peut plus faire tomber le rendu.

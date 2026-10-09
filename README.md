@@ -62,6 +62,19 @@ Raccourcis par défaut (modifiables dans `[keys]`) : `ctrl+shift+t` nouvel ongle
 horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+c` /
 `ctrl+shift+v` copier / coller, `shift+page_up` / `shift+page_down` historique, `ctrl+shift+left` / `ctrl+shift+right` ou `ctrl+shift+tab` / `ctrl+tab` onglet précédent / suivant, `alt+1`…`alt+5` onglet n, `ctrl+shift+z` zoom, `ctrl+shift+r` rotation, `ctrl+shift+f5` recharger la config, `ctrl+shift+alt+t` (ou double clic sur l'onglet) renommer l'onglet, `ctrl+plus` / `ctrl+minus` / `ctrl+0` et `ctrl+molette` taille de police du panneau survolé (les autres panneaux et la barre d'onglets ne changent pas). Un clic droit dans un panneau ouvre un menu (copier, coller, diviser, agrandir, renommer l'onglet, nouvel onglet, fermer le panneau ; `shift`+clic droit dans une application qui capte la souris). Les barres de split se glissent à la souris ; au redimensionnement, les lignes se réorganisent (reflow).
 
+## Afficher une image
+
+```bash
+rustty img photo.png                     # fichier local
+rustty img https://exemple.org/photo.jpg # URL http(s), 64 Mio au plus
+alias img='rustty img'                   # à mettre dans ~/.bashrc ou ~/.zshrc
+```
+
+L'image s'affiche dans le panneau courant, via le protocole graphique de kitty ;
+elle défile avec le texte, suit le zoom de police et disparaît avec `clear`.
+Formats : PNG, JPEG, GIF (première image), WebP, BMP. Les images de plus de
+2048 px de côté sont réduites avant l'envoi. `rustty img` marche aussi dans kitty.
+
 ## Objectifs de la v0.1
 
 - Fenêtre rendue par le GPU via `wgpu`, sur Linux (Wayland et X11), macOS et Windows.

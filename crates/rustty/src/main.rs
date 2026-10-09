@@ -14,6 +14,8 @@ mod events;
 mod font_zoom;
 mod geometry;
 mod gpu_surface;
+mod img;
+mod img_fetch;
 mod input;
 mod keyboard;
 mod menu_input;
@@ -47,7 +49,7 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    match args.command {
+    match &args.command {
         Some(cli::Command::Version) => {
             println!("rustty {VERSION}");
             return ExitCode::SUCCESS;
@@ -58,6 +60,7 @@ fn main() -> ExitCode {
         }
         Some(cli::Command::InstallDesktop) => return install_desktop(),
         Some(cli::Command::InitConfig) => return init_config(args.config.as_deref()),
+        Some(cli::Command::Img(source)) => return show_image(source),
         None => {}
     }
     init_tracing();
@@ -102,6 +105,17 @@ fn init_config(path: Option<&std::path::Path>) -> ExitCode {
         }
         Err(e) => {
             eprintln!("rustty : impossible d'écrire {} : {e}", path.display());
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// Affiche une image dans le terminal courant (protocole graphique kitty).
+fn show_image(source: &str) -> ExitCode {
+    match img::run(source, &mut std::io::stdout().lock()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("rustty : {e}");
             ExitCode::from(1)
         }
     }
