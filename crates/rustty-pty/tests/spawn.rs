@@ -4,6 +4,7 @@
 
 mod common;
 
+use std::io::Write;
 use std::time::Duration;
 
 use common::{pump, wait_bounded};
@@ -190,4 +191,45 @@ fn killed_shell_reports_signaled() {
     let mut pty = spawn(&shell);
     let out = pump(pty.reader().unwrap());
     assert_eq!(wait_bounded(&mut pty, &out, TIMEOUT), ExitStatus::Signaled);
+}
+
+#[test]
+fn writer_can_be_taken_once() {
+    let mut pty = spawn(&interactive_shell());
+    let out = pump(pty.reader().unwrap());
+    let mut taken = pty.take_writer().expect("premier appel");
+    assert!(pty.take_writer().is_none(), "second appel");
+    assert!(
+        pty.write(b"x").is_err(),
+        "l'écrivain n'est plus dans le Pty"
+    );
+    taken.write_all(b"echo via-writer\r\n").unwrap();
+    taken.flush().unwrap();
+    out.expect(&mut pty, "via-writer", TIMEOUT);
+    pty.kill().unwrap();
+    wait_bounded(&mut pty, &out, TIMEOUT);
+}
+
+#[cfg(unix)]
+#[test]
+fn running_children_are_detected_from_the_foreground_process_group() {
+    let mut pty = spawn(&interactive_shell());
+    let out = pump(pty.reader().unwrap());
+    out.expect(&mut pty, "$", TIMEOUT);
+    assert!(
+        !pty.has_running_children(),
+        "un shell au repos n'a pas d'enfant au premier plan"
+    );
+    pty.write(b"sleep 3\r\n").unwrap();
+    let start = std::time::Instant::now();
+    while !pty.has_running_children() {
+        assert!(
+            start.elapsed() < TIMEOUT,
+            "sleep n'est jamais passé au premier plan ; sortie : {:?}",
+            out.text()
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    pty.kill().unwrap();
+    wait_bounded(&mut pty, &out, TIMEOUT);
 }

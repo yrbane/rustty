@@ -19,7 +19,7 @@ pub enum ExitStatus {
 
 pub struct Pty {
     master: Box<dyn MasterPty + Send>,
-    writer: Box<dyn Write + Send>,
+    writer: Option<Box<dyn Write + Send>>,
     child: Box<dyn Child + Send + Sync>,
     program: String,
 }
@@ -67,7 +67,7 @@ impl Pty {
             .map_err(|e| PtyError::Open(e.to_string()))?;
         Ok(Self {
             master: pair.master,
-            writer,
+            writer: Some(writer),
             child,
             program: shell.program.clone(),
         })
@@ -88,9 +88,35 @@ impl Pty {
     }
 
     pub fn write(&mut self, bytes: &[u8]) -> Result<(), PtyError> {
-        self.writer.write_all(bytes)?;
-        self.writer.flush()?;
+        let writer = self.writer.as_mut().ok_or_else(|| {
+            PtyError::Io(std::io::Error::new(
+                std::io::ErrorKind::BrokenPipe,
+                "écrivain déjà pris par take_writer",
+            ))
+        })?;
+        writer.write_all(bytes)?;
+        writer.flush()?;
         Ok(())
+    }
+
+    /// Cède l'écrivain (une seule fois) à un thread dédié ; `write` échoue ensuite.
+    pub fn take_writer(&mut self) -> Option<Box<dyn Write + Send>> {
+        self.writer.take()
+    }
+
+    /// Vrai si un programme autre que le shell est au premier plan du terminal.
+    #[cfg(unix)]
+    pub fn has_running_children(&self) -> bool {
+        match (self.master.process_group_leader(), self.child.process_id()) {
+            (Some(leader), Some(pid)) => leader != pid as libc::pid_t,
+            _ => false,
+        }
+    }
+
+    /// Windows n'expose pas le groupe de premier plan de ConPTY.
+    #[cfg(windows)]
+    pub fn has_running_children(&self) -> bool {
+        false
     }
 
     pub fn resize(&self, size: PtySize) -> Result<(), PtyError> {
