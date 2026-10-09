@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.76 — 2026-10-09 · « Accents et titres d'onglet »
+
+- `rustty` : tirage reproductible de couleurs d'accent parmi les 12 couleurs vives de la palette (jamais deux fois de suite la même) ; chaque onglet et chaque division reçoivent la leur à la création ; un onglet peut porter un nom personnalisé.
+
 ## 0.1.0-alpha.75 — 2026-10-09 · « Style de la barre d'onglets »
 
 - `rustty-render` : la barre d'onglets suit `[tabs]` — marges horizontale et verticale, espacement entre onglets, couleurs configurées — et accepte une couleur d'accent par onglet (assombrie quand l'onglet est inactif) avec un texte automatiquement contrasté (`Rgba::luminance`, `readable_on`). Rendu par défaut inchangé.

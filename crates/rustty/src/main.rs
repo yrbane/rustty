@@ -1,5 +1,6 @@
 //! Point d'entrée : arguments, journalisation, configuration, puis la fenêtre.
 
+mod accent;
 mod app;
 mod banner;
 mod cli;
