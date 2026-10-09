@@ -261,3 +261,38 @@ fn tab_bar_with_close_buttons_matches_golden() {
         "le bouton survolé est dans sa couleur de survol"
     );
 }
+
+#[test]
+fn render_onto_keeps_what_is_already_there() {
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let target = Offscreen::new(&ctx, 60, 30);
+    rustty_render::clear(&ctx, target.view(), Rgba::new(1.0, 0.0, 0.0, 1.0));
+    let mut term = Term::new(2, 1, 0);
+    term.input(b"\x1b[?25l");
+    let snap = term.snapshot();
+    let frame = Frame {
+        viewport: (60, 30),
+        background: Rgba::new(0.0, 1.0, 0.0, 1.0),
+        panes: vec![PaneFrame {
+            rect: PixelRect::new(30, 0, 30, 30),
+            snapshot: &snap,
+            focused: true,
+        }],
+        chrome: Default::default(),
+    };
+    r.render_onto(&ctx, target.view(), &frame);
+    let px = target.read_rgba(&ctx).unwrap();
+    assert_eq!(
+        pixel(&px, 60, 5, 5),
+        [255, 0, 0, 255],
+        "la moitié gauche n'est pas effacée"
+    );
+    assert_eq!(
+        pixel(&px, 60, 45, 15),
+        [255, 0, 0, 255],
+        "fond par défaut du terminal : rien n'est peint, pas de vert"
+    );
+}

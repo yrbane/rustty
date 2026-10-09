@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.85 — 2026-10-09 · « Rendu par-dessus »
+
+- `rustty-render` : `Renderer::render_onto` dessine par-dessus une image existante (sans effacer), pour composer une même image avec plusieurs tailles de police.
+
 ## 0.1.0-alpha.84 — 2026-10-09 · « Reflow »
 
 - `rustty-vt` : reflow au changement de largeur — l'écran principal et l'historique sont redécoupés selon les retours à la ligne automatiques (une ligne longue se replie quand le panneau rétrécit et se déplie quand il s'élargit), curseur reporté sur le même caractère, caractères larges jamais coupés, blancs de fin retirés ; l'écran alternatif n'est pas touché.
