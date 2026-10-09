@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0-alpha.55"
+version = "0.1.0-alpha.56"
 edition = "2024"
 license = "GPL-3.0-only"
 repository = "https://github.com/yrbane/rustty"
@@ -27,6 +27,13 @@ pollster = "1"
 fontdb = "0.24"
 swash = "0.2"
 image = { version = "0.25", default-features = false, features = ["png"] }
+winit = "0.30"
+arboard = { version = "3", features = ["wayland-data-control"] }
+notify = "8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+parking_lot = "0.12"
 
 [workspace.lints.clippy]
 all = "warn"
