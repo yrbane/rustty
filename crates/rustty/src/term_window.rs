@@ -62,6 +62,7 @@ impl TermWindow {
                 }
                 waker.wake(UserEvent::TermUpdated(id));
             }
+            PtyEvent::Failed(message) => waker.wake(UserEvent::TermFailed(id, message)),
             PtyEvent::Eof => waker.wake(UserEvent::PtyEof(id)),
         });
         Ok(Self {
@@ -118,12 +119,6 @@ impl TermWindow {
 
     pub fn has_running_children(&self) -> bool {
         self.pty.has_running_children()
-    }
-
-    pub fn kill(&mut self) {
-        if let Err(e) = self.pty.kill() {
-            tracing::debug!("kill : {e}");
-        }
     }
 }
 
@@ -225,6 +220,6 @@ mod tests {
         tw.scroll(ScrollRequest::Lines(-1));
         tw.scroll(ScrollRequest::ToBottom);
         assert_eq!(tw.snapshot().display_offset, 0);
-        tw.kill();
+        drop(tw);
     }
 }

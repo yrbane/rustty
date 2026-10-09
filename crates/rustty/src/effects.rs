@@ -42,9 +42,8 @@ impl OsWindow {
     }
 
     fn close_term(&mut self, id: TermId) {
-        if let Some(mut tw) = self.terms.remove(&id) {
-            tw.kill();
-        }
+        // Le Drop du Pty tue et moissonne le shell dans un thread détaché.
+        self.terms.remove(&id);
         self.titles.remove(&id);
         if self.selection.as_ref().is_some_and(|(t, _)| *t == id) {
             self.selection = None;

@@ -13,6 +13,8 @@ pub enum UserEvent {
     TermModes(TermId),
     SetClipboard(String),
     PtyEof(TermId),
+    /// Le thread lecteur a paniqué : le panneau est perdu, l'application continue.
+    TermFailed(TermId, String),
     ConfigChanged,
 }
 

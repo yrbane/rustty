@@ -23,7 +23,7 @@ use crate::events::Waker;
 use crate::geometry;
 use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
-use crate::mouse::{MouseButton, Selection};
+use crate::mouse::{MouseButton, Selection, WheelAccumulator};
 use crate::render_frame::{self, PaneView};
 use crate::tab::TermId;
 use crate::term_window::TermWindow;
@@ -53,6 +53,7 @@ pub struct OsWindow {
     pub selection: Option<(TermId, Selection)>,
     pub dragging: bool,
     pub held: Option<MouseButton>,
+    pub wheel: WheelAccumulator,
     pub press_target: HoverTarget,
     pub tab_bar: Option<TabBarLayout>,
     pub pane_rects: Vec<(WindowId, PixelRect)>,
@@ -122,6 +123,7 @@ impl OsWindow {
             selection: None,
             dragging: false,
             held: None,
+            wheel: WheelAccumulator::default(),
             press_target: HoverTarget::None,
             tab_bar: None,
             pane_rects: Vec::new(),

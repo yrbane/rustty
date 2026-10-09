@@ -10,9 +10,10 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::WindowId;
 
+use crate::banner::Banner;
 use crate::config_watch::ConfigWatcher;
 use crate::events::UserEvent;
-use crate::model::Effect;
+use crate::model::{CloseRequest, Effect};
 use crate::window_state::OsWindow;
 
 /// Période de sondage de la fin des shells (Windows n'a pas de fin de flux).
@@ -121,6 +122,13 @@ impl ApplicationHandler<UserEvent> for App {
                 Vec::new()
             }
             UserEvent::PtyEof(id) => w.check_exit(id),
+            UserEvent::TermFailed(id, message) => {
+                tracing::error!("thread lecteur du panneau {id:?} : {message}");
+                w.model.set_notice(Some(Banner::error(format!(
+                    "panneau fermé après une erreur interne : {message}"
+                ))));
+                w.model.request_close(CloseRequest::Term(id), false)
+            }
             UserEvent::ConfigChanged => {
                 w.reload_config();
                 Vec::new()

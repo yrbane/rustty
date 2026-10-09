@@ -241,3 +241,38 @@ fn running_children_are_detected_from_the_foreground_process_group() {
     pty.kill().unwrap();
     wait_bounded(&mut pty, &out, TIMEOUT);
 }
+
+#[cfg(unix)]
+#[test]
+fn dropping_a_pty_never_blocks_the_caller() {
+    // Un shell qui ignore SIGHUP : portable-pty attend 200 ms avant SIGKILL.
+    let shell = Shell::new(
+        "/bin/sh",
+        vec!["-c".into(), "trap '' HUP; echo pret; sleep 30".into()],
+    );
+    let mut pty = spawn(&shell);
+    let pid = pty.process_id().expect("pid du shell");
+    let out = pump(pty.reader().unwrap());
+    out.expect(&mut pty, "pret", TIMEOUT);
+    let start = std::time::Instant::now();
+    drop(pty);
+    assert!(
+        start.elapsed() < Duration::from_millis(100),
+        "drop a bloqué {:?}",
+        start.elapsed()
+    );
+    let alive = |pid: u32| {
+        std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .status()
+            .is_ok_and(|s| s.success())
+    };
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while alive(pid) {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "le shell {pid} est toujours vivant"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}

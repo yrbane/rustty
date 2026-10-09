@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.71 — 2026-10-09 · « Corrections de revue »
+
+- `rustty-pty` : la libération d'un `Pty` ne bloque plus l'appelant — le shell est tué et moissonné dans un thread détaché (SIGHUP, grâce, SIGKILL) ; le thread lecteur capture une panique du traitement et la signale par `PtyEvent::Failed` au lieu de disparaître.
+- `rustty` : un panneau dont le lecteur a paniqué est fermé avec un bandeau d'erreur, l'application continue ; la molette au pixel (pavé tactile) accumule les fractions de ligne au lieu de les perdre.
+
 ## 0.1.0-alpha.70 — 2026-10-09 · « Harnais pty et écrivain cédé »
 
 - `rustty-pty` : le harnais de tests répond aux demandes de ConPTY par l'écrivain disponible (y compris celui cédé par `take_writer`), ce qui faisait échouer un test sur Windows.

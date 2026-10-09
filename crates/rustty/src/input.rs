@@ -228,7 +228,7 @@ impl OsWindow {
             MouseScrollDelta::LineDelta(_, y) => f64::from(y) * WHEEL_LINES,
             MouseScrollDelta::PixelDelta(p) => p.y / f64::from(self.metrics().height.max(1)),
         };
-        let lines = lines.round() as i32;
+        let lines = self.wheel.lines(lines);
         if lines == 0 {
             return Vec::new();
         }

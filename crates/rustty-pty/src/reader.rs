@@ -1,7 +1,9 @@
 //! Thread lecteur : vide le pseudo-terminal par blocs et pousse des
 //! événements vers l'interface, qui les donne au `Term`.
 
+use std::any::Any;
 use std::io::Read;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
 
@@ -12,6 +14,9 @@ pub const READ_CHUNK: usize = 64 * 1024;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PtyEvent {
     Data(Vec<u8>),
+    /// Le traitement d'un bloc a paniqué : le lecteur s'arrête, l'hôte doit
+    /// fermer ou signaler ce terminal. Aucun `Eof` ne suit.
+    Failed(String),
     /// Fin du flux : le terminal est fermé (ou lecture impossible). Signal
     /// fiable sur Unix ; sur Windows il peut n'arriver qu'à la libération du
     /// `Pty`, la fin du shell se détecte alors par `Pty::try_wait`.
@@ -40,7 +45,15 @@ where
             loop {
                 match reader.read(&mut buf) {
                     Ok(0) | Err(_) => break,
-                    Ok(n) => sink(PtyEvent::Data(buf[..n].to_vec())),
+                    Ok(n) => {
+                        let data = PtyEvent::Data(buf[..n].to_vec());
+                        if let Err(payload) = catch_unwind(AssertUnwindSafe(|| sink(data))) {
+                            let message = panic_message(payload.as_ref());
+                            let _ =
+                                catch_unwind(AssertUnwindSafe(|| sink(PtyEvent::Failed(message))));
+                            return;
+                        }
+                    }
                 }
             }
             sink(PtyEvent::Eof);
@@ -48,9 +61,42 @@ where
         .expect("création du thread lecteur")
 }
 
+/// Le texte d'une panique, quelle que soit la façon dont elle a été levée.
+fn panic_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(s) = payload.downcast_ref::<&str>() {
+        (*s).to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "panique sans message".to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn a_panicking_sink_is_reported_as_failed_and_the_thread_ends() {
+        let seen: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+        let log = Arc::clone(&seen);
+        let reader: Box<dyn Read + Send> = Box::new(std::io::Cursor::new(b"abc".to_vec()));
+        let handle = spawn_reader_with(reader, move |ev| match ev {
+            PtyEvent::Data(_) => panic!("séquence impossible"),
+            PtyEvent::Failed(msg) => log.lock().unwrap().push(format!("failed:{msg}")),
+            PtyEvent::Eof => log.lock().unwrap().push("eof".into()),
+        });
+        handle
+            .join()
+            .expect("le thread lecteur ne propage pas la panique");
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1, "{seen:?}");
+        assert!(
+            seen[0].starts_with("failed:") && seen[0].contains("séquence impossible"),
+            "{seen:?}"
+        );
+    }
     use std::io::Cursor;
     use std::sync::mpsc;
 
@@ -69,6 +115,7 @@ mod tests {
                     assert!(!chunk.is_empty() && chunk.len() <= READ_CHUNK);
                     received.extend_from_slice(&chunk);
                 }
+                PtyEvent::Failed(message) => panic!("échec inattendu : {message}"),
                 PtyEvent::Eof => eof_seen = true,
             }
         }
