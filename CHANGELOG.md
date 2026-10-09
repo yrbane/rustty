@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.94 — 2026-10-09 · « Plan 8 : images et corrections différées »
+
+- Plan `docs/superpowers/plans/2026-10-09-images.md` : protocole graphique kitty dans `rustty-vt` (filtre APC, bandes d'image rattachées aux lignes), dessin des images dans `rustty-render`, commande `rustty img <chemin|url>`.
+- Le même plan reprend les mineurs différés des revues des plans 4 à 7 : menu contextuel, zoom, molette, souris, reflow, démarrage, lanceur, presse-papiers OSC 52, titres d'onglets.
+
 ## 0.1.0-alpha.93 — 2026-10-09 · « Menu : clics dans le menu »
 
 - Un clic sur un séparateur, sur une entrée grisée ou dans la marge du menu le laisse ouvert au lieu de le fermer ; seul un clic hors du menu le ferme.
