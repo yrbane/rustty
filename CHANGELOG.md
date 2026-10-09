@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.78 — 2026-10-09 · « Barres, couleurs et zoom »
+
+- `rustty` : barres de split dessinées dans l'interstice (épaisseur et couleur de `[splits]`, ou couleur tirée au sort par division ; sans barre, panneaux bord à bord), couleurs aléatoires des onglets avec texte lisible, zoom de police par `ctrl+molette`, `ctrl+plus`, `ctrl+minus`, `ctrl+0` (4 à 72 points, retour à la taille configurée), rendu extrait dans `render.rs`.
+
 ## 0.1.0-alpha.77 — 2026-10-09 · « Renommage des onglets »
 
 - `rustty` : renommage des onglets au double clic ou par `ctrl+shift+alt+t` — édition dans la barre (Entrée valide, Échap annule, retour arrière), caractères de contrôle ignorés, 64 caractères au plus, nom vide = titre du shell ; le nom remplace `{title}` dans le gabarit.

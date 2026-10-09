@@ -8,6 +8,7 @@ use rustty_pty::ExitStatus;
 use rustty_render::HoverTarget;
 
 use crate::banner::Banner;
+use crate::font_zoom::FontChange;
 use crate::mouse::MouseButton;
 use crate::rename::{Rename, RenameKey, RenameOutcome};
 use crate::tab::{Tab, TermId};
@@ -28,6 +29,7 @@ pub enum Effect {
     Copy,
     Paste,
     SetOpacity(f32),
+    FontSize(FontChange),
     ReloadConfig,
     Relayout,
     Redraw,
@@ -154,12 +156,11 @@ impl Model {
             Action::ScrollLines(n) => self.scroll(ScrollRequest::Lines(n)),
             Action::ScrollPages(n) => self.scroll(ScrollRequest::Pages(n)),
             Action::ScrollToBottom => self.scroll(ScrollRequest::ToBottom),
-            // Branchés aux tâches 5 (renommage) et 6 (zoom de police).
             Action::RenameTab => self.start_rename(self.workspace.active()),
-            Action::IncreaseFontSize
-            | Action::DecreaseFontSize
-            | Action::ResetFontSize
-            | Action::Unbind => Vec::new(),
+            Action::IncreaseFontSize => vec![Effect::FontSize(FontChange::Increase)],
+            Action::DecreaseFontSize => vec![Effect::FontSize(FontChange::Decrease)],
+            Action::ResetFontSize => vec![Effect::FontSize(FontChange::Reset)],
+            Action::Unbind => Vec::new(),
         }
     }
 
@@ -339,6 +340,23 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn font_actions_emit_font_size_effects() {
+        let (mut m, _) = Model::new(0.9, false);
+        assert_eq!(
+            m.apply(Action::IncreaseFontSize, false, &never_running),
+            vec![Effect::FontSize(FontChange::Increase)]
+        );
+        assert_eq!(
+            m.apply(Action::DecreaseFontSize, false, &never_running),
+            vec![Effect::FontSize(FontChange::Decrease)]
+        );
+        assert_eq!(
+            m.apply(Action::ResetFontSize, false, &never_running),
+            vec![Effect::FontSize(FontChange::Reset)]
+        );
+    }
 
     #[test]
     fn rename_action_edits_the_active_tab() {

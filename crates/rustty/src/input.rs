@@ -9,6 +9,7 @@ use rustty_vt::MouseMode;
 use winit::event::{ElementState, KeyEvent, MouseButton as WinitButton, MouseScrollDelta};
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 
+use crate::font_zoom::FontChange;
 use crate::geometry;
 use crate::keyboard::{encode_key, key_combo, mods_from_winit};
 use crate::model::{Effect, ScrollRequest};
@@ -251,6 +252,14 @@ impl OsWindow {
         let lines = self.wheel.lines(lines);
         if lines == 0 {
             return Vec::new();
+        }
+        if self.modifiers.contains(Mods::CTRL) {
+            let change = if lines > 0 {
+                FontChange::Increase
+            } else {
+                FontChange::Decrease
+            };
+            return vec![Effect::FontSize(change); lines.unsigned_abs() as usize];
         }
         let (x, y) = self.cursor;
         let Some((term, rect)) = self.pane_under(x, y).or_else(|| {

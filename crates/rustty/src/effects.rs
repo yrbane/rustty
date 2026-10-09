@@ -5,6 +5,7 @@ use winit::event_loop::ActiveEventLoop;
 
 use crate::banner::Banner;
 use crate::config_watch::{self, ReloadOutcome};
+use crate::font_zoom::next_size;
 use crate::keyboard::paste_bytes;
 use crate::model::Effect;
 use crate::tab::TermId;
@@ -31,6 +32,15 @@ impl OsWindow {
                 Effect::Copy => self.copy_selection(),
                 Effect::Paste => self.paste(),
                 Effect::SetOpacity(_) | Effect::Redraw => self.window.request_redraw(),
+                Effect::FontSize(change) => {
+                    let size = next_size(self.font_size, self.config.font.size, change);
+                    if size != self.font_size {
+                        self.font_size = size;
+                        self.rebuild_fonts();
+                        self.relayout();
+                    }
+                    self.window.request_redraw();
+                }
                 Effect::ReloadConfig => self.reload_config(),
                 Effect::Relayout => {
                     self.relayout();

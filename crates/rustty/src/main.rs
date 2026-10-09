@@ -2,11 +2,13 @@
 
 mod accent;
 mod app;
+mod appearance;
 mod banner;
 mod cli;
 mod config_watch;
 mod effects;
 mod events;
+mod font_zoom;
 mod geometry;
 mod gpu_surface;
 mod input;
@@ -14,6 +16,7 @@ mod keyboard;
 mod model;
 mod mouse;
 mod rename;
+mod render;
 mod render_frame;
 mod tab;
 mod term_window;

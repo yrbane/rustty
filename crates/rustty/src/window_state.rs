@@ -7,24 +7,24 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context as _;
-use rustty_config::{Config, Mods, TabBarPosition};
-use rustty_layout::WindowId;
+use rustty_config::{Config, Mods};
+use rustty_layout::{SplitId, WindowId};
 use rustty_pty::Shell;
 use rustty_render::{
-    CellMetrics, Chrome, FontSet, GpuContext, HoverTarget, Palette, PixelRect, Renderer,
-    TabBarLayout, TabBarStyle, layout_tab_bar, tab_bar_chrome, tab_bar_height,
+    CellMetrics, FontSet, GpuContext, HoverTarget, Palette, PixelRect, Renderer, TabBarLayout,
+    TabBarStyle, layout_tab_bar, tab_bar_height,
 };
 use winit::dpi::LogicalSize;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Icon, Window};
 
-use crate::banner::{Banner, banner_chrome, banner_height};
+use crate::banner::Banner;
 use crate::events::Waker;
 use crate::geometry;
 use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
 use crate::mouse::{DoubleClick, MouseButton, Selection, WheelAccumulator};
-use crate::render_frame::{self, PaneView};
+use crate::render_frame;
 use crate::tab::TermId;
 use crate::term_window::TermWindow;
 use crate::title;
@@ -34,7 +34,7 @@ const DEFAULT_SIZE: LogicalSize<f64> = LogicalSize::new(960.0, 600.0);
 /// Taille de police de la config en points typographiques → pixels à 96 dpi.
 const PT_TO_PX: f32 = 96.0 / 72.0;
 /// Alpha de la surbrillance de sélection posée par-dessus le texte.
-const SELECTION_ALPHA: f32 = 0.4;
+pub(crate) const SELECTION_ALPHA: f32 = 0.4;
 
 pub struct OsWindow {
     pub window: Arc<Window>,
@@ -58,6 +58,9 @@ pub struct OsWindow {
     pub press_target: HoverTarget,
     pub tab_bar: Option<TabBarLayout>,
     pub pane_rects: Vec<(WindowId, PixelRect)>,
+    pub dividers: Vec<(SplitId, PixelRect)>,
+    /// Taille de police courante en points (zoom compris).
+    pub font_size: f32,
     pub focused: bool,
     pub clipboard: Option<arboard::Clipboard>,
     pub shell: Shell,
@@ -87,7 +90,8 @@ impl OsWindow {
         let size = window.inner_size();
         let surface = Surface::new(raw_surface, &ctx, size.width, size.height)?;
         let palette = Palette::from_config(&config.colors, config.font.bold_is_bright);
-        let fonts = load_fonts(&config, window.scale_factor());
+        let font_size = config.font.size;
+        let fonts = load_fonts(&config.font.family, config.font.size, window.scale_factor());
         let renderer = Renderer::new(
             &ctx,
             surface.view_format(),
@@ -125,6 +129,8 @@ impl OsWindow {
             press_target: HoverTarget::None,
             tab_bar: None,
             pane_rects: Vec::new(),
+            dividers: Vec::new(),
+            font_size,
             focused: true,
             clipboard,
             shell: Shell::default_for_platform(),
@@ -210,18 +216,21 @@ impl OsWindow {
             layout_tab_bar(
                 w,
                 y,
-                &render_frame::tab_specs(&titles, active),
+                &render_frame::tab_specs(&titles, active, None),
                 &self.tab_style,
                 metrics,
             )
         });
         if self.model.workspace.is_empty() {
             self.pane_rects.clear();
+            self.dividers.clear();
             return;
         }
         let padding = self.config.window.padding;
+        let gap = geometry::split_gap(&self.config.splits);
         let tab = self.model.workspace.active_tab();
-        self.pane_rects = geometry::pane_rects(&tab.layout, g.content);
+        self.pane_rects = geometry::pane_rects(&tab.layout, g.content, gap);
+        self.dividers = geometry::divider_rects(&tab.layout, g.content, gap);
         for (wid, rect) in &self.pane_rects {
             if let Some(term) = tab.term_at(*wid)
                 && let Some(tw) = self.terms.get_mut(&term)
@@ -233,81 +242,12 @@ impl OsWindow {
         self.update_title();
     }
 
-    pub fn render(&mut self) {
-        let Some(texture) = self.surface.acquire(&self.ctx) else {
-            return;
-        };
-        let view = Surface::view(&texture, self.surface.view_format());
-        let (w, h) = self.surface.size();
-        let metrics = self.metrics();
-        let padding = self.config.window.padding;
-        let mut panes = Vec::new();
-        let mut chrome = Chrome::default();
-        if !self.model.workspace.is_empty() {
-            let tab = self.model.workspace.active_tab();
-            let focused_window = tab.layout.focused();
-            for (wid, rect) in &self.pane_rects {
-                let Some(term) = tab.term_at(*wid) else {
-                    continue;
-                };
-                let Some(tw) = self.terms.get(&term) else {
-                    continue;
-                };
-                panes.push(PaneView {
-                    rect: *rect,
-                    snapshot: tw.snapshot(),
-                    focused: self.focused && Some(*wid) == focused_window,
-                });
-                if let Some((sel_term, sel)) = &self.selection
-                    && *sel_term == term
-                    && !sel.is_empty()
-                {
-                    let color = self.palette.selection.with_alpha(SELECTION_ALPHA);
-                    chrome.quads.extend(render_frame::selection_quads(
-                        sel, *rect, metrics, padding, color,
-                    ));
-                }
-            }
-        }
-        if let Some(bar) = &self.tab_bar {
-            let titles = self.tab_titles();
-            let specs = render_frame::tab_specs(&titles, self.model.workspace.active());
-            let bar_chrome =
-                tab_bar_chrome(bar, &specs, &self.tab_style, metrics, self.model.hover);
-            chrome.quads.extend(bar_chrome.quads);
-            chrome.texts.extend(bar_chrome.texts);
-        }
-        if let Some(banner) = self.model.banner() {
-            let bar_at_bottom =
-                self.tab_bar.is_some() && self.config.tabs.position == TabBarPosition::Bottom;
-            let reserved = banner_height(metrics)
-                + if bar_at_bottom {
-                    tab_bar_height(metrics, &self.tab_style)
-                } else {
-                    0
-                };
-            let b = banner_chrome(
-                &banner,
-                w,
-                h.saturating_sub(reserved),
-                metrics,
-                &self.palette,
-            );
-            chrome.quads.extend(b.quads);
-            chrome.texts.extend(b.texts);
-        }
-        let background = render_frame::background_color(
-            self.palette.background,
-            self.model.opacity,
-            self.surface.premultiplied(),
-        );
-        let frame = render_frame::build_frame((w, h), background, &panes, chrome);
-        self.renderer.render(&self.ctx, &view, &frame);
-        self.ctx.queue.present(texture);
-    }
-
     /// Applique une configuration rechargée : palette, police, onglets, opacité, raccourcis.
     pub fn apply_config(&mut self, new: Config) {
+        if new.font.size != self.config.font.size {
+            // La taille configurée change : le zoom repart de la nouvelle base.
+            self.font_size = new.font.size;
+        }
         let font_changed = new.font.family != self.config.font.family
             || new.font.size != self.config.font.size
             || new.window.padding != self.config.window.padding;
@@ -326,7 +266,11 @@ impl OsWindow {
 
     /// Nouveau renderer avec la police courante (changement de police ou d'échelle d'écran).
     pub fn rebuild_fonts(&mut self) {
-        let fonts = load_fonts(&self.config, self.window.scale_factor());
+        let fonts = load_fonts(
+            &self.config.font.family,
+            self.font_size,
+            self.window.scale_factor(),
+        );
         self.renderer = Renderer::new(
             &self.ctx,
             self.surface.view_format(),
@@ -337,10 +281,10 @@ impl OsWindow {
     }
 }
 
-fn load_fonts(config: &Config, scale_factor: f64) -> FontSet {
-    let px = config.font.size * PT_TO_PX * scale_factor as f32;
-    FontSet::load(&config.font.family, px).unwrap_or_else(|e| {
-        tracing::warn!("police « {} » : {e} — police embarquée", config.font.family);
+fn load_fonts(family: &str, size_pt: f32, scale_factor: f64) -> FontSet {
+    let px = size_pt * PT_TO_PX * scale_factor as f32;
+    FontSet::load(family, px).unwrap_or_else(|e| {
+        tracing::warn!("police « {family} » : {e} — police embarquée");
         FontSet::embedded(px)
     })
 }

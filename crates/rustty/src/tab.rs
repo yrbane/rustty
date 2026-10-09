@@ -9,7 +9,6 @@ use rustty_layout::{Axis, SplitId, TabLayout, WindowId};
 pub struct TermId(pub u64);
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)] // accent et custom_title consommés aux tâches 5 et 6 (provisoire).
 pub struct Tab {
     pub layout: TabLayout,
     panes: HashMap<WindowId, TermId>,
@@ -32,7 +31,6 @@ impl Tab {
         }
     }
 
-    #[allow(dead_code)] // Consommé à la tâche 6 (provisoire).
     /// Accent de la barre d'une division ; 0 si elle est inconnue.
     pub fn split_accent(&self, split: SplitId) -> usize {
         self.split_accents.get(&split).copied().unwrap_or(0)

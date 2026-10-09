@@ -49,7 +49,6 @@ impl AccentPicker {
     }
 }
 
-#[allow(dead_code)] // Consommé à la tâche 6 (provisoire).
 pub fn accent_color(palette: &Palette, accent: usize) -> Rgba {
     palette.ansi[ACCENT_SLOTS[accent % ACCENT_SLOTS.len()]]
 }

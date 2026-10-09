@@ -1,12 +1,14 @@
 //! Découpage de la fenêtre en pixels : barre d'onglets, zone de contenu,
 //! rectangles des panneaux, cellule sous la souris. Pur.
 
-use rustty_config::TabBarPosition;
-use rustty_layout::{Rect, TabLayout, WindowId};
+use rustty_config::{Splits, TabBarPosition};
+use rustty_layout::{Rect, SplitId, TabLayout, WindowId};
 use rustty_render::{CellMetrics, PixelRect, grid_geometry};
 
-/// Interstice entre deux panneaux, où le fond de la fenêtre reste visible.
-pub const PANE_GAP: u32 = 2;
+/// Interstice entre deux panneaux : l'épaisseur de la barre, ou rien.
+pub fn split_gap(splits: &Splits) -> u32 {
+    if splits.border { splits.width } else { 0 }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WindowGeometry {
@@ -42,11 +44,24 @@ pub fn window_geometry(
     }
 }
 
-pub fn pane_rects(layout: &TabLayout, content: Rect) -> Vec<(WindowId, PixelRect)> {
+fn to_pixels(r: Rect) -> PixelRect {
+    PixelRect::new(r.x, r.y, r.width, r.height)
+}
+
+/// Les barres entre panneaux, en pixels, avec l'identifiant de leur division.
+pub fn divider_rects(layout: &TabLayout, content: Rect, gap: u32) -> Vec<(SplitId, PixelRect)> {
     layout
-        .rects(content, PANE_GAP)
+        .dividers(content, gap)
         .into_iter()
-        .map(|(id, r)| (id, PixelRect::new(r.x, r.y, r.width, r.height)))
+        .map(|(id, r)| (id, to_pixels(r)))
+        .collect()
+}
+
+pub fn pane_rects(layout: &TabLayout, content: Rect, gap: u32) -> Vec<(WindowId, PixelRect)> {
+    layout
+        .rects(content, gap)
+        .into_iter()
+        .map(|(id, r)| (id, to_pixels(r)))
         .collect()
 }
 
@@ -87,6 +102,31 @@ pub fn pane_at(rects: &[(WindowId, PixelRect)], x: f64, y: f64) -> Option<Window
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gap_follows_the_border_option() {
+        let mut splits = rustty_config::Splits::default();
+        assert_eq!(split_gap(&splits), 2);
+        splits.width = 6;
+        assert_eq!(split_gap(&splits), 6);
+        splits.border = false;
+        assert_eq!(split_gap(&splits), 0);
+    }
+
+    #[test]
+    fn divider_rects_convert_the_layout() {
+        let (mut layout, first) = TabLayout::new();
+        let second = layout.split(first, Axis::Vertical).unwrap();
+        let d = divider_rects(&layout, Rect::new(0, 24, 806, 500), 6);
+        assert_eq!(
+            d,
+            vec![(
+                rustty_layout::SplitId(second.0),
+                PixelRect::new(400, 24, 6, 500)
+            )]
+        );
+        assert!(divider_rects(&layout, Rect::new(0, 24, 806, 500), 0).is_empty());
+    }
     use rustty_layout::Axis;
 
     fn metrics() -> CellMetrics {
@@ -138,7 +178,7 @@ mod tests {
     fn pane_rects_follow_the_layout_with_a_gap() {
         let (mut layout, first) = TabLayout::new();
         let second = layout.split(first, Axis::Vertical).unwrap();
-        let rects = pane_rects(&layout, Rect::new(0, 24, 802, 500));
+        let rects = pane_rects(&layout, Rect::new(0, 24, 802, 500), 2);
         assert_eq!(rects.len(), 2);
         let left = rects.iter().find(|(id, _)| *id == first).unwrap().1;
         let right = rects.iter().find(|(id, _)| *id == second).unwrap().1;
