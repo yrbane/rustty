@@ -10,6 +10,11 @@ mod mouse;
 // Consommé par app.rs (tâche 14).
 #[allow(unused)]
 mod geometry;
+// Consommés par app.rs (tâche 14).
+#[allow(unused)]
+mod tab;
+#[allow(unused)]
+mod workspace;
 
 use std::process::ExitCode;
 
