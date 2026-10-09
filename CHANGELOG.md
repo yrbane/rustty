@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.59 — 2026-10-09 · « Encodage clavier »
+
+- `rustty` : encodage xterm des touches (contrôle, alt, touches nommées, F1–F12, paramètre de modificateurs, mode curseur application) et collage assaini avec encadrement (mode 2004).
+
 ## 0.1.0-alpha.58 — 2026-10-09 · « Touches → raccourcis »
 
 - `rustty` : traduction des touches winit en combinaisons de la configuration (minuscules, touches nommées, F1–F12, modificateurs).
