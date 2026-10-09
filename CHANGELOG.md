@@ -4,11 +4,16 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.106 — 2026-10-09 · « rustty img : limites HTTP franches »
+
+- Une réponse HTTP de plus de 64 Mio donne l'erreur « réponse trop volumineuse (plus de 64 Mio) » au lieu d'être tronquée en silence.
+- Un statut HTTP d'erreur s'affiche en français (« code HTTP 404 ») et le téléchargement a un délai global de 30 s.
+- L'encodage PNG en mémoire remonte une erreur au lieu de paniquer.
+
 ## 0.1.0-alpha.105 — 2026-10-09 · « rustty img : afficher une image »
 
 - Nouvelle commande `rustty img <source>` : lit un fichier local ou une URL `http(s)://` (corps limité à 64 Mio), décode (PNG, JPEG, GIF, WebP, BMP), réduit à 2048 px de côté au plus (Lanczos3) et l'émet en séquences graphiques kitty (`a=T`, PNG, base64 par morceaux de 4096 caractères). Fonctionne aussi dans kitty. Rien n'est écrit en cas d'erreur (message en français, code de sortie 1).
-- `TermWindow::resize` transmet la taille d'une cellule au `Term` (par panneau, selon sa police) pour calculer les cellules couvertes par une image, et renvoie vrai quand la grille change.
-- Correction : un redimensionnement qui ne change que les pixels n'était plus ignoré par `TermWindow::resize`.
+- `TermWindow::resize` transmet désormais la taille d'une cellule au `Term` (par panneau, selon sa police), même quand la grille ne change pas, pour calculer les cellules couvertes par une image ; il renvoie vrai quand la grille change.
 - Dépendances : `ureq` 3 (HTTP), `base64`, et décodeurs `image` jpeg/gif/webp/bmp.
 - Usage et README mis à jour (« Afficher une image »), parcours manuel dans `docs/e2e.md`.
 
