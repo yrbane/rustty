@@ -20,6 +20,11 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 - [ ] `ctrl+shift+q` ferme l'onglet actif ; avec `sleep 100` en cours et `confirm_close_with_running_children = true`, le bandeau de confirmation apparaît ; Échap annule, Entrée ferme.
 - [ ] Dernier onglet fermé : la fenêtre se ferme.
 
+## Renommage, zoom, icône
+- [ ] Double clic sur un onglet : édition du nom (curseur ▌), Entrée valide, Échap annule, nom vide = titre du shell ; `ctrl+shift+alt+t` fait de même sur l'onglet actif.
+- [ ] `ctrl+molette`, `ctrl+plus`, `ctrl+minus` changent la taille de police, `ctrl+0` revient à celle de la config.
+- [ ] Après `--install-desktop`, la fenêtre a l'icône du crabe dans la barre des tâches et rustty apparaît dans les menus.
+
 ## Splits
 - [ ] `ctrl+shift+e` divise verticalement (nouveau panneau à droite, focalisé), `ctrl+shift+o` horizontalement (en dessous).
 - [ ] `shift+flèches` déplacent le focus ; `ctrl+flèches` redimensionnent ; les raccourcis de rotation et de zoom de la config fonctionnent.
@@ -35,8 +40,10 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 ## Configuration
 - [ ] Modifier `opacity` dans le fichier : le fond change sans redémarrer ; mettre `opacity = 7` : bandeau d'erreur, ancienne config conservée ; corriger : le bandeau disparaît.
 - [ ] Changer `font.size` : la grille se recalcule.
-- [ ] `ctrl+shift+a` (ou le raccourci configuré) change l'opacité par pas.
+- [ ] Un raccourci `{ opacity = +0.05 }` ajouté dans `[keys]` change l'opacité par pas.
+- [ ] `[splits] width = 6`, puis `random_colors = true` : chaque nouveau split a sa barre colorée ; `border = false` : panneaux bord à bord.
+- [ ] `[tabs] padding_horizontal = 3`, `padding_vertical = 6`, `spacing = 4` : la barre s'élargit et s'aère ; `[tabs.colors] random = true` : chaque onglet a sa couleur, texte lisible.
 
 ## Robustesse
 - [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique.
-- [ ] `RUSTTY_LOG=debug cargo run -p rustty` : aucune erreur dans le journal pendant le parcours.
+- [ ] `cargo run -p rustty` : rien sur la sortie d'erreur pendant le parcours ; `RUSTTY_LOG=rustty=debug` pour le détail.

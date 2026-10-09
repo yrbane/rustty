@@ -8,6 +8,7 @@ Usage : rustty [OPTIONS]
 Options :
   --config <chemin>   fichier de configuration TOML (défaut : ~/.config/rustty/rustty.toml)
   --hold              garder le panneau ouvert quand le shell se termine
+  --install-desktop   installer le lanceur et l'icône (Linux, ~/.local/share)
   -V, --version       afficher la version
   -h, --help          afficher cette aide
 ";
@@ -23,6 +24,7 @@ pub struct Args {
 pub enum Command {
     Version,
     Help,
+    InstallDesktop,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -46,6 +48,7 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Args, CliError> {
             "--hold" => out.hold = true,
             "--version" | "-V" => out.command = Some(Command::Version),
             "--help" | "-h" => out.command = Some(Command::Help),
+            "--install-desktop" => out.command = Some(Command::InstallDesktop),
             other => match other.strip_prefix("--config=") {
                 Some(value) if !value.is_empty() => out.config = Some(PathBuf::from(value)),
                 Some(_) => return Err(CliError::MissingValue("--config")),
@@ -59,6 +62,15 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Args, CliError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn install_desktop_flag() {
+        assert_eq!(
+            parse_strs(&["--install-desktop"]).unwrap().command,
+            Some(Command::InstallDesktop)
+        );
+        assert!(USAGE.contains("--install-desktop"));
+    }
 
     fn parse_strs(args: &[&str]) -> Result<Args, CliError> {
         parse(args.iter().map(|s| s.to_string()))

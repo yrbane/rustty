@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.79 — 2026-10-09 · « Icône partout »
+
+- Icône `res/rustty.svg` partout : PNG 16–512, `.ico` et `.icns` générés par `scripts/icons.sh` dans `assets/icons/` ; icône de fenêtre, identifiant d'application `rustty` (Wayland `app_id`, X11 `WM_CLASS`), icône embarquée dans l'exécutable Windows (`build.rs` + `winresource`), `rustty --install-desktop` installe le lanceur et les icônes hicolor sous `~/.local/share`.
+- Journal : par défaut les dépendances ne parlent qu'en cas d'erreur (plus d'avertissement d'`arboard` au lancement sous GNOME).
+- README et `docs/e2e.md` : nouvelles options, renommage, zoom, icône.
+
 ## 0.1.0-alpha.78 — 2026-10-09 · « Barres, couleurs et zoom »
 
 - `rustty` : barres de split dessinées dans l'interstice (épaisseur et couleur de `[splits]`, ou couleur tirée au sort par division ; sans barre, panneaux bord à bord), couleurs aléatoires des onglets avec texte lisible, zoom de police par `ctrl+molette`, `ctrl+plus`, `ctrl+minus`, `ctrl+0` (4 à 72 points, retour à la taille configurée), rendu extrait dans `render.rs`.

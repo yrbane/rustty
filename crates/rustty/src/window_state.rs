@@ -16,7 +16,7 @@ use rustty_render::{
 };
 use winit::dpi::LogicalSize;
 use winit::event_loop::ActiveEventLoop;
-use winit::window::{Icon, Window};
+use winit::window::{Icon, Window, WindowAttributes};
 
 use crate::banner::Banner;
 use crate::events::Waker;
@@ -29,7 +29,10 @@ use crate::tab::TermId;
 use crate::term_window::TermWindow;
 use crate::title;
 
-const LOGO_PNG: &[u8] = include_bytes!("../../../assets/logo.png");
+/// Icône de fenêtre (X11, Windows) ; Wayland passe par le `.desktop`.
+const ICON_PNG: &[u8] = include_bytes!("../../../assets/icons/rustty-256.png");
+/// Identifiant d'application : `app_id` Wayland et `WM_CLASS` X11.
+const APP_ID: &str = "rustty";
 const DEFAULT_SIZE: LogicalSize<f64> = LogicalSize::new(960.0, 600.0);
 /// Taille de police de la config en points typographiques → pixels à 96 dpi.
 const PT_TO_PX: f32 = 96.0 / 72.0;
@@ -81,6 +84,7 @@ impl OsWindow {
             .with_inner_size(DEFAULT_SIZE)
             .with_transparent(true)
             .with_window_icon(load_icon());
+        let attrs = with_app_id(attrs);
         let window = Arc::new(
             event_loop
                 .create_window(attrs)
@@ -290,7 +294,7 @@ fn load_fonts(family: &str, size_pt: f32, scale_factor: f64) -> FontSet {
 }
 
 fn load_icon() -> Option<Icon> {
-    let image = image::load_from_memory(LOGO_PNG)
+    let image = image::load_from_memory(ICON_PNG)
         .map_err(|e| tracing::warn!("icône : {e}"))
         .ok()?
         .to_rgba8();
@@ -298,4 +302,20 @@ fn load_icon() -> Option<Icon> {
     Icon::from_rgba(image.into_raw(), w, h)
         .map_err(|e| tracing::warn!("icône : {e}"))
         .ok()
+}
+
+/// Annonce `rustty` comme identifiant d'application, pour que le bureau
+/// associe la fenêtre au lanceur et à son icône.
+#[cfg(target_os = "linux")]
+fn with_app_id(attrs: WindowAttributes) -> WindowAttributes {
+    use winit::platform::wayland::WindowAttributesExtWayland;
+    use winit::platform::x11::WindowAttributesExtX11;
+    let attrs = WindowAttributesExtWayland::with_name(attrs, APP_ID, APP_ID);
+    WindowAttributesExtX11::with_name(attrs, APP_ID, APP_ID)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn with_app_id(attrs: WindowAttributes) -> WindowAttributes {
+    let _ = APP_ID;
+    attrs
 }
