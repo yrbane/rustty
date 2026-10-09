@@ -1,11 +1,11 @@
 //! Le menu du clic droit dans un panneau : ouverture, survol, exécution de
 //! l'entrée choisie, fermeture. La logique (entrées, placement, dessin) est
-//! dans `context_menu.rs`.
+//! dans le module `context_menu`.
 
 use rustty_render::Chrome;
 
 use crate::context_menu::{
-    ContextMenu, ENTRIES, MenuEntry, MenuLayout, layout, menu_chrome, shortcuts,
+    ContextMenu, ENTRIES, MenuClick, MenuEntry, MenuLayout, layout, menu_chrome, shortcuts,
 };
 use crate::model::Effect;
 use crate::mouse::MouseButton;
@@ -62,7 +62,8 @@ impl OsWindow {
         Some(vec![Effect::Redraw])
     }
 
-    /// Appui de souris menu ouvert : exécute l'entrée cliquée, sinon ferme.
+    /// Appui de souris menu ouvert : exécute l'entrée cliquée, ignore un
+    /// clic dans le menu hors des entrées actives, ferme sinon.
     /// `None` si aucun menu n'est ouvert.
     pub(crate) fn menu_click(
         &mut self,
@@ -71,12 +72,17 @@ impl OsWindow {
         y: f64,
     ) -> Option<Vec<Effect>> {
         let menu = self.menu.as_ref()?;
-        let hit = (button == MouseButton::Left)
-            .then(|| self.menu_layout(menu).hit(menu, x, y))
-            .flatten();
+        let decision = self
+            .menu_layout(menu)
+            .click(menu, button == MouseButton::Left, x, y);
+        let index = match decision {
+            MenuClick::Keep => return Some(Vec::new()),
+            MenuClick::Close => return Some(self.close_context_menu()),
+            MenuClick::Run(index) => index,
+        };
         let menu = self.menu.take()?;
         let mut effects = vec![Effect::Redraw];
-        if let Some(MenuEntry::Item(item)) = hit.map(|i| ENTRIES[i]) {
+        if let MenuEntry::Item(item) = ENTRIES[index] {
             // L'action vise le panneau du menu : il prend le focus d'abord.
             self.model.workspace.focus_term(menu.term);
             self.update_title();

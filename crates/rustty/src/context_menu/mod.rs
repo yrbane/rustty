@@ -3,7 +3,7 @@
 
 mod layout;
 
-pub use layout::{MenuLayout, layout, menu_chrome};
+pub use layout::{MenuClick, MenuLayout, layout, menu_chrome};
 
 use rustty_config::{Action, KeyMap, SplitAxis};
 

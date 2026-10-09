@@ -20,7 +20,32 @@ pub struct MenuLayout {
     pub rows: Vec<(usize, PixelRect)>,
 }
 
+/// Ce que fait un clic quand le menu est ouvert.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MenuClick {
+    /// Exécuter l'entrée d'index donné dans `ENTRIES`.
+    Run(usize),
+    /// Clic dans le menu sans entrée active : le menu reste ouvert.
+    Keep,
+    /// Clic hors du menu : il se ferme.
+    Close,
+}
+
 impl MenuLayout {
+    /// La décision pour un clic (`left` : bouton gauche) au point `(x, y)`.
+    pub fn click(&self, menu: &ContextMenu, left: bool, x: f64, y: f64) -> MenuClick {
+        let r = self.rect;
+        let inside = x >= f64::from(r.x)
+            && x < f64::from(r.x + r.width)
+            && y >= f64::from(r.y)
+            && y < f64::from(r.y + r.height);
+        match (inside, left.then(|| self.hit(menu, x, y)).flatten()) {
+            (_, Some(i)) => MenuClick::Run(i),
+            (true, None) => MenuClick::Keep,
+            (false, None) => MenuClick::Close,
+        }
+    }
+
     /// L'entrée cliquable sous le point (ni séparateur, ni entrée grisée).
     pub fn hit(&self, menu: &ContextMenu, x: f64, y: f64) -> Option<usize> {
         self.rows
@@ -156,143 +181,5 @@ pub fn menu_chrome(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::context_menu::MenuItem;
-    use crate::tab::TermId;
-    use rustty_config::Colors;
-
-    fn metrics() -> CellMetrics {
-        CellMetrics {
-            width: 10,
-            height: 20,
-            baseline: 16,
-            underline_y: 18,
-            underline_thickness: 1,
-            strike_y: 10,
-        }
-    }
-
-    fn menu(x: u32, y: u32) -> ContextMenu {
-        ContextMenu {
-            term: TermId(1),
-            x,
-            y,
-            can_copy: true,
-            zoomed: false,
-            hovered: None,
-        }
-    }
-
-    fn no_shortcuts() -> Vec<Option<String>> {
-        vec![None; ENTRIES.len()]
-    }
-
-    fn item_index(item: MenuItem) -> usize {
-        ENTRIES
-            .iter()
-            .position(|e| *e == MenuEntry::Item(item))
-            .unwrap()
-    }
-
-    #[test]
-    fn menu_opens_at_the_click() {
-        let l = layout(&menu(100, 50), (800, 600), metrics(), &no_shortcuts());
-        assert_eq!((l.rect.x, l.rect.y), (100, 50));
-        assert_eq!(l.rows.len(), ENTRIES.len());
-        assert!(
-            l.rows
-                .windows(2)
-                .all(|w| w[0].1.y + w[0].1.height == w[1].1.y),
-            "rangées jointives"
-        );
-        assert_eq!(
-            l.rows.last().unwrap().1.y + l.rows.last().unwrap().1.height + MENU_PADDING,
-            l.rect.y + l.rect.height
-        );
-    }
-
-    #[test]
-    fn menu_stays_inside_the_window() {
-        let l = layout(&menu(790, 590), (800, 600), metrics(), &no_shortcuts());
-        assert!(
-            l.rect.x + l.rect.width <= 800 && l.rect.y + l.rect.height <= 600,
-            "{:?}",
-            l.rect
-        );
-        let tiny = layout(&menu(5, 5), (40, 30), metrics(), &no_shortcuts());
-        assert_eq!(
-            (tiny.rect.x, tiny.rect.y),
-            (0, 0),
-            "plus grand que la fenêtre : collé en haut à gauche"
-        );
-    }
-
-    #[test]
-    fn hit_finds_items_by_row() {
-        let m = menu(100, 50);
-        let l = layout(&m, (800, 600), metrics(), &no_shortcuts());
-        let close = item_index(MenuItem::ClosePane);
-        let row = l.rows[close].1;
-        assert_eq!(
-            l.hit(&m, f64::from(row.x + 5), f64::from(row.y + 2)),
-            Some(close)
-        );
-        assert_eq!(l.hit(&m, 10.0, 10.0), None, "hors du menu");
-    }
-
-    #[test]
-    fn separators_and_disabled_items_are_not_clickable() {
-        let mut m = menu(100, 50);
-        m.can_copy = false;
-        let l = layout(&m, (800, 600), metrics(), &no_shortcuts());
-        let sep = ENTRIES
-            .iter()
-            .position(|e| *e == MenuEntry::Separator)
-            .unwrap();
-        let r = l.rows[sep].1;
-        assert_eq!(
-            l.hit(&m, f64::from(r.x + 5), f64::from(r.y + r.height / 2)),
-            None
-        );
-        let copy = l.rows[item_index(MenuItem::Copy)].1;
-        assert_eq!(
-            l.hit(&m, f64::from(copy.x + 5), f64::from(copy.y + 2)),
-            None,
-            "copier grisé sans sélection"
-        );
-    }
-
-    #[test]
-    fn chrome_highlights_the_hovered_item_and_greys_disabled_ones() {
-        let palette = Palette::from_config(&Colors::default(), false);
-        let mut m = menu(100, 50);
-        m.can_copy = false;
-        let close = item_index(MenuItem::ClosePane);
-        m.hovered = Some(close);
-        let mut shortcuts = no_shortcuts();
-        shortcuts[close] = Some("ctrl+shift+w".into());
-        let l = layout(&m, (800, 600), metrics(), &shortcuts);
-        let c = menu_chrome(&m, &l, &shortcuts, &palette, metrics());
-        assert!(
-            c.quads
-                .iter()
-                .any(|q| q.rect == l.rows[close].1 && q.color == palette.selection),
-            "survol"
-        );
-        let copy_text = c.texts.iter().find(|t| t.text == "Copier").unwrap();
-        assert_eq!(copy_text.color, palette.ansi[8], "grisé");
-        let close_text = c
-            .texts
-            .iter()
-            .find(|t| t.text == "Fermer le panneau")
-            .unwrap();
-        assert_eq!(close_text.color, palette.foreground);
-        let hint = c.texts.iter().find(|t| t.text == "ctrl+shift+w").unwrap();
-        assert!(hint.x > close_text.x, "raccourci à droite du libellé");
-        assert!(
-            hint.x + 12 * 10 <= l.rect.x + l.rect.width,
-            "raccourci dans le menu"
-        );
-    }
-}
+#[path = "layout_tests.rs"]
+mod tests;
