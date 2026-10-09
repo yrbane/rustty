@@ -150,7 +150,12 @@ impl Model {
             Action::ScrollLines(n) => self.scroll(ScrollRequest::Lines(n)),
             Action::ScrollPages(n) => self.scroll(ScrollRequest::Pages(n)),
             Action::ScrollToBottom => self.scroll(ScrollRequest::ToBottom),
-            Action::Unbind => Vec::new(),
+            // Branchés aux tâches 5 (renommage) et 6 (zoom de police).
+            Action::RenameTab
+            | Action::IncreaseFontSize
+            | Action::DecreaseFontSize
+            | Action::ResetFontSize
+            | Action::Unbind => Vec::new(),
         }
     }
 

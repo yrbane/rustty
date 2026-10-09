@@ -93,7 +93,14 @@ const NAMED: &[(&str, NamedKey)] = &[
     ("down", NamedKey::Down),
 ];
 
+/// Touches de ponctuation qu'on ne peut pas écrire telles quelles : `+`
+/// sépare les éléments d'une combinaison.
+const CHAR_NAMES: &[(&str, char)] = &[("plus", '+'), ("minus", '-'), ("equal", '=')];
+
 fn parse_key(token: &str) -> Option<Key> {
+    if let Some((_, c)) = CHAR_NAMES.iter().find(|(name, _)| *name == token) {
+        return Some(Key::Char(*c));
+    }
     let mut chars = token.chars();
     if let (Some(c), None) = (chars.next(), chars.next()) {
         return Some(Key::Char(c));
@@ -148,7 +155,10 @@ impl fmt::Display for KeyCombo {
             }
         }
         match self.key {
-            Key::Char(c) => write!(f, "{c}"),
+            Key::Char(c) => match CHAR_NAMES.iter().find(|(_, named)| *named == c) {
+                Some((name, _)) => write!(f, "{name}"),
+                None => write!(f, "{c}"),
+            },
             Key::Named(NamedKey::F(n)) => write!(f, "f{n}"),
             Key::Named(named) => {
                 let name = NAMED
@@ -171,6 +181,23 @@ impl<'de> Deserialize<'de> for KeyCombo {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn punctuation_keys_have_names_that_round_trip() {
+        for (text, ch) in [("ctrl+plus", '+'), ("ctrl+minus", '-'), ("ctrl+equal", '=')] {
+            let combo: KeyCombo = text.parse().unwrap();
+            assert_eq!(
+                combo,
+                KeyCombo {
+                    mods: Mods::CTRL,
+                    key: Key::Char(ch)
+                }
+            );
+            assert_eq!(combo.to_string(), text);
+        }
+        let shifted: KeyCombo = "ctrl+shift+plus".parse().unwrap();
+        assert_eq!(shifted.to_string(), "ctrl+shift+plus");
+    }
 
     fn combo(s: &str) -> KeyCombo {
         s.parse().unwrap_or_else(|e| panic!("{s}: {e}"))

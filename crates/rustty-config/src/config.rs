@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::error::ConfigError;
 use crate::keymap::KeyMap;
-use crate::sections::{Colors, Font, Tabs, Window};
+use crate::sections::{Colors, Font, Splits, Tabs, Window};
 
 /// Plafond de lignes d'historique par fenêtre : au-delà, la mémoire explose
 /// avant que l'utilisateur ne s'en serve.
@@ -18,6 +18,7 @@ pub struct Config {
     pub font: Font,
     pub window: Window,
     pub tabs: Tabs,
+    pub splits: Splits,
     pub colors: Colors,
     pub keys: KeyMap,
 }
@@ -54,6 +55,28 @@ impl Config {
                     .into(),
             );
         }
+        let bounded = |field, value: u32, range: std::ops::RangeInclusive<u32>| {
+            if range.contains(&value) {
+                Ok(())
+            } else {
+                invalid(
+                    field,
+                    format!(
+                        "{value} n'est pas entre {} et {}",
+                        range.start(),
+                        range.end()
+                    ),
+                )
+            }
+        };
+        bounded("splits.width", self.splits.width, 1..=32)?;
+        bounded(
+            "tabs.padding_horizontal",
+            self.tabs.padding_horizontal,
+            0..=8,
+        )?;
+        bounded("tabs.padding_vertical", self.tabs.padding_vertical, 0..=32)?;
+        bounded("tabs.spacing", self.tabs.spacing, 0..=64)?;
         if self.window.scrollback_lines > MAX_SCROLLBACK_LINES {
             return invalid(
                 "window.scrollback_lines",
@@ -96,8 +119,74 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn splits_and_tab_sections_parse() {
+        let c = Config::from_str(
+            "[splits]\nborder = false\nwidth = 4\ncolor = \"#ff0000\"\nrandom_colors = true\n\
+             [tabs]\npadding_horizontal = 2\npadding_vertical = 6\nspacing = 3\n\
+             [tabs.colors]\nactive_background = \"#112233\"\nrandom = true\n",
+        )
+        .unwrap();
+        assert!(!c.splits.border);
+        assert_eq!(c.splits.width, 4);
+        assert_eq!(c.splits.color, Some(Rgb::new(0xff, 0, 0)));
+        assert!(c.splits.random_colors);
+        assert_eq!(
+            (
+                c.tabs.padding_horizontal,
+                c.tabs.padding_vertical,
+                c.tabs.spacing
+            ),
+            (2, 6, 3)
+        );
+        assert_eq!(
+            c.tabs.colors.active_background,
+            Some(Rgb::new(0x11, 0x22, 0x33))
+        );
+        assert_eq!(c.tabs.colors.inactive_foreground, None);
+        assert!(c.tabs.colors.random);
+    }
+
+    #[test]
+    fn new_sections_default_to_the_previous_look() {
+        let c = Config::default();
+        assert!(c.splits.border && !c.splits.random_colors);
+        assert_eq!((c.splits.width, c.splits.color), (2, None));
+        assert_eq!(
+            (
+                c.tabs.padding_horizontal,
+                c.tabs.padding_vertical,
+                c.tabs.spacing
+            ),
+            (1, 2, 0)
+        );
+        assert_eq!(c.tabs.colors, TabColors::default());
+    }
+
+    #[test]
+    fn out_of_range_values_are_rejected() {
+        for (toml, field) in [
+            ("[splits]\nwidth = 0", "splits.width"),
+            ("[splits]\nwidth = 1000", "splits.width"),
+            ("[tabs]\npadding_horizontal = 9", "tabs.padding_horizontal"),
+            ("[tabs]\npadding_vertical = 33", "tabs.padding_vertical"),
+            ("[tabs]\nspacing = 65", "tabs.spacing"),
+        ] {
+            match Config::from_str(toml) {
+                Err(ConfigError::Invalid { field: f, .. }) => assert_eq!(f, field, "{toml}"),
+                other => panic!("{toml} : {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn unknown_key_in_new_sections_is_an_error() {
+        assert!(Config::from_str("[splits]\ncolour = \"#ffffff\"").is_err());
+        assert!(Config::from_str("[tabs.colors]\nactive = \"#ffffff\"").is_err());
+    }
     use crate::color::Rgb;
-    use crate::sections::TabBarPosition;
+    use crate::sections::{TabBarPosition, TabColors};
 
     #[test]
     fn empty_document_is_the_default_config() {

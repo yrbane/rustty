@@ -19,4 +19,6 @@ pub use error::ConfigError;
 pub use example::DEFAULT_TOML;
 pub use keymap::KeyMap;
 pub use keys::{Key, KeyCombo, KeyParseError, Mods, NamedKey};
-pub use sections::{CloseButtonStyle, Colors, Font, TabBarPosition, Tabs, Window};
+pub use sections::{
+    CloseButtonStyle, Colors, Font, Splits, TabBarPosition, TabColors, Tabs, Window,
+};

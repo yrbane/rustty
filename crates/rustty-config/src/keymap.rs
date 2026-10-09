@@ -42,6 +42,12 @@ const DEFAULTS: &[(&str, Action)] = &[
     ("shift+page_down", Action::ScrollPages(-1)),
     ("ctrl+shift+end", Action::ScrollToBottom),
     ("ctrl+shift+f5", Action::ReloadConfig),
+    ("ctrl+shift+alt+t", Action::RenameTab),
+    ("ctrl+plus", Action::IncreaseFontSize),
+    ("ctrl+shift+plus", Action::IncreaseFontSize),
+    ("ctrl+equal", Action::IncreaseFontSize),
+    ("ctrl+minus", Action::DecreaseFontSize),
+    ("ctrl+0", Action::ResetFontSize),
 ];
 
 impl KeyMap {
@@ -119,6 +125,18 @@ impl<'de> Deserialize<'de> for KeyMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rename_and_zoom_have_default_bindings() {
+        let k = KeyMap::defaults();
+        let r = |s: &str| k.resolve(s.parse().unwrap());
+        assert_eq!(r("ctrl+shift+alt+t"), Some(Action::RenameTab));
+        assert_eq!(r("ctrl+plus"), Some(Action::IncreaseFontSize));
+        assert_eq!(r("ctrl+shift+plus"), Some(Action::IncreaseFontSize));
+        assert_eq!(r("ctrl+equal"), Some(Action::IncreaseFontSize));
+        assert_eq!(r("ctrl+minus"), Some(Action::DecreaseFontSize));
+        assert_eq!(r("ctrl+0"), Some(Action::ResetFontSize));
+    }
     use crate::action::{FocusDirection, SplitAxis};
 
     fn combo(s: &str) -> KeyCombo {

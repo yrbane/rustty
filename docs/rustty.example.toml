@@ -29,11 +29,39 @@ close_button = true
 # Gabarit du titre : {index} et {title} sont remplacés.
 title_template = "{index}: {title}"
 
+# Cellules vides de chaque côté du titre (0 à 8).
+padding_horizontal = 1
+# Pixels au-dessus et au-dessous du titre : règle la hauteur de la barre (0 à 32).
+padding_vertical = 2
+# Pixels entre deux onglets (0 à 64).
+spacing = 0
+
+[tabs.colors]
+# Couleurs des onglets ; décommenter pour remplacer celles tirées de la palette.
+# bar_background = "#1e1e2e"
+# active_background = "#1e1e2e"
+# active_foreground = "#cdd6f4"
+# inactive_background = "#45475a"
+# inactive_foreground = "#bac2de"
+# Une couleur vive de la palette tirée au sort pour chaque onglet ; le texte
+# prend automatiquement une couleur lisible dessus.
+random = false
+
 [tabs.close_button_style]
 foreground = "#ffffff"
 background = "#d32f2f"
 hover_foreground = "#ffffff"
 hover_background = "#ef5350"
+
+[splits]
+# Barre entre les panneaux d'un onglet divisé ; false = panneaux bord à bord.
+border = true
+# Épaisseur de la barre en pixels (1 à 32).
+width = 2
+# Couleur de la barre ; par défaut la couleur 8 de la palette.
+# color = "#585b70"
+# Une couleur vive de la palette tirée au sort pour chaque division.
+random_colors = false
 
 [colors]
 # Thème Catppuccin Mocha.
@@ -52,7 +80,9 @@ palette = [
 # un existant, et "none" délie une combinaison.
 # Actions sans paramètre : "new_tab", "close_tab", "next_tab", "prev_tab",
 # "close_window", "toggle_zoom", "rotate", "copy", "paste", "scroll_to_bottom",
-# "reload_config", "none".
+# "reload_config", "rename_tab", "increase_font_size", "decrease_font_size",
+# "reset_font_size", "none".
+# Touches de ponctuation : "plus", "minus", "equal".
 # Actions à paramètre : { split = "horizontal" | "vertical" },
 # { focus = "left" | "right" | "up" | "down" },
 # { resize = "narrower" | "wider" | "taller" | "shorter" },
@@ -85,3 +115,9 @@ palette = [
 "shift+page_down" = { scroll_pages = -1 }
 "ctrl+shift+end" = "scroll_to_bottom"
 "ctrl+shift+f5" = "reload_config"
+"ctrl+shift+alt+t" = "rename_tab"
+"ctrl+plus" = "increase_font_size"
+"ctrl+shift+plus" = "increase_font_size"
+"ctrl+equal" = "increase_font_size"
+"ctrl+minus" = "decrease_font_size"
+"ctrl+0" = "reset_font_size"
