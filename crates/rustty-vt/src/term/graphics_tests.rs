@@ -168,3 +168,22 @@ fn set_cell_pixels_changes_extent_and_ignores_zero() {
     assert_eq!(t.grid().line(0).images()[0].placement.cols, 4);
     assert_eq!(t.grid().line(0).images()[0].placement.rows, 4);
 }
+
+#[test]
+fn ris_abandons_an_interrupted_transfer() {
+    let mut t = term(10, 5);
+    feed(&mut t, &apc("a=T,m=1;AAAA"));
+    feed(&mut t, "texte\x1bc");
+    feed(&mut t, &apc_png("a=T,f=100,i=5", 10, 20));
+    assert_eq!(reply(&mut t), "\x1b_Gi=5;OK\x1b\\");
+    assert_eq!(strips_on(&t, 0), 1);
+}
+
+#[test]
+fn ris_forgets_stored_images() {
+    let mut t = term(10, 5);
+    feed(&mut t, &apc_png("a=t,f=100,i=4,q=2", 10, 20));
+    feed(&mut t, "\x1bc");
+    feed(&mut t, &apc("a=p,i=4"));
+    assert!(reply(&mut t).contains("ENOENT"));
+}

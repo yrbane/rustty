@@ -4,13 +4,15 @@
 use super::Term;
 use crate::charset::Charsets;
 use crate::cursor::{Cursor, CursorShape, SavedCursor};
+use crate::graphics::{Chunks, ImageStore};
 use crate::grid::Grid;
 use crate::modes::Modes;
 use crate::region::ScrollRegion;
 use crate::tabs::TabStops;
 
 impl Term {
-    /// RIS : état initial, taille et historique conservés.
+    /// RIS : état initial, taille et historique conservés. Comme kitty, la
+    /// transmission graphique en cours et les images mémorisées sont oubliées.
     pub(crate) fn reset(&mut self) {
         let (cols, rows) = (self.cols(), self.rows());
         let before = self.modes;
@@ -25,6 +27,8 @@ impl Term {
         self.tabs = TabStops::new(cols);
         self.charsets = Charsets::default();
         self.display_offset = 0;
+        self.chunks = Chunks::default();
+        self.images = ImageStore::default();
         self.set_title(String::new());
         self.notify_if_host_modes_changed(before);
     }

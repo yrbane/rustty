@@ -51,6 +51,9 @@ pub struct GraphicsCommand {
     /// Vrai si `a=` ou `f=` porte une valeur inconnue : `Chunks::push`
     /// répond alors `Invalid` (choix documenté : l'analyse ne rejette pas).
     pub invalid: bool,
+    /// Vrai si la partie contrôle porte une clé autre que `m=`, `q=` et `i=` :
+    /// le morceau ouvre alors une nouvelle commande (jamais une suite).
+    pub other_keys: bool,
 }
 
 impl Default for GraphicsCommand {
@@ -69,6 +72,7 @@ impl Default for GraphicsCommand {
             medium: 'd',
             compressed: false,
             invalid: false,
+            other_keys: false,
         }
     }
 }
@@ -90,6 +94,7 @@ pub fn parse(apc: &[u8]) -> Option<(GraphicsCommand, &[u8])> {
             continue; // les clés sont d'un seul caractère
         }
         let value = std::str::from_utf8(&pair[2..]).unwrap_or("");
+        cmd.other_keys |= !matches!(pair[0], b'm' | b'q' | b'i');
         apply(&mut cmd, pair[0], value);
     }
     Some((cmd, payload))
@@ -159,6 +164,12 @@ mod tests {
         let (cmd, _) = parse(b"Gz=1,i=x;").unwrap();
         assert_eq!(cmd.id, None);
         assert!(!cmd.invalid);
+    }
+
+    #[test]
+    fn other_keys_ignore_m_q_and_i() {
+        assert!(!parse(b"Gm=1,q=2,i=3;").unwrap().0.other_keys);
+        assert!(parse(b"Ga=p;").unwrap().0.other_keys);
     }
 
     #[test]

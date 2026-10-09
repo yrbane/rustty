@@ -38,7 +38,9 @@ pub enum ChunkResult {
 }
 
 /// Accumulateur de morceaux : le premier fixe la commande, les suivants
-/// n'apportent que `m=`.
+/// n'apportent que `m=` (et `q=`, ou le même `i=`). Un morceau portant
+/// d'autres clés, ou un autre `i=`, ouvre une nouvelle commande et abandonne
+/// la transmission interrompue (comme kitty).
 #[derive(Debug)]
 pub struct Chunks {
     limit: usize,
@@ -46,6 +48,8 @@ pub struct Chunks {
     /// Après une erreur en cours de transmission, les morceaux restants
     /// sont écartés jusqu'au `m=0` pour ne pas produire de données parasites.
     dropping: bool,
+    /// `i=` de la transmission en cours d'abandon.
+    dropped_id: Option<u32>,
 }
 
 impl Default for Chunks {
@@ -61,10 +65,15 @@ impl Chunks {
             limit,
             pending: None,
             dropping: false,
+            dropped_id: None,
         }
     }
 
     pub fn push(&mut self, cmd: GraphicsCommand, payload: &[u8]) -> ChunkResult {
+        if self.starts_new_command(&cmd) {
+            self.pending = None;
+            self.dropping = false;
+        }
         if self.dropping {
             self.dropping = cmd.more;
             return ChunkResult::Pending;
@@ -74,14 +83,14 @@ impl Chunks {
             Some(p) => p,
             None => {
                 if let Some(err) = Self::reject(&cmd) {
-                    self.dropping = more;
+                    self.drop_rest(more, cmd.id);
                     return ChunkResult::Error(cmd, err);
                 }
                 (cmd, Vec::new())
             }
         };
         if raw.len() + payload.len() > self.limit {
-            self.dropping = more;
+            self.drop_rest(more, first.id);
             return ChunkResult::Error(Self::finished(first), GraphicsError::TooBig);
         }
         raw.extend_from_slice(payload);
@@ -100,6 +109,22 @@ impl Chunks {
             Ok(data) => ChunkResult::Complete(first, data),
             Err(e) => ChunkResult::Error(first, GraphicsError::Invalid(format!("base64 : {e}"))),
         }
+    }
+
+    /// Écarte les morceaux restants de la transmission `id` si `more`.
+    fn drop_rest(&mut self, more: bool, id: Option<u32>) {
+        self.dropping = more;
+        self.dropped_id = id;
+    }
+
+    /// Vrai si `cmd` ne peut pas être la suite de la transmission en cours.
+    fn starts_new_command(&self, cmd: &GraphicsCommand) -> bool {
+        let current = match &self.pending {
+            Some((first, _)) => first.id,
+            None if self.dropping => self.dropped_id,
+            None => None,
+        };
+        cmd.other_keys || (cmd.id.is_some() && cmd.id != current)
     }
 
     fn finished(mut cmd: GraphicsCommand) -> GraphicsCommand {
@@ -211,6 +236,76 @@ mod tests {
             ChunkResult::Complete(_, data) => assert_eq!(data, b"ABC"),
             other => panic!("inattendu : {other:?}"),
         }
+    }
+
+    #[test]
+    fn a_full_command_abandons_an_interrupted_transfer() {
+        let mut c = Chunks::default();
+        assert_eq!(push(&mut c, b"Ga=T,m=1;QUJD"), ChunkResult::Pending);
+        match push(&mut c, b"Ga=T,f=100,i=5;REVG") {
+            ChunkResult::Complete(cmd, data) => {
+                assert_eq!(cmd.id, Some(5));
+                assert_eq!(data, b"DEF");
+            }
+            other => panic!("inattendu : {other:?}"),
+        }
+    }
+
+    #[test]
+    fn put_and_delete_are_never_appended_to_a_pending_transfer() {
+        for apc in [&b"Ga=p,i=2;"[..], b"Ga=d,d=a;"] {
+            let mut c = Chunks::default();
+            assert_eq!(push(&mut c, b"Ga=T,m=1;QUJD"), ChunkResult::Pending);
+            match push(&mut c, apc) {
+                ChunkResult::Complete(cmd, data) => {
+                    assert!(matches!(cmd.action, Action::Put | Action::Delete));
+                    assert!(data.is_empty());
+                }
+                other => panic!("inattendu : {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn a_different_id_starts_a_new_command_but_the_same_id_continues() {
+        let mut c = Chunks::default();
+        assert_eq!(push(&mut c, b"Gi=1,m=1;QUJD"), ChunkResult::Pending);
+        assert_eq!(push(&mut c, b"Gi=1,q=2,m=1;REVG"), ChunkResult::Pending);
+        match push(&mut c, b"Gi=1,m=0;R0hJ") {
+            ChunkResult::Complete(_, data) => assert_eq!(data, b"ABCDEFGHI"),
+            other => panic!("inattendu : {other:?}"),
+        }
+        assert_eq!(push(&mut c, b"Gi=1,m=1;QUJD"), ChunkResult::Pending);
+        match push(&mut c, b"Gi=2;REVG") {
+            ChunkResult::Complete(cmd, data) => {
+                assert_eq!(cmd.id, Some(2));
+                assert_eq!(data, b"DEF");
+            }
+            other => panic!("inattendu : {other:?}"),
+        }
+    }
+
+    #[test]
+    fn continuations_with_the_same_id_are_dropped_after_an_error() {
+        let mut c = Chunks::default();
+        assert!(matches!(
+            push(&mut c, b"Gt=f,i=3,m=1;QUJD"),
+            ChunkResult::Error(..)
+        ));
+        assert_eq!(push(&mut c, b"Gi=3,m=0;QUJD"), ChunkResult::Pending);
+    }
+
+    #[test]
+    fn a_full_command_stops_dropping_after_an_error() {
+        let mut c = Chunks::default();
+        assert!(matches!(
+            push(&mut c, b"Gt=f,m=1;QUJD"),
+            ChunkResult::Error(..)
+        ));
+        assert!(matches!(
+            push(&mut c, b"Gf=100,i=3;QUJD"),
+            ChunkResult::Complete(..)
+        ));
     }
 
     #[test]

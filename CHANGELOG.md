@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.113 — 2026-10-09 · « Transferts graphiques interrompus abandonnés »
+
+- Protocole graphique : un morceau dont la partie contrôle porte d'autres clés que `m=`, `q=` et `i=`, ou un `i=` différent, ouvre une nouvelle commande et abandonne la transmission interrompue (`m=1` sans `m=0`) au lieu d'y être avalé ; `a=p` et `a=d` ne sont donc jamais ajoutés à un transfert en attente.
+- Après une erreur en cours de transmission, seuls les morceaux de suite (même `i=` ou aucun) sont écartés ; une commande complète est de nouveau exécutée.
+- RIS (`ESC c`) remet l'accumulateur de morceaux à zéro et vide le magasin d'images, comme kitty.
+
 ## 0.1.0-alpha.112 — 2026-10-09 · « Onglets tronqués, modules découpés, parcours e2e »
 
 - Barre d'onglets : `fit_title` renvoie `""` à 0 cellule et `…` à 1 cellule (plus de débordement) ; le dernier onglet est tronqué à la place restante (au moins 3 cellules de titre) au lieu d'être abandonné.
