@@ -96,6 +96,10 @@ impl OsWindow {
         self.focused = focused;
         if !focused {
             self.menu = None;
+            // Plus de souris à suivre : le glisser de barre s'arrête.
+            if self.drag.take().is_some() {
+                self.update_cursor_icon(self.cursor.0, self.cursor.1);
+            }
         }
         if let Some(term) = self.model.workspace.focused_term()
             && let Some(tw) = self.terms.get(&term)

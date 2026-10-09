@@ -5,6 +5,8 @@ use rustty_config::{Splits, TabBarPosition};
 use rustty_layout::{Rect, SplitId, TabLayout, WindowId};
 use rustty_render::{CellMetrics, PixelRect, grid_geometry};
 
+pub use crate::cell_hit::{cell_at, cell_at_clamped};
+
 /// Interstice entre deux panneaux : l'épaisseur de la barre, ou rien.
 pub fn split_gap(splits: &Splits) -> u32 {
     if splits.border { splits.width } else { 0 }
@@ -68,23 +70,6 @@ pub fn pane_rects(layout: &TabLayout, content: Rect, gap: u32) -> Vec<(WindowId,
 pub fn grid_size(rect: PixelRect, metrics: CellMetrics, padding: u32) -> (usize, usize) {
     let g = grid_geometry(rect, metrics, padding);
     (g.cols.max(1), g.rows.max(1))
-}
-
-/// La cellule sous le point `(x, y)` en pixels, ou `None` hors de la grille.
-pub fn cell_at(
-    rect: PixelRect,
-    metrics: CellMetrics,
-    padding: u32,
-    x: f64,
-    y: f64,
-) -> Option<(usize, usize)> {
-    let g = grid_geometry(rect, metrics, padding);
-    if g.cols == 0 || g.rows == 0 || x < f64::from(g.origin_x) || y < f64::from(g.origin_y) {
-        return None;
-    }
-    let col = ((x - f64::from(g.origin_x)) / f64::from(metrics.width)) as usize;
-    let row = ((y - f64::from(g.origin_y)) / f64::from(metrics.height)) as usize;
-    (col < g.cols && row < g.rows).then_some((col, row))
 }
 
 /// Largeur minimale de saisie d'une barre de split, en pixels.
@@ -251,37 +236,6 @@ mod tests {
             (10, 2)
         );
         assert_eq!(grid_size(PixelRect::new(0, 0, 3, 3), metrics(), 4), (1, 1));
-    }
-
-    #[test]
-    fn cell_at_maps_pixels_inside_the_grid() {
-        let rect = PixelRect::new(100, 50, 108, 48);
-        assert_eq!(cell_at(rect, metrics(), 4, 104.0, 54.0), Some((0, 0)));
-        assert_eq!(cell_at(rect, metrics(), 4, 113.9, 73.9), Some((0, 0)));
-        assert_eq!(cell_at(rect, metrics(), 4, 114.0, 74.0), Some((1, 1)));
-        assert_eq!(cell_at(rect, metrics(), 4, 203.0, 93.0), Some((9, 1)));
-    }
-
-    #[test]
-    fn cell_at_outside_rect_is_none() {
-        let rect = PixelRect::new(100, 50, 108, 48);
-        assert_eq!(
-            cell_at(rect, metrics(), 4, 101.0, 60.0),
-            None,
-            "dans la marge"
-        );
-        assert_eq!(cell_at(rect, metrics(), 4, 99.0, 60.0), None);
-        assert_eq!(cell_at(rect, metrics(), 4, -5.0, -5.0), None);
-        assert_eq!(
-            cell_at(rect, metrics(), 4, 204.0, 60.0),
-            None,
-            "après la dernière colonne"
-        );
-        assert_eq!(
-            cell_at(PixelRect::new(0, 0, 5, 5), metrics(), 0, 1.0, 1.0),
-            None,
-            "fenêtre plus petite qu'une cellule"
-        );
     }
 
     #[test]

@@ -1,7 +1,8 @@
 //! Glisser une barre de split à la souris, et la forme du curseur qui
 //! l'annonce (↔ entre deux panneaux côte à côte, ↕ entre deux empilés).
 
-use rustty_layout::Axis;
+use rustty_layout::{Axis, SplitId};
+use rustty_render::PixelRect;
 use winit::window::CursorIcon;
 
 use crate::geometry::{self, GRAB_WIDTH};
@@ -60,5 +61,27 @@ impl OsWindow {
             self.cursor_icon = icon;
             self.window.set_cursor(icon);
         }
+    }
+}
+
+/// Le glisser en cours, s'il désigne encore une barre existante.
+pub fn drag_still_valid(
+    drag: Option<SplitId>,
+    dividers: &[(SplitId, PixelRect)],
+) -> Option<SplitId> {
+    drag.filter(|id| dividers.iter().any(|(d, _)| d == id))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drag_is_cancelled_when_its_split_disappears() {
+        let bars = [(SplitId(2), PixelRect::new(400, 0, 2, 600))];
+        assert_eq!(drag_still_valid(Some(SplitId(2)), &bars), Some(SplitId(2)));
+        assert_eq!(drag_still_valid(Some(SplitId(3)), &bars), None);
+        assert_eq!(drag_still_valid(Some(SplitId(2)), &[]), None);
+        assert_eq!(drag_still_valid(None, &bars), None);
     }
 }

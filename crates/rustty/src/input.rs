@@ -162,17 +162,7 @@ impl OsWindow {
             sel.extend(CellPos { col, row });
             effects.push(Effect::Redraw);
         }
-        if let Some(tw) = self.terms.get(&term)
-            && let Some(bytes) = encode_mouse(
-                MouseKind::Motion,
-                self.held,
-                cell,
-                self.modifiers,
-                &tw.modes(),
-            )
-        {
-            tw.write(bytes);
-        }
+        self.report_motion(term, cell);
         effects
     }
 
@@ -232,7 +222,7 @@ impl OsWindow {
             {
                 tw.write(bytes);
             }
-            self.held = Some(button);
+            self.hold(term, button);
             return effects;
         }
         match button {
@@ -272,19 +262,7 @@ impl OsWindow {
             };
             return self.model.tab_bar_click(target, button, confirm, &running);
         }
-        if let Some(held) = self.held.take() {
-            if let Some((term, rect)) = self.pane_under(x, y)
-                && let Some(tw) = self.terms.get(&term)
-                && let Some(bytes) = encode_mouse(
-                    MouseKind::Release,
-                    Some(held),
-                    self.cell_under(term, rect, x, y),
-                    self.modifiers,
-                    &tw.modes(),
-                )
-            {
-                tw.write(bytes);
-            }
+        if self.release_held(x, y) {
             return Vec::new();
         }
         if self.dragging && button == MouseButton::Left {

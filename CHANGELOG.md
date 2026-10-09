@@ -4,6 +4,15 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.109 — 2026-10-09 · « Souris et clavier, cas limites »
+
+- Le relâchement d'un bouton est désormais rapporté au terminal qui a reçu l'appui, même si la souris a quitté le panneau (cellule bornée à la grille) : plus de bouton « resté enfoncé » côté application.
+- Rapports de mouvement filtrés : un seul par cellule traversée au lieu d'un par pixel (`MotionFilter`).
+- Le défilement de l'affichage d'un terminal efface sa sélection, qui ne désignait plus les mêmes lignes.
+- Le glisser d'une barre de split est annulé (curseur remis) quand la barre disparaît (changement d'onglet, panneau fermé) ou que la fenêtre perd le focus.
+- `ctrl+1`, `ctrl+9` et `ctrl+0` envoient le chiffre lui-même, comme xterm.
+- `cell_at` et `cell_at_clamped` déplacés dans `cell_hit.rs` ; relâchement et mouvement dans `mouse_input.rs`.
+
 ## 0.1.0-alpha.108 — 2026-10-09 · « Zoom, molette et sélection plus justes »
 
 - Zoom de police : une taille configurée hors de 4–72 pt ne va plus à contre-sens (80 pt ne rétrécit plus sur « agrandir »).

@@ -22,7 +22,7 @@ use crate::context_menu::ContextMenu;
 use crate::events::Waker;
 use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
-use crate::mouse::{DoubleClick, MouseButton, Selection, WheelAccumulator};
+use crate::mouse::{DoubleClick, MotionFilter, MouseButton, Selection, WheelAccumulator};
 use crate::pane_fonts::{PaneFonts, SizeKey};
 use crate::renderers::{RendererSpec, Renderers};
 use crate::tab::TermId;
@@ -57,7 +57,9 @@ pub struct OsWindow {
     pub cursor_inside: bool,
     pub selection: Option<(TermId, Selection)>,
     pub dragging: bool,
-    pub held: Option<MouseButton>,
+    pub held: Option<(TermId, MouseButton)>,
+    /// Dernière cellule rapportée en mouvement (une fois par cellule).
+    pub motion: MotionFilter,
     pub tab_clicks: DoubleClick,
     pub wheel: WheelAccumulator,
     pub press_target: HoverTarget,
@@ -140,6 +142,7 @@ impl OsWindow {
             selection: None,
             dragging: false,
             held: None,
+            motion: MotionFilter::default(),
             tab_clicks: DoubleClick::default(),
             wheel: WheelAccumulator::default(),
             press_target: HoverTarget::None,

@@ -4,6 +4,7 @@
 
 use rustty_render::{layout_tab_bar, tab_bar_height};
 
+use crate::divider_drag::drag_still_valid;
 use crate::geometry;
 use crate::pane_fonts::SizeKey;
 use crate::render_frame;
@@ -45,6 +46,7 @@ impl OsWindow {
         if self.model.workspace.is_empty() {
             self.pane_rects.clear();
             self.dividers.clear();
+            self.cancel_stale_drag();
             return;
         }
         let padding = self.config.window.padding;
@@ -85,7 +87,17 @@ impl OsWindow {
         if !selection_survives(self.selection.as_ref().map(|(t, _)| *t), &resized) {
             self.selection = None;
         }
+        self.cancel_stale_drag();
         self.update_title();
+    }
+
+    /// Une barre disparue (onglet changé, panneau fermé) met fin au glisser.
+    fn cancel_stale_drag(&mut self) {
+        let still = drag_still_valid(self.drag, &self.dividers);
+        if still != self.drag {
+            self.drag = still;
+            self.update_cursor_icon(self.cursor.0, self.cursor.1);
+        }
     }
 }
 
