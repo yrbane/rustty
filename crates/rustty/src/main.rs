@@ -14,6 +14,8 @@ mod geometry;
 #[allow(unused)]
 mod banner;
 #[allow(unused)]
+mod config_watch;
+#[allow(unused)]
 mod events;
 #[allow(unused)]
 mod model;
@@ -53,7 +55,10 @@ fn main() -> ExitCode {
         None => {}
     }
     init_tracing();
-    let (config, error) = load_config(args.config.as_deref());
+    let (config, error) = match config_watch::reload(args.config.as_deref()) {
+        config_watch::ReloadOutcome::Applied(c) => (*c, None),
+        config_watch::ReloadOutcome::Rejected(e) => (Config::default(), Some(e)),
+    };
     if let Some(e) = &error {
         tracing::warn!("configuration : {e} — valeurs par défaut utilisées");
     }
@@ -71,16 +76,4 @@ fn init_tracing() {
         .with_env_filter(filter)
         .with_writer(std::io::stderr)
         .init();
-}
-
-/// La configuration demandée, ou les défauts avec le message d'erreur à afficher.
-fn load_config(path: Option<&std::path::Path>) -> (Config, Option<String>) {
-    let result = match path {
-        Some(p) => Config::load(p),
-        None => Config::load_default(),
-    };
-    match result {
-        Ok(c) => (c, None),
-        Err(e) => (Config::default(), Some(e.to_string())),
-    }
 }

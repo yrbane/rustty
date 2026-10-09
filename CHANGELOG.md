@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.67 — 2026-10-09 · « Rechargement de la config »
+
+- `rustty` : surveillance du fichier de configuration (`notify`, répertoire parent) et rechargement sûr — fichier absent = défauts, fichier invalide = ancienne config conservée avec le message d'erreur.
+
 ## 0.1.0-alpha.66 — 2026-10-09 · « TermWindow »
 
 - `rustty` : réveils de l'interface (`UserEvent`, `Wake`) et `TermWindow` — `Term` sous verrou, thread lecteur qui alimente l'émulation, renvoie ses réponses au PTY et réveille la boucle, thread écrivain, resize, défilement, sondage de fin de shell.
