@@ -27,7 +27,7 @@ impl Entry {
 /// Une espace sans attribut est un blanc, quelles que soient ses couleurs : le
 /// fond d'une queue colorée est perdu au reflow plutôt que d'y fabriquer des
 /// lignes vides. Une seconde moitié de caractère large n'en est jamais un.
-fn is_blank(cell: &Cell) -> bool {
+pub(crate) fn is_blank(cell: &Cell) -> bool {
     cell.c == ' ' && cell.style.attrs.is_empty()
 }
 
@@ -51,7 +51,7 @@ impl Logical {
 }
 
 /// Redécoupe `lines` (de la plus ancienne à la plus récente) à `cols`
-/// colonnes. Chaque curseur est (ligne, colonne) dans `lines` ; le résultat
+/// colonnes. Seul le premier curseur retient les blancs de fin. Chaque curseur est (ligne, colonne) dans `lines` ; le résultat
 /// donne, dans le même ordre, sa position dans les nouvelles lignes, la
 /// colonne pouvant valoir `cols` quand il suit le dernier caractère d'une
 /// ligne pleine, ou `None` s'il ne désignait aucune ligne.
@@ -123,9 +123,10 @@ fn append(logical: &mut Logical, line: &mut Line, row: usize, cursors: &[(usize,
     }
 }
 
-/// Retire les blancs de fin, sauf ceux qui précèdent un curseur.
+/// Retire les blancs de fin, sauf ceux qui précèdent le premier curseur (le
+/// curseur vivant) ; les suivants, au-delà du texte, s'y posent en fin.
 fn trimmed(mut logical: Logical) -> Logical {
-    let keep = logical.cursors.iter().flatten().max().copied().unwrap_or(0);
+    let keep = logical.cursors.first().copied().flatten().unwrap_or(0);
     while logical.entries.len() > keep && logical.entries.last().is_some_and(Entry::is_blank) {
         logical.entries.pop();
     }

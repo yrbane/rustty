@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.102 — 2026-10-09 · « Curseur sauvegardé périmé sans effet sur le reflow »
+
+- `rustty-vt` : un curseur DECSC périmé (laissé en bas par une application plein écran, puis `clear`) n'étend plus les rangées reprises par le reflow ; seuls le contenu, les images et le curseur vivant les bornent, l'invite n'est plus poussée dans l'historique quand la hauteur diminue en même temps. Un curseur sauvegardé hors de ces rangées est seulement borné, comme avant.
+- `reflow` : seul le premier curseur (le vivant) retient les blancs de fin ; un curseur sauvegardé dans la queue blanche ou au-delà de la ligne se pose en fin de texte, sans multiplier les lignes vides.
+- Les rangées d'écran faites d'espaces colorées sans attribut comptent comme vides, avec la même règle que le reflow (`reflow::is_blank`).
+- Tests ajoutés : plusieurs curseurs sur une même ligne logique, curseur sur une ligne absente (`None`), DECSC périmé, rangées blanches colorées.
+
 ## 0.1.0-alpha.101 — 2026-10-09 · « Reflow des images, du curseur sauvegardé et de l'historique plein »
 
 - `rustty-vt` : les bandes d'image survivent au reflow ; sur le chemin rapide la ligne garde toutes ses bandes (même au-delà de la nouvelle largeur, le rendu rogne), et les bandes de toutes les lignes source d'une ligne logique enroulée vont à sa première ligne produite, colonne conservée.

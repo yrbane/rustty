@@ -217,3 +217,19 @@ fn a_wide_continuation_is_never_a_blank() {
     );
     assert!(out[1].get(0).is_wide() && out[1].get(1).is_wide_continuation());
 }
+
+#[test]
+fn only_the_first_cursor_keeps_trailing_blanks() {
+    // Le premier curseur est le curseur vivant ; un curseur sauvegardé dans la
+    // queue blanche ou au-delà de la ligne n'y retient aucun blanc.
+    let (out, moved) = reflow(vec![line("ab", 10, false)], &[(0, 1), (0, 5), (0, 12)], 3);
+    assert_eq!(texts(&out), ["ab"], "la queue n'est pas multipliée");
+    assert_eq!(moved, [Some((0, 1)), Some((0, 2)), Some((0, 2))]);
+}
+
+#[test]
+fn a_cursor_on_a_missing_row_maps_to_none() {
+    let (out, moved) = reflow(vec![line("ab", 4, false)], &[(0, 1), (5, 0)], 4);
+    assert_eq!(texts(&out), ["ab"]);
+    assert_eq!(moved, [Some((0, 1)), None]);
+}

@@ -6,7 +6,7 @@ use crate::cell::Cell;
 use crate::cursor::Cursor;
 use crate::grid::Grid;
 use crate::line::Line;
-use crate::reflow::reflow;
+use crate::reflow::{is_blank, reflow};
 use crate::region::ScrollRegion;
 use crate::tabs::TabStops;
 
@@ -61,6 +61,8 @@ impl Term {
 
     /// Redécoupe l'historique et l'écran principal à `cols` colonnes et rend,
     /// pour chaque curseur, sa nouvelle position (ligne, colonne) dans la grille.
+    /// Le premier curseur (le vivant) borne les rangées reprises ; un suivant
+    /// au-delà, comme un DECSC périmé, rend `None` et sera seulement borné.
     fn reflow_primary(
         &mut self,
         cols: usize,
@@ -72,18 +74,29 @@ impl Term {
         let screen = self.grid.lines();
         let used = screen
             .iter()
-            .rposition(|l| {
-                !l.images().is_empty() || l.cells().iter().any(|c| *c != Cell::default())
-            })
+            .rposition(|l| !l.images().is_empty() || !l.cells().iter().all(is_blank))
             .map_or(0, |i| i + 1)
-            .max(cursors.iter().map(|c| c.row + 1).max().unwrap_or(0))
+            .max(cursors.first().map_or(0, |c| c.row + 1))
             .min(screen.len());
         lines.extend(screen[..used].iter().cloned());
         let positions: Vec<(usize, usize)> = cursors
             .iter()
+            .filter(|c| c.row < used)
             .map(|c| (history + c.row, c.col + usize::from(c.pending_wrap)))
             .collect();
         let (mut lines, moved) = reflow(lines, &positions, cols);
+        // Les curseurs hors des rangées reprises n'ont pas de position.
+        let mut moved_iter = moved.into_iter();
+        let moved: Vec<_> = cursors
+            .iter()
+            .map(|c| {
+                if c.row < used {
+                    moved_iter.next().flatten()
+                } else {
+                    None
+                }
+            })
+            .collect();
         // Les `rows` dernières lignes à l'écran : aucun texte n'est perdu. Si
         // un curseur était plus haut, il reste en haut de l'écran (l'application
         // qui l'y a mis redessine à la réception du nouveau format).

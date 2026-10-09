@@ -247,3 +247,31 @@ fn image_rows_below_the_cursor_survive_a_reflow() {
         assert_eq!(t.grid().line(row).images().len(), 1, "ligne {row}");
     }
 }
+
+#[test]
+fn a_stale_saved_cursor_never_pushes_the_prompt_into_history() {
+    let mut t = term(10, 6);
+    // DECSC laissé en bas (sortie de vim), puis `clear` et une invite en haut.
+    feed(&mut t, "\x1b[6;1H\x1b7\x1b[2J\x1b[H$ ");
+    t.resize(8, 3);
+    let c = t.cursor();
+    assert_eq!(
+        t.text()[c.row],
+        "$",
+        "l'invite reste à l'écran sous le curseur"
+    );
+    assert_eq!(c.col, 2);
+}
+
+#[test]
+fn colored_blank_rows_below_the_cursor_are_not_kept() {
+    let mut t = term(10, 4);
+    // Effacement à fond rouge : toutes les rangées sont des espaces colorées.
+    feed(&mut t, "\x1b[41m\x1b[2J\x1b[H$");
+    t.resize(8, 2);
+    assert_eq!(t.text()[t.cursor().row], "$");
+    assert!(
+        t.scrollback().is_empty(),
+        "aucune rangée blanche ne pousse l'invite"
+    );
+}
