@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.81 — 2026-10-09 · « Plan 6 : panneaux »
+
+- Plan d'implémentation de la deuxième salve de demandes : `rustty --init-config` pour éditer les raccourcis, `ctrl+tab` / `ctrl+shift+tab`, glisser les barres de split à la souris, reflow des lignes au redimensionnement, zoom de police propre au panneau survolé (barre d'onglets inchangée), installation documentée par `cargo install`. Les images (`img`) passent au plan 7.
+
 ## 0.1.0-alpha.80 — 2026-10-09 · « Corrections de revue »
 
 - Renommage : l'onglet s'élargit à chaque frappe (le nom n'est plus tronqué) ; l'édition s'arrête sur toute autre action, tout clic dans la barre ou dans un panneau (fini le `git push` tapé dans le nom de l'onglet, ou le mauvais onglet renommé après en avoir ouvert un).
