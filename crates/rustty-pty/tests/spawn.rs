@@ -205,7 +205,15 @@ fn writer_can_be_taken_once() {
     );
     taken.write_all(b"echo via-writer\r\n").unwrap();
     taken.flush().unwrap();
-    out.expect(&mut pty, "via-writer", TIMEOUT);
+    // Les réponses du « terminal » (DSR de ConPTY) passent par l'écrivain cédé.
+    out.expect_with(
+        &mut |bytes| {
+            taken.write_all(bytes).unwrap();
+            taken.flush().unwrap();
+        },
+        "via-writer",
+        TIMEOUT,
+    );
     pty.kill().unwrap();
     wait_bounded(&mut pty, &out, TIMEOUT);
 }

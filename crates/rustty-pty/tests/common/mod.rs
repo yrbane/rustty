@@ -57,21 +57,47 @@ impl Output {
     }
 
     /// Joue le rôle du terminal : répond à chaque demande de position du
-    /// curseur apparue dans la sortie, comme le fera `rustty-vt`.
-    pub fn answer_requests(&self, pty: &mut Pty) {
+    /// curseur apparue dans la sortie, comme le fera `rustty-vt`. `reply`
+    /// écrit vers le PTY par le canal que le test a sous la main.
+    pub fn answer_requests_with(&self, reply: &mut dyn FnMut(&[u8])) {
         let seen = self.text().matches(CURSOR_POSITION_REQUEST).count();
         while self.requests_answered.get() < seen {
-            pty.write(CURSOR_POSITION_REPLY).unwrap();
+            reply(CURSOR_POSITION_REPLY);
             self.requests_answered.set(self.requests_answered.get() + 1);
         }
+    }
+
+    /// Variante courante : répond par `Pty::write`. Un écrivain déjà cédé par
+    /// `take_writer` rend l'écriture impossible, ce qui n'est pas une erreur
+    /// du test (voir `writer_can_be_taken_once`).
+    pub fn answer_requests(&self, pty: &mut Pty) {
+        self.answer_requests_with(&mut |bytes| {
+            let _ = pty.write(bytes);
+        });
     }
 
     /// Attend que la sortie contienne `needle` en répondant aux requêtes du
     /// programme ; échoue en montrant ce qui a été lu.
     pub fn expect(&self, pty: &mut Pty, needle: &str, timeout: Duration) -> String {
+        self.expect_with(
+            &mut |bytes| {
+                let _ = pty.write(bytes);
+            },
+            needle,
+            timeout,
+        )
+    }
+
+    /// Même attente, les réponses passant par `reply`.
+    pub fn expect_with(
+        &self,
+        reply: &mut dyn FnMut(&[u8]),
+        needle: &str,
+        timeout: Duration,
+    ) -> String {
         let start = Instant::now();
         loop {
-            self.answer_requests(pty);
+            self.answer_requests_with(reply);
             let text = self.text();
             if text.contains(needle) {
                 return text;

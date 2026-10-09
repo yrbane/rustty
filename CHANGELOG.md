@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.70 — 2026-10-09 · « Harnais pty et écrivain cédé »
+
+- `rustty-pty` : le harnais de tests répond aux demandes de ConPTY par l'écrivain disponible (y compris celui cédé par `take_writer`), ce qui faisait échouer un test sur Windows.
+
 ## 0.1.0-alpha.69 — 2026-10-09 · « Le terminal s'ouvre »
 
 - `rustty` : fenêtre winit + surface wgpu, un shell par panneau, clavier (raccourcis puis encodage), souris (barre d'onglets avec ✕ au survol, sélection avec copie, collage, molette, rapports aux applications), onglets et splits, opacité, bandeaux, rechargement de la configuration à chaud, fin de shell avec `--hold`, icône et titre avec la version.
