@@ -19,6 +19,7 @@ rustty-vt = { path = "../rustty-vt" }
 anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+winit.workspace = true
 thiserror.workspace = true
 
 [lints]

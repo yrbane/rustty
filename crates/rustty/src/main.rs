@@ -1,6 +1,9 @@
 //! Point d'entrée : arguments, journalisation, configuration, puis la fenêtre.
 
 mod cli;
+// Consommé par app.rs (tâche 14).
+#[allow(unused)]
+mod keyboard;
 
 use std::process::ExitCode;
 

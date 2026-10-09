@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.58 — 2026-10-09 · « Touches → raccourcis »
+
+- `rustty` : traduction des touches winit en combinaisons de la configuration (minuscules, touches nommées, F1–F12, modificateurs).
+
 ## 0.1.0-alpha.57 — 2026-10-09 · « Écrivain PTY »
 
 - `rustty-pty` : `PtyWriter` + `spawn_writer` (thread écrivain alimenté par un canal, l'interface ne bloque jamais), `Pty::take_writer`, `Pty::has_running_children` (groupe de premier plan sur Unix).
