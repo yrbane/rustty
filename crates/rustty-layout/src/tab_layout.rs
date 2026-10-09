@@ -109,6 +109,21 @@ impl TabLayout {
         out
     }
 
+    /// Glisse la barre de la division `id` jusqu'au point `(x, y)` (en pixels,
+    /// dans `bounds`). Faux si l'id est inconnu ou si un panneau est zoomé.
+    pub fn drag_divider(&mut self, id: SplitId, bounds: Rect, gap: u32, x: u32, y: u32) -> bool {
+        if self.zoomed.is_some() {
+            return false;
+        }
+        self.root
+            .as_mut()
+            .is_some_and(|root| root.drag(id, bounds, gap, x, y))
+    }
+
+    pub fn split_axis(&self, id: SplitId) -> Option<Axis> {
+        self.root.as_ref().and_then(|root| root.split_axis(id))
+    }
+
     /// Côté de la grille virtuelle utilisée pour les calculs de voisinage.
     const VIRTUAL_SIDE: u32 = 10_000;
 
@@ -199,6 +214,65 @@ fn overlap_1d(a0: u32, a1: u32, b0: u32, b1: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dragging_a_vertical_divider_moves_it() {
+        let (mut l, first) = TabLayout::new();
+        let second = l.split(first, Axis::Vertical).unwrap();
+        let bounds = Rect::new(0, 0, 802, 600);
+        assert!(l.drag_divider(SplitId(second.0), bounds, 2, 200, 300));
+        assert_eq!(l.dividers(bounds, 2)[0].1.x, 200);
+    }
+
+    #[test]
+    fn dragging_a_nested_divider_uses_its_own_bounds() {
+        let (mut l, first) = TabLayout::new();
+        let second = l.split(first, Axis::Vertical).unwrap();
+        let third = l.split(second, Axis::Horizontal).unwrap();
+        let bounds = Rect::new(0, 0, 802, 602);
+        assert!(l.drag_divider(SplitId(third.0), bounds, 2, 600, 150));
+        let bar = l
+            .dividers(bounds, 2)
+            .into_iter()
+            .find(|(id, _)| *id == SplitId(third.0))
+            .unwrap()
+            .1;
+        assert_eq!(bar.y, 150);
+        assert_eq!(
+            l.dividers(bounds, 2)[0].1.x,
+            400,
+            "la division parente ne bouge pas"
+        );
+    }
+
+    #[test]
+    fn drag_is_clamped() {
+        let (mut l, first) = TabLayout::new();
+        let second = l.split(first, Axis::Vertical).unwrap();
+        let bounds = Rect::new(0, 0, 1002, 600);
+        l.drag_divider(SplitId(second.0), bounds, 2, 0, 0);
+        assert_eq!(l.dividers(bounds, 2)[0].1.x, 100, "ratio 0,1");
+        l.drag_divider(SplitId(second.0), bounds, 2, 10_000, 0);
+        assert_eq!(l.dividers(bounds, 2)[0].1.x, 900, "ratio 0,9");
+    }
+
+    #[test]
+    fn unknown_id_or_zoom_refuses() {
+        let (mut l, first) = TabLayout::new();
+        let second = l.split(first, Axis::Vertical).unwrap();
+        let bounds = Rect::new(0, 0, 802, 600);
+        assert!(!l.drag_divider(SplitId(99), bounds, 2, 100, 0));
+        l.toggle_zoom(first);
+        assert!(!l.drag_divider(SplitId(second.0), bounds, 2, 100, 0));
+    }
+
+    #[test]
+    fn split_axis_reports_the_axis() {
+        let (mut l, first) = TabLayout::new();
+        let second = l.split(first, Axis::Horizontal).unwrap();
+        assert_eq!(l.split_axis(SplitId(second.0)), Some(Axis::Horizontal));
+        assert_eq!(l.split_axis(SplitId(42)), None);
+    }
 
     #[test]
     fn a_vertical_split_has_one_vertical_divider() {

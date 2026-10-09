@@ -58,6 +58,58 @@ impl Node {
         }
     }
 
+    /// Place la barre de la division `target` au point `(x, y)` : le ratio
+    /// suit la position, borné à [MIN_RATIO, MAX_RATIO]. Faux si absente.
+    pub(crate) fn drag(&mut self, target: SplitId, bounds: Rect, gap: u32, x: u32, y: u32) -> bool {
+        let Self::Split {
+            id,
+            axis,
+            ratio,
+            first,
+            second,
+        } = self
+        else {
+            return false;
+        };
+        if *id == target {
+            let (start, total, pos) = match axis {
+                Axis::Vertical => (bounds.x, bounds.width, x),
+                Axis::Horizontal => (bounds.y, bounds.height, y),
+            };
+            let available = total.saturating_sub(gap);
+            if available == 0 {
+                return false;
+            }
+            let wanted = pos.saturating_sub(start) as f32 / available as f32;
+            *ratio = wanted.clamp(MIN_RATIO, MAX_RATIO);
+            return true;
+        }
+        let (a, b) = split_rect(bounds, *axis, *ratio, gap);
+        first.drag(target, a, gap, x, y) || second.drag(target, b, gap, x, y)
+    }
+
+    /// L'axe de la division `target`, si elle existe.
+    pub(crate) fn split_axis(&self, target: SplitId) -> Option<Axis> {
+        match self {
+            Self::Leaf(_) => None,
+            Self::Split {
+                id,
+                axis,
+                first,
+                second,
+                ..
+            } => {
+                if *id == target {
+                    Some(*axis)
+                } else {
+                    first
+                        .split_axis(target)
+                        .or_else(|| second.split_axis(target))
+                }
+            }
+        }
+    }
+
     /// L'interstice de chaque division, de la racine vers les feuilles.
     /// Les interstices de taille nulle sont omis.
     pub(crate) fn dividers(&self, bounds: Rect, gap: u32, out: &mut Vec<(SplitId, Rect)>) {

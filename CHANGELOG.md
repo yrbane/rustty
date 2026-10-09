@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.83 — 2026-10-09 · « Glisser une barre de split »
+
+- `rustty-layout` : `TabLayout::drag_divider` place la barre d'une division sous la souris (ratio borné à 0,1–0,9, refusé quand un panneau est zoomé) et `split_axis` donne son orientation.
+
 ## 0.1.0-alpha.82 — 2026-10-09 · « ctrl+tab et --init-config »
 
 - `ctrl+tab` / `ctrl+shift+tab` changent d'onglet (déliables par `"none"`).
