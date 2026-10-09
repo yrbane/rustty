@@ -48,6 +48,7 @@ const DEFAULTS: &[(&str, Action)] = &[
     ("ctrl+equal", Action::IncreaseFontSize),
     ("ctrl+minus", Action::DecreaseFontSize),
     ("ctrl+0", Action::ResetFontSize),
+    ("ctrl+shift+0", Action::ResetFontSize),
 ];
 
 impl KeyMap {
@@ -136,6 +137,11 @@ mod tests {
         assert_eq!(r("ctrl+equal"), Some(Action::IncreaseFontSize));
         assert_eq!(r("ctrl+minus"), Some(Action::DecreaseFontSize));
         assert_eq!(r("ctrl+0"), Some(Action::ResetFontSize));
+        assert_eq!(
+            r("ctrl+shift+0"),
+            Some(Action::ResetFontSize),
+            "AZERTY : 0 demande shift"
+        );
     }
     use crate::action::{FocusDirection, SplitAxis};
 

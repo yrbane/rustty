@@ -9,7 +9,7 @@ use rustty_vt::MouseMode;
 use winit::event::{ElementState, KeyEvent, MouseButton as WinitButton, MouseScrollDelta};
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 
-use crate::font_zoom::FontChange;
+use crate::font_zoom::wheel_change;
 use crate::geometry;
 use crate::keyboard::{encode_key, key_combo, mods_from_winit};
 use crate::model::{Effect, ScrollRequest};
@@ -167,7 +167,8 @@ impl OsWindow {
         let Some((term, rect)) = self.pane_under(x, y) else {
             return Vec::new();
         };
-        let mut effects = Vec::new();
+        // Un clic dans un panneau ramène au terminal : l'édition de nom s'arrête.
+        let mut effects = self.model.cancel_rename();
         if self.model.workspace.focused_term() != Some(term) {
             self.model.workspace.focus_term(term);
             self.update_title();
@@ -254,12 +255,10 @@ impl OsWindow {
             return Vec::new();
         }
         if self.modifiers.contains(Mods::CTRL) {
-            let change = if lines > 0 {
-                FontChange::Increase
-            } else {
-                FontChange::Decrease
-            };
-            return vec![Effect::FontSize(change); lines.unsigned_abs() as usize];
+            return wheel_change(lines)
+                .map(Effect::FontSize)
+                .into_iter()
+                .collect();
         }
         let (x, y) = self.cursor;
         let Some((term, rect)) = self.pane_under(x, y).or_else(|| {

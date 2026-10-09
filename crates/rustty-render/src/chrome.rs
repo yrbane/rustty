@@ -46,12 +46,35 @@ impl TabBarStyle {
             |configured: Option<Rgb>, derived: Rgba| configured.map_or(derived, Rgba::from_rgb);
         let colors = &tabs.colors;
         let close = &tabs.close_button_style;
+        // Les deux couleurs de texte de la palette, rangées par luminance : un
+        // thème clair a un premier plan sombre.
+        let (light_text, dark_text) =
+            if palette.foreground.luminance() >= palette.background.luminance() {
+                (palette.foreground, palette.background)
+            } else {
+                (palette.background, palette.foreground)
+            };
+        // Texte d'un onglet : la couleur configurée, sinon celle de la palette,
+        // sauf si le fond a été choisi sans texte — alors une couleur lisible dessus.
+        let text = |fg: Option<Rgb>, bg: Option<Rgb>, derived: Rgba| match (fg, bg) {
+            (Some(fg), _) => Rgba::from_rgb(fg),
+            (None, Some(bg)) => readable_on(Rgba::from_rgb(bg), light_text, dark_text),
+            (None, None) => derived,
+        };
         Self {
             background: pick(colors.bar_background, palette.ansi[8].dim(0.5)),
             active_background: pick(colors.active_background, palette.background),
             inactive_background: pick(colors.inactive_background, palette.ansi[0]),
-            active_foreground: pick(colors.active_foreground, palette.foreground),
-            inactive_foreground: pick(colors.inactive_foreground, palette.ansi[7]),
+            active_foreground: text(
+                colors.active_foreground,
+                colors.active_background,
+                palette.foreground,
+            ),
+            inactive_foreground: text(
+                colors.inactive_foreground,
+                colors.inactive_background,
+                palette.ansi[7],
+            ),
             close_foreground: Rgba::from_rgb(close.foreground),
             close_background: Rgba::from_rgb(close.background),
             close_hover_foreground: Rgba::from_rgb(close.hover_foreground),
@@ -60,8 +83,8 @@ impl TabBarStyle {
             padding_horizontal: tabs.padding_horizontal,
             padding_vertical: tabs.padding_vertical,
             spacing: tabs.spacing,
-            light_text: palette.foreground,
-            dark_text: palette.background,
+            light_text,
+            dark_text,
         }
     }
 
@@ -287,6 +310,39 @@ pub fn tab_bar_chrome(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_configured_background_without_text_color_gets_readable_text() {
+        let colors = TabColors {
+            active_background: Some(Rgb::new(0xf0, 0xf0, 0xf0)),
+            inactive_background: Some(Rgb::new(0x10, 0x10, 0x10)),
+            ..TabColors::default()
+        };
+        let st = style_with(Tabs {
+            colors,
+            ..Tabs::default()
+        });
+        assert_eq!(
+            st.active_foreground, st.dark_text,
+            "texte sombre sur fond clair"
+        );
+        assert_eq!(
+            st.inactive_foreground, st.light_text,
+            "texte clair sur fond sombre"
+        );
+    }
+
+    #[test]
+    fn light_and_dark_text_follow_luminance_even_on_a_light_theme() {
+        let light_theme = Colors {
+            foreground: Rgb::new(0x20, 0x20, 0x20),
+            background: Rgb::new(0xfa, 0xfa, 0xfa),
+            ..Colors::default()
+        };
+        let st =
+            TabBarStyle::from_config(&Palette::from_config(&light_theme, false), &Tabs::default());
+        assert!(st.light_text.luminance() > st.dark_text.luminance());
+    }
     use rustty_config::{Colors, Rgb, TabColors, Tabs};
 
     fn metrics() -> CellMetrics {

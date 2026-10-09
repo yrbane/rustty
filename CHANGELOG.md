@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.80 — 2026-10-09 · « Corrections de revue »
+
+- Renommage : l'onglet s'élargit à chaque frappe (le nom n'est plus tronqué) ; l'édition s'arrête sur toute autre action, tout clic dans la barre ou dans un panneau (fini le `git push` tapé dans le nom de l'onglet, ou le mauvais onglet renommé après en avoir ouvert un).
+- Couleurs d'onglet : un fond choisi sans couleur de texte reçoit un texte lisible ; les couleurs de texte claire et sombre suivent la luminance, y compris sur un thème clair.
+- Zoom : un seul cran par événement de molette (moins de rechargements de polices) ; `ctrl+shift+0` revient aussi à la taille configurée (`0` demande shift en AZERTY).
+
 ## 0.1.0-alpha.79 — 2026-10-09 · « Icône partout »
 
 - Icône `res/rustty.svg` partout : PNG 16–512, `.ico` et `.icns` générés par `scripts/icons.sh` dans `assets/icons/` ; icône de fenêtre, identifiant d'application `rustty` (Wayland `app_id`, X11 `WM_CLASS`), icône embarquée dans l'exécutable Windows (`build.rs` + `winresource`), `rustty --install-desktop` installe le lanceur et les icônes hicolor sous `~/.local/share`.

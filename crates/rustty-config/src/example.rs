@@ -124,6 +124,7 @@ palette = [
 "ctrl+equal" = "increase_font_size"
 "ctrl+minus" = "decrease_font_size"
 "ctrl+0" = "reset_font_size"
+"ctrl+shift+0" = "reset_font_size"
 "###;
 
 #[cfg(test)]

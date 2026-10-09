@@ -95,12 +95,24 @@ impl Model {
         changed
     }
 
+    /// Abandonne une édition de nom en cours.
+    pub fn cancel_rename(&mut self) -> Vec<Effect> {
+        match self.renaming.take() {
+            Some(_) => vec![Effect::Relayout],
+            None => Vec::new(),
+        }
+    }
+
     pub fn apply(
         &mut self,
         action: Action,
         confirm_close: bool,
         running: &dyn Fn(TermId) -> bool,
     ) -> Vec<Effect> {
+        if action != Action::RenameTab {
+            // Toute autre action peut décaler les onglets : l'édition s'arrête.
+            self.renaming = None;
+        }
         match action {
             Action::NewTab => Self::spawn(Some(self.workspace.new_tab())),
             Action::Split(axis) => {
@@ -227,7 +239,8 @@ impl Model {
             return Vec::new();
         };
         match rename.apply(key) {
-            RenameOutcome::Editing => vec![Effect::Redraw],
+            // La largeur de l'onglet suit le nom tapé : mise en page complète.
+            RenameOutcome::Editing => vec![Effect::Relayout],
             RenameOutcome::Commit(title) => {
                 let tab = rename.tab;
                 self.renaming = None;
@@ -293,6 +306,7 @@ impl Model {
         confirm_close: bool,
         running: &dyn Fn(TermId) -> bool,
     ) -> Vec<Effect> {
+        self.renaming = None;
         let close_tab = |model: &mut Self, i: usize| {
             let req = CloseRequest::Tab(i);
             let needs = confirm_close && model.terms_of(req).iter().any(|t| running(*t));
@@ -342,6 +356,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn any_other_action_or_tab_bar_click_cancels_the_edit() {
+        let (mut m, _) = Model::new(0.9, false);
+        m.start_rename(0);
+        m.apply(Action::NewTab, false, &never_running);
+        assert!(m.renaming.is_none(), "un nouvel onglet décale les index");
+        m.start_rename(0);
+        m.tab_bar_click(
+            HoverTarget::NewTabButton,
+            MouseButton::Left,
+            false,
+            &never_running,
+        );
+        assert!(m.renaming.is_none());
+        m.start_rename(0);
+        assert_eq!(m.cancel_rename(), vec![Effect::Relayout]);
+        assert!(m.renaming.is_none());
+        assert!(m.cancel_rename().is_empty(), "rien à annuler");
+    }
+
+    #[test]
     fn font_actions_emit_font_size_effects() {
         let (mut m, _) = Model::new(0.9, false);
         assert_eq!(
@@ -378,7 +412,7 @@ mod tests {
         m.rename_key(RenameKey::Backspace);
         assert_eq!(
             m.rename_key(RenameKey::Text("x".into())),
-            vec![Effect::Redraw]
+            vec![Effect::Relayout]
         );
         assert_eq!(m.rename_key(RenameKey::Commit), vec![Effect::Relayout]);
         assert_eq!(

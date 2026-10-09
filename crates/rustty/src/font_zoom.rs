@@ -10,6 +10,16 @@ pub enum FontChange {
     Reset,
 }
 
+/// Le sens du zoom pour un événement de molette : un seul cran par
+/// événement, quelle que soit son amplitude (chaque cran recharge les polices).
+pub fn wheel_change(lines: i32) -> Option<FontChange> {
+    match lines.signum() {
+        1 => Some(FontChange::Increase),
+        -1 => Some(FontChange::Decrease),
+        _ => None,
+    }
+}
+
 /// La nouvelle taille en points ; `base` est celle de la configuration.
 pub fn next_size(current: f32, base: f32, change: FontChange) -> f32 {
     let wanted = match change {
@@ -23,6 +33,13 @@ pub fn next_size(current: f32, base: f32, change: FontChange) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn one_wheel_event_is_one_zoom_step() {
+        assert_eq!(wheel_change(3), Some(FontChange::Increase));
+        assert_eq!(wheel_change(-1), Some(FontChange::Decrease));
+        assert_eq!(wheel_change(0), None);
+    }
 
     #[test]
     fn steps_of_one_point() {
