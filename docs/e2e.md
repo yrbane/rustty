@@ -25,6 +25,14 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 - [ ] `ctrl+molette`, `ctrl+plus`, `ctrl+minus` changent la taille de police, `ctrl+0` revient à celle de la config.
 - [ ] Après `--install-desktop`, la fenêtre a l'icône du crabe dans la barre des tâches et rustty apparaît dans les menus.
 
+## Panneaux (plan 6)
+- [ ] Glisser une barre de split à la souris : curseur ↔ ou ↕ au survol, les panneaux suivent, la barre ne dépasse pas 10 % / 90 %.
+- [ ] Une longue ligne (`seq -s ' ' 1 200`) se replie quand le panneau rétrécit et se déplie quand il s'élargit ; le prompt reste au bon endroit.
+- [ ] Deux panneaux : `ctrl+molette` au-dessus de l'un ne change que lui ; la barre d'onglets ne change pas ; `ctrl+0` le remet à la taille de la config.
+- [ ] `ctrl+tab` / `ctrl+shift+tab` passent d'un onglet à l'autre.
+- [ ] `rustty --init-config` écrit `~/.config/rustty/rustty.toml` (refuse s'il existe) ; changer un raccourci dans `[keys]` agit sans redémarrer.
+- [ ] `cargo install --path crates/rustty` puis `rustty` depuis le `PATH`.
+
 ## Splits
 - [ ] `ctrl+shift+e` divise verticalement (nouveau panneau à droite, focalisé), `ctrl+shift+o` horizontalement (en dessous).
 - [ ] `shift+flèches` déplacent le focus ; `ctrl+flèches` redimensionnent ; les raccourcis de rotation et de zoom de la config fonctionnent.

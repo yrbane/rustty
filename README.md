@@ -27,6 +27,20 @@ produites avec la police embarquée DejaVu Sans Mono. Pour les régénérer apr�
 changement voulu du rendu : `UPDATE_GOLDEN=1 cargo test -p rustty-render --test offscreen`,
 puis vérifier les PNG à l'œil avant de les committer.
 
+## Installer
+
+```bash
+cargo install --path crates/rustty                          # depuis un clone du dépôt
+cargo install --git https://github.com/yrbane/rustty rustty # sans cloner
+rustty --install-desktop                                    # Linux : lanceur et icône dans les menus
+rustty --init-config                                        # fichier de configuration à éditer
+```
+
+Le binaire va dans `~/.cargo/bin` (à mettre dans le `PATH`). `--init-config`
+écrit `~/.config/rustty/rustty.toml`, complet et commenté : les raccourcis se
+redéfinissent dans sa section `[keys]` (`"none"` en délie un), et la
+configuration se recharge à chaud.
+
 ## Lancer
 
 ```bash
@@ -46,7 +60,7 @@ l'exécutable. Les icônes se régénèrent depuis `assets/icon.svg` avec
 Raccourcis par défaut (modifiables dans `[keys]`) : `ctrl+shift+t` nouvel onglet,
 `ctrl+shift+q` fermer l'onglet, `ctrl+shift+e` / `ctrl+shift+o` split vertical /
 horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+c` /
-`ctrl+shift+v` copier / coller, `shift+page_up` / `shift+page_down` historique, `ctrl+shift+left` / `ctrl+shift+right` onglet précédent / suivant, `alt+1`…`alt+5` onglet n, `ctrl+shift+z` zoom, `ctrl+shift+r` rotation, `ctrl+shift+f5` recharger la config, `ctrl+shift+alt+t` (ou double clic sur l'onglet) renommer l'onglet, `ctrl+plus` / `ctrl+minus` / `ctrl+0` et `ctrl+molette` taille de police.
+`ctrl+shift+v` copier / coller, `shift+page_up` / `shift+page_down` historique, `ctrl+shift+left` / `ctrl+shift+right` ou `ctrl+shift+tab` / `ctrl+tab` onglet précédent / suivant, `alt+1`…`alt+5` onglet n, `ctrl+shift+z` zoom, `ctrl+shift+r` rotation, `ctrl+shift+f5` recharger la config, `ctrl+shift+alt+t` (ou double clic sur l'onglet) renommer l'onglet, `ctrl+plus` / `ctrl+minus` / `ctrl+0` et `ctrl+molette` taille de police du panneau survolé (les autres panneaux et la barre d'onglets ne changent pas). Les barres de split se glissent à la souris ; au redimensionnement, les lignes se réorganisent (reflow).
 
 ## Objectifs de la v0.1
 

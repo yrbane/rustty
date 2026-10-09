@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.88 — 2026-10-09 · « Documentation des panneaux »
+
+- README : section « Installer » (`cargo install --path crates/rustty`, `cargo install --git …`, `--install-desktop`, `--init-config`), raccourcis à jour, zoom par panneau, glisser des barres, reflow ; `docs/e2e.md` complété.
+- `rustty` : la molette et le focus quittent `input.rs` pour `wheel_input.rs`.
+
 ## 0.1.0-alpha.87 — 2026-10-09 · « Glisser les barres »
 
 - `rustty` : les barres de split se glissent à la souris (saisie élargie à 4 px, même sans bordure), le curseur devient ↔ ou ↕ au survol, le contenu des panneaux se réorganise (reflow).
