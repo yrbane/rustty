@@ -6,31 +6,18 @@ use std::collections::{HashMap, HashSet};
 
 use unicode_width::UnicodeWidthChar;
 
-use crate::atlas::{AtlasPacker, AtlasRegion, atlas_size_for};
-use crate::builtin::builtin_glyph;
+use crate::atlas::{AtlasPacker, atlas_size_for};
 use crate::color::Palette;
 use crate::font::{CellMetrics, FontSet, Rasterizer, Variant};
 use crate::frame::Frame;
 use crate::gpu::{GpuContext, to_wgpu_color};
 use crate::grid::{GlyphRequest, pane_instances};
 use crate::images::pane_images;
-use crate::pipeline::glyph::{AtlasTexture, GlyphInstance, GlyphPipeline};
+use crate::pipeline::glyph::{AtlasTexture, GlyphPipeline};
+
 use crate::pipeline::image::{ImagePipeline, ImageTextures};
 use crate::pipeline::quad::{QuadInstance, QuadPipeline};
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-struct GlyphKey {
-    ch: char,
-    variant: Variant,
-}
-
-#[derive(Clone, Copy)]
-struct CachedGlyph {
-    region: AtlasRegion,
-    left: i32,
-    top: i32,
-    is_color: bool,
-}
+use glyph_cache::{CachedGlyph, GlyphKey};
 
 pub struct Renderer {
     quads: QuadPipeline,
@@ -218,101 +205,8 @@ impl Renderer {
             self.image_textures.retain(&used);
         }
     }
-
-    /// Les instances d'une image. Si l'atlas est reconstruit en cours de route,
-    /// les instances déjà produites pointent dans l'ancien atlas : une seconde
-    /// passe, cache vidé, les recrée toutes de façon cohérente. Si l'ensemble
-    /// de travail dépasse l'atlas, la seconde passe reconstruit encore et
-    /// l'image reste partiellement fausse : on ne boucle pas.
-    fn build_glyphs(
-        &mut self,
-        ctx: &GpuContext,
-        pane: &[GlyphRequest],
-        chrome: &[GlyphRequest],
-    ) -> (Vec<GlyphInstance>, Vec<GlyphInstance>) {
-        let mut result = (Vec::new(), Vec::new());
-        for _pass in 0..2 {
-            let before = self.rebuilds;
-            result.0 = pane
-                .iter()
-                .filter_map(|r| self.glyph_instance(ctx, r))
-                .collect();
-            result.1 = chrome
-                .iter()
-                .filter_map(|r| self.glyph_instance(ctx, r))
-                .collect();
-            if self.rebuilds == before {
-                break;
-            }
-        }
-        result
-    }
-
-    /// L'instance à dessiner pour une demande, `None` si le caractère n'a
-    /// aucun glyphe (il reste une cellule vide).
-    pub(crate) fn glyph_instance(
-        &mut self,
-        ctx: &GpuContext,
-        req: &GlyphRequest,
-    ) -> Option<GlyphInstance> {
-        let key = GlyphKey {
-            ch: req.ch,
-            variant: req.variant,
-        };
-        let cached = match self.cache.get(&key) {
-            Some(c) => *c,
-            None => {
-                let c = self.load_glyph(ctx, key);
-                self.cache.insert(key, c);
-                c
-            }
-        }?;
-        let metrics = self.metrics();
-        let x = req.x + cached.left as f32;
-        let y = req.y + metrics.baseline as f32 - cached.top as f32;
-        Some(GlyphInstance::new(
-            x,
-            y,
-            cached.region.width as f32,
-            cached.region.height as f32,
-            cached.region.uv(self.packer.size()),
-            req.color,
-            cached.is_color,
-        ))
-    }
-
-    fn load_glyph(&mut self, ctx: &GpuContext, key: GlyphKey) -> Option<CachedGlyph> {
-        let metrics = self.metrics();
-        let bitmap = match builtin_glyph(key.ch, metrics) {
-            Some(b) => b,
-            None => {
-                let glyph = self.fonts.glyph(key.ch, key.variant)?;
-                let face = self.fonts.face_by_slot(glyph.slot).clone();
-                self.rasterizer
-                    .rasterize(&face, self.fonts.size_px(), glyph.glyph_id)?
-            }
-        };
-        let region = match self.packer.insert(bitmap.width, bitmap.height) {
-            Some(r) => r,
-            None => {
-                // Atlas plein : on repart de zéro. Les entrées du cache qui
-                // pointaient dans l'ancien atlas sont invalidées.
-                self.packer.clear();
-                self.atlas.clear(&ctx.queue);
-                self.cache.clear();
-                self.rebuilds += 1;
-                self.packer.insert(bitmap.width, bitmap.height)?
-            }
-        };
-        self.atlas.upload(&ctx.queue, region, &bitmap.data);
-        Some(CachedGlyph {
-            region,
-            left: bitmap.left,
-            top: bitmap.top,
-            is_color: bitmap.is_color,
-        })
-    }
 }
 
+mod glyph_cache;
 #[cfg(test)]
 mod tests;

@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.116 — 2026-10-09 · « L'atlas de glyphes s'agrandit au lieu de se vider »
+
+- Rendu : un atlas de glyphes plein double de taille (512 → 1024 → 2048) au lieu d'être reconstruit à taille égale ; il n'est vidé qu'à 2048. Une page CJK pleine en petite police n'entraîne plus une reconstruction à chaque image ni des glyphes faux.
+- La construction des glyphes d'une image fait jusqu'à 4 passes (deux agrandissements, un vidage à la taille maximale, la passe finale) pour que toutes les instances pointent dans l'atlas final.
+- Découpage sans changement de comportement : le cache de glyphes (`build_glyphs`, `glyph_instance`, `load_glyph`, `rebuild_atlas`) passe de `renderer.rs` à `renderer/glyph_cache.rs`.
+
 ## 0.1.0-alpha.115 — 2026-10-09 · « Mémoire des images posées bornée »
 
 - Protocole graphique : au placement, l'image est réduite à sa taille affichée en pixels (colonnes × largeur de cellule, rangées × hauteur, marge ×2 pour le zoom, jamais agrandie, `graphics::fit_display`) ; une petite image garde le même `ImageData` que le magasin.

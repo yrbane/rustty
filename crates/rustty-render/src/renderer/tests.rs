@@ -94,3 +94,36 @@ fn atlas_overflow_is_recovered() {
     );
     assert!(again.is_some());
 }
+
+#[test]
+fn full_atlas_doubles_and_keeps_every_glyph_of_the_frame() {
+    let Ok(ctx) = GpuContext::headless() else {
+        eprintln!("test GPU ignoré");
+        return;
+    };
+    let mut r = Renderer::with_atlas_size(
+        &ctx,
+        OFFSCREEN_FORMAT,
+        FontSet::embedded(64.0),
+        Palette::from_config(&Colors::default(), false),
+        0,
+        512,
+    );
+    let page: Vec<_> = [Variant::Regular, Variant::Bold, Variant::Italic]
+        .into_iter()
+        .flat_map(|variant| {
+            ('!'..='~').map(move |ch| GlyphRequest {
+                variant,
+                ..request(ch)
+            })
+        })
+        .collect();
+    let (instances, _) = r.build_glyphs(&ctx, &page, &[]);
+    assert_eq!(r.packer.size(), 1024, "l'atlas de 512 déborde : il double");
+    assert_eq!(r.atlas.size(), 1024);
+    let rebuilds = r.rebuilds;
+    for (req, inst) in page.iter().zip(&instances) {
+        assert_eq!(r.glyph_instance(&ctx, req), Some(*inst), "{:?}", req.ch);
+    }
+    assert_eq!(r.rebuilds, rebuilds, "aucune reconstruction de plus");
+}
