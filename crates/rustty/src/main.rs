@@ -14,9 +14,13 @@ mod geometry;
 #[allow(unused)]
 mod banner;
 #[allow(unused)]
+mod events;
+#[allow(unused)]
 mod model;
 #[allow(unused)]
 mod tab;
+#[allow(unused)]
+mod term_window;
 #[allow(unused)]
 mod title;
 #[allow(unused)]
