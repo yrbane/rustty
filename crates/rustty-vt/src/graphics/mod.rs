@@ -7,7 +7,13 @@
 mod chunks;
 mod command;
 mod image;
+mod placement;
+mod store;
+#[cfg(test)]
+pub(crate) mod test_support;
 
 pub use self::image::{ImageData, ImageStrip, MAX_SIDE, Placement, decode};
 pub use chunks::{ChunkResult, Chunks, GraphicsError, MAX_PAYLOAD};
 pub use command::{Action, Format, GraphicsCommand, parse};
+pub use placement::extent;
+pub use store::{ImageStore, QUOTA};

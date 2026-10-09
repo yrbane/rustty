@@ -25,6 +25,11 @@ impl Line {
         });
     }
 
+    /// Retire les bandes pour lesquelles `drop` répond vrai.
+    pub(crate) fn drop_strips_where(&mut self, mut drop: impl FnMut(&ImageStrip) -> bool) {
+        self.images.retain(|s| !drop(s));
+    }
+
     /// Retire les bandes qui commencent à partir de `cols` (réduction).
     pub(crate) fn drop_strips_from(&mut self, cols: usize) {
         self.images.retain(|s| (s.col as usize) < cols);

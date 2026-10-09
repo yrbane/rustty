@@ -3,6 +3,9 @@
 //! `perform.rs` ne fait que du dispatch.
 
 mod edit;
+mod graphics;
+#[cfg(test)]
+mod graphics_tests;
 mod mode_ops;
 mod movement;
 mod osc;
@@ -19,6 +22,7 @@ use crate::apc::{ApcSplitter, Chunk};
 use crate::cell::Cell;
 use crate::charset::Charsets;
 use crate::cursor::{Cursor, CursorShape, SavedCursor};
+use crate::graphics::{Chunks, ImageStore};
 use crate::grid::Grid;
 use crate::modes::Modes;
 use crate::outbox::{Outbox, TermEvent};
@@ -42,6 +46,12 @@ pub struct Term {
     /// Décalage d'affichage dans le scrollback : 0 = écran vivant.
     pub(crate) display_offset: usize,
     pub(crate) outbox: Outbox,
+    /// Morceaux graphiques en cours de réassemblage.
+    pub(crate) chunks: Chunks,
+    /// Images transmises avec un identifiant.
+    pub(crate) images: ImageStore,
+    /// Taille d'une cellule en pixels (largeur, hauteur), pour dimensionner les images.
+    pub(crate) cell_pixels: (u32, u32),
     parser: Parser,
     apc: ApcSplitter,
 }
@@ -65,6 +75,9 @@ impl Term {
             title: String::new(),
             display_offset: 0,
             outbox: Outbox::default(),
+            chunks: Chunks::default(),
+            images: ImageStore::default(),
+            cell_pixels: (10, 20),
             parser: Parser::new(),
             apc: ApcSplitter::default(),
         }
@@ -84,9 +97,6 @@ impl Term {
         }
         self.parser = parser;
     }
-
-    /// Charge d'une séquence APC complète (hook, rempli par les tâches suivantes).
-    fn apc(&mut self, _payload: &[u8]) {}
 
     pub fn grid(&self) -> &Grid {
         self.active_grid()

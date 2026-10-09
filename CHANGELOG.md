@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.100 — 2026-10-09 · « Affichage des images du protocole kitty »
+
+- `rustty-vt` : `Term` exécute les commandes graphiques APC (`a=t`, `a=T`, `a=p`, `a=d`) ; l'image est posée à partir du curseur, une bande par rangée, avec défilement de l'écran et passage dans l'historique comme n'importe quelle ligne.
+- Nouveau `ImageStore` (quota 256 Mio, oubli des plus anciennes) pour les images transmises avec `i=`, et `placement::extent` pour calculer l'emprise en cellules (taille naturelle, `c=` / `r=`, réduction à la largeur du terminal).
+- Réponses `OK` / erreur (`ENOENT`, `EINVAL`…) selon `i=` et `q=` ; `d=a` / `d=i` retirent les bandes de la grille active ; `Term::set_cell_pixels` règle la taille de cellule (10×20 par défaut).
+
 ## 0.1.0-alpha.99 — 2026-10-09 · « Décodage d'images durci »
 
 - `rustty-vt` : les dimensions d'un PNG sont lues dans l'en-tête et refusées (`EFBIG`) au-delà de 8192 px avant tout décodage de pixels ; le décodeur est de plus plafonné à 256 Mio d'allocation.
