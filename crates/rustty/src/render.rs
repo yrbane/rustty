@@ -103,6 +103,10 @@ impl OsWindow {
             overlay.quads.extend(b.quads);
             overlay.texts.extend(b.texts);
         }
+        if let Some(menu) = self.context_menu_chrome() {
+            overlay.quads.extend(menu.quads);
+            overlay.texts.extend(menu.texts);
+        }
         let background = render_frame::background_color(
             self.palette.background,
             self.model.opacity,

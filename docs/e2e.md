@@ -33,6 +33,14 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 - [ ] `rustty --init-config` écrit `~/.config/rustty/rustty.toml` (refuse s'il existe) ; changer un raccourci dans `[keys]` agit sans redémarrer.
 - [ ] `cargo install --path crates/rustty` puis `rustty` depuis le `PATH`.
 
+## Menu contextuel
+- [ ] Clic droit dans un panneau : le menu s'ouvre au point du clic, avec les raccourcis à droite ; près d'un bord il reste entièrement visible.
+- [ ] « Copier » est grisé sans sélection ; avec une sélection, il copie.
+- [ ] « Fermer le panneau » ferme le panneau cliqué (pas le panneau actif) ; avec `sleep 100` en cours, la confirmation s'affiche.
+- [ ] « Diviser », « Agrandir le panneau », « Renommer l'onglet », « Nouvel onglet » agissent sur le panneau cliqué.
+- [ ] Échap, un clic ailleurs, un redimensionnement ou la perte du focus ferment le menu.
+- [ ] Dans `vim` avec `:set mouse=a`, le clic droit va à vim ; `shift`+clic droit ouvre le menu.
+
 ## Splits
 - [ ] `ctrl+shift+e` divise verticalement (nouveau panneau à droite, focalisé), `ctrl+shift+o` horizontalement (en dessous).
 - [ ] `shift+flèches` déplacent le focus ; `ctrl+flèches` redimensionnent ; les raccourcis de rotation et de zoom de la config fonctionnent.

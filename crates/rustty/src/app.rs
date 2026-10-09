@@ -73,6 +73,7 @@ impl ApplicationHandler<UserEvent> for App {
                 w.model.request_close_window(confirm, &running)
             }
             WindowEvent::Resized(size) => {
+                w.menu = None;
                 w.surface.resize(&w.ctx, size.width, size.height);
                 vec![Effect::Relayout]
             }

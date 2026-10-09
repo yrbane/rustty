@@ -6,8 +6,6 @@ mod appearance;
 mod banner;
 mod cli;
 mod config_watch;
-// Consommé par menu_input.rs (tâche 2, provisoire).
-#[allow(unused)]
 mod context_menu;
 mod desktop;
 mod divider_drag;
@@ -18,6 +16,7 @@ mod geometry;
 mod gpu_surface;
 mod input;
 mod keyboard;
+mod menu_input;
 mod model;
 mod mouse;
 mod pane_fonts;

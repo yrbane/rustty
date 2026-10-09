@@ -26,6 +26,13 @@ impl OsWindow {
         if event.state != ElementState::Pressed {
             return Vec::new();
         }
+        if self.menu.is_some() {
+            // Une touche ferme le menu ; Échap s'arrête là, les autres agissent ensuite.
+            let closed = self.close_context_menu();
+            if event.logical_key == Key::Named(NamedKey::Escape) {
+                return closed;
+            }
+        }
         if self.model.renaming.is_some() {
             let key = match &event.logical_key {
                 Key::Named(NamedKey::Enter) => RenameKey::Commit,
@@ -114,6 +121,9 @@ impl OsWindow {
 
     pub fn on_cursor_moved(&mut self, x: f64, y: f64) -> Vec<Effect> {
         self.cursor = (x, y);
+        if let Some(effects) = self.menu_hover(x, y) {
+            return effects;
+        }
         self.update_cursor_icon(x, y);
         if let Some(effects) = self.drag_divider_to(x, y) {
             return effects;
@@ -171,6 +181,9 @@ impl OsWindow {
     }
 
     fn on_press(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if let Some(effects) = self.menu_click(button, x, y) {
+            return effects;
+        }
         let on_bar = self.bar_target(x, y);
         if on_bar != HoverTarget::None {
             self.press_target = on_bar;
@@ -211,6 +224,7 @@ impl OsWindow {
                 effects.push(Effect::Redraw);
             }
             MouseButton::Middle => effects.push(Effect::Paste),
+            MouseButton::Right => effects.extend(self.open_context_menu(term, x, y)),
             _ => {}
         }
         effects

@@ -82,6 +82,9 @@ impl OsWindow {
 
     pub fn on_focus(&mut self, focused: bool) -> Vec<Effect> {
         self.focused = focused;
+        if !focused {
+            self.menu = None;
+        }
         if let Some(term) = self.model.workspace.focused_term()
             && let Some(tw) = self.terms.get(&term)
             && tw.modes().focus_events

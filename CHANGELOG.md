@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.92 — 2026-10-09 · « Menu contextuel »
+
+- `rustty` : menu au clic droit dans les panneaux — copier (grisé sans sélection), coller, diviser verticalement ou horizontalement, agrandir/réduire, renommer l'onglet, nouvel onglet, fermer le panneau cliqué (confirmation comprise), raccourcis affichés ; `shift`+clic droit dans les applications qui captent la souris ; fermeture par Échap, clic ailleurs, perte du focus ou redimensionnement ; dessiné au-dessus de tout.
+- README et `docs/e2e.md`.
+
 ## 0.1.0-alpha.91 — 2026-10-09 · « Menu contextuel, modèle »
 
 - `rustty` : modèle pur du menu contextuel — entrées (copier, coller, diviser, agrandir/réduire, renommer l'onglet, nouvel onglet, fermer le panneau) reliées aux actions de la configuration, raccourci le plus court affiché, placement borné à la fenêtre, test de clic (séparateurs et entrées grisées inactifs) et dessin.
