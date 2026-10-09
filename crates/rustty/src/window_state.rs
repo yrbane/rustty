@@ -8,23 +8,22 @@ use std::sync::Arc;
 
 use anyhow::Context as _;
 use rustty_config::{Config, Mods};
-use rustty_layout::{SplitId, WindowId};
+use rustty_layout::{Rect, SplitId, WindowId};
 use rustty_pty::Shell;
 use rustty_render::{
-    CellMetrics, FontSet, GpuContext, HoverTarget, Palette, PixelRect, Renderer, TabBarLayout,
-    TabBarStyle, layout_tab_bar, tab_bar_height,
+    CellMetrics, GpuContext, HoverTarget, Palette, PixelRect, TabBarLayout, TabBarStyle,
 };
 use winit::dpi::LogicalSize;
 use winit::event_loop::ActiveEventLoop;
-use winit::window::{Icon, Window, WindowAttributes};
+use winit::window::{CursorIcon, Icon, Window, WindowAttributes};
 
 use crate::banner::Banner;
 use crate::events::Waker;
-use crate::geometry;
 use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
 use crate::mouse::{DoubleClick, MouseButton, Selection, WheelAccumulator};
-use crate::render_frame;
+use crate::pane_fonts::{PaneFonts, SizeKey};
+use crate::renderers::{RendererSpec, Renderers};
 use crate::tab::TermId;
 use crate::term_window::TermWindow;
 use crate::title;
@@ -34,8 +33,6 @@ const ICON_PNG: &[u8] = include_bytes!("../../../assets/icons/rustty-256.png");
 /// Identifiant d'application : `app_id` Wayland et `WM_CLASS` X11.
 const APP_ID: &str = "rustty";
 const DEFAULT_SIZE: LogicalSize<f64> = LogicalSize::new(960.0, 600.0);
-/// Taille de police de la config en points typographiques → pixels à 96 dpi.
-const PT_TO_PX: f32 = 96.0 / 72.0;
 /// Alpha de la surbrillance de sélection posée par-dessus le texte.
 pub(crate) const SELECTION_ALPHA: f32 = 0.4;
 
@@ -43,7 +40,9 @@ pub struct OsWindow {
     pub window: Arc<Window>,
     pub ctx: GpuContext,
     pub surface: Surface,
-    pub renderer: Renderer,
+    pub renderers: Renderers,
+    /// Taille de police de chaque panneau (zoom par panneau).
+    pub pane_fonts: PaneFonts,
     pub palette: Palette,
     pub tab_style: TabBarStyle,
     pub config: Config,
@@ -62,8 +61,11 @@ pub struct OsWindow {
     pub tab_bar: Option<TabBarLayout>,
     pub pane_rects: Vec<(WindowId, PixelRect)>,
     pub dividers: Vec<(SplitId, PixelRect)>,
-    /// Taille de police courante en points (zoom compris).
-    pub font_size: f32,
+    /// Zone des panneaux (sous ou sur la barre d'onglets).
+    pub content: Rect,
+    /// Barre de split en cours de glisser.
+    pub drag: Option<SplitId>,
+    pub cursor_icon: CursorIcon,
     pub focused: bool,
     pub clipboard: Option<arboard::Clipboard>,
     pub shell: Shell,
@@ -94,15 +96,18 @@ impl OsWindow {
         let size = window.inner_size();
         let surface = Surface::new(raw_surface, &ctx, size.width, size.height)?;
         let palette = Palette::from_config(&config.colors, config.font.bold_is_bright);
-        let font_size = config.font.size;
-        let fonts = load_fonts(&config.font.family, config.font.size, window.scale_factor());
-        let renderer = Renderer::new(
-            &ctx,
-            surface.view_format(),
-            fonts,
-            palette.clone(),
-            config.window.padding,
+        let renderers = Renderers::new(
+            &RendererSpec {
+                ctx: &ctx,
+                format: surface.view_format(),
+                family: &config.font.family,
+                scale_factor: window.scale_factor(),
+                palette: &palette,
+                padding: config.window.padding,
+            },
+            config.font.size,
         );
+        let pane_fonts = PaneFonts::new(config.font.size);
         let tab_style = TabBarStyle::from_config(&palette, &config.tabs);
         let (mut model, first) = Model::new(config.window.opacity, hold);
         if let Some(e) = config_error {
@@ -115,7 +120,8 @@ impl OsWindow {
             window,
             ctx,
             surface,
-            renderer,
+            renderers,
+            pane_fonts,
             palette,
             tab_style,
             config,
@@ -134,7 +140,9 @@ impl OsWindow {
             tab_bar: None,
             pane_rects: Vec::new(),
             dividers: Vec::new(),
-            font_size,
+            content: Rect::new(0, 0, 0, 0),
+            drag: None,
+            cursor_icon: CursorIcon::Default,
             focused: true,
             clipboard,
             shell: Shell::default_for_platform(),
@@ -145,8 +153,26 @@ impl OsWindow {
         Ok(this)
     }
 
+    /// Métriques de la taille configurée : barre d'onglets, bandeaux.
     pub fn metrics(&self) -> CellMetrics {
-        self.renderer.metrics()
+        self.renderers.metrics(self.renderers.base_key())
+    }
+
+    /// Métriques du panneau de `term`, zoom compris.
+    pub fn metrics_of(&self, term: TermId) -> CellMetrics {
+        self.renderers
+            .metrics(SizeKey::of(self.pane_fonts.size_of(term)))
+    }
+
+    fn renderer_spec(&self) -> RendererSpec<'_> {
+        RendererSpec {
+            ctx: &self.ctx,
+            format: self.surface.view_format(),
+            family: &self.config.font.family,
+            scale_factor: self.window.scale_factor(),
+            palette: &self.palette,
+            padding: self.config.window.padding,
+        }
     }
 
     pub fn spawn_term(&mut self, id: TermId) -> anyhow::Result<()> {
@@ -201,56 +227,11 @@ impl OsWindow {
             .set_title(&title::window_title(raw, crate::VERSION));
     }
 
-    /// Recalcule barre d'onglets, rectangles des panneaux et tailles des terminaux.
-    pub fn relayout(&mut self) {
-        let (w, h) = self.surface.size();
-        let metrics = self.metrics();
-        let tabs = &self.config.tabs;
-        let g = geometry::window_geometry(
-            w,
-            h,
-            tabs.position,
-            self.model.workspace.tabs().len(),
-            tabs.min_tabs,
-            tab_bar_height(metrics, &self.tab_style),
-        );
-        let titles = self.tab_titles();
-        let active = self.model.workspace.active();
-        self.tab_bar = g.tab_bar_y.map(|y| {
-            layout_tab_bar(
-                w,
-                y,
-                &render_frame::tab_specs(&titles, active, None),
-                &self.tab_style,
-                metrics,
-            )
-        });
-        if self.model.workspace.is_empty() {
-            self.pane_rects.clear();
-            self.dividers.clear();
-            return;
-        }
-        let padding = self.config.window.padding;
-        let gap = geometry::split_gap(&self.config.splits);
-        let tab = self.model.workspace.active_tab();
-        self.pane_rects = geometry::pane_rects(&tab.layout, g.content, gap);
-        self.dividers = geometry::divider_rects(&tab.layout, g.content, gap);
-        for (wid, rect) in &self.pane_rects {
-            if let Some(term) = tab.term_at(*wid)
-                && let Some(tw) = self.terms.get_mut(&term)
-            {
-                let (cols, rows) = geometry::grid_size(*rect, metrics, padding);
-                tw.resize(cols, rows, (rect.width, rect.height));
-            }
-        }
-        self.update_title();
-    }
-
     /// Applique une configuration rechargée : palette, police, onglets, opacité, raccourcis.
     pub fn apply_config(&mut self, new: Config) {
         if new.font.size != self.config.font.size {
-            // La taille configurée change : le zoom repart de la nouvelle base.
-            self.font_size = new.font.size;
+            // La taille configurée change : les zooms repartent de la nouvelle base.
+            self.pane_fonts.rebase(new.font.size);
         }
         let font_changed = new.font.family != self.config.font.family
             || new.font.size != self.config.font.size
@@ -262,35 +243,20 @@ impl OsWindow {
         if font_changed {
             self.rebuild_fonts();
         } else {
-            self.renderer.set_palette(self.palette.clone());
+            self.renderers.set_palette(&self.palette);
         }
         self.relayout();
         self.window.request_redraw();
     }
 
-    /// Nouveau renderer avec la police courante (changement de police ou d'échelle d'écran).
+    /// Renderers refaits avec la police courante (changement de police, de
+    /// marge ou d'échelle d'écran) ; les tailles zoomées reviennent au relayout.
     pub fn rebuild_fonts(&mut self) {
-        let fonts = load_fonts(
-            &self.config.font.family,
-            self.font_size,
-            self.window.scale_factor(),
-        );
-        self.renderer = Renderer::new(
-            &self.ctx,
-            self.surface.view_format(),
-            fonts,
-            self.palette.clone(),
-            self.config.window.padding,
-        );
+        let base = self.pane_fonts.base();
+        let spec = self.renderer_spec();
+        let fresh = Renderers::new(&spec, base);
+        self.renderers = fresh;
     }
-}
-
-fn load_fonts(family: &str, size_pt: f32, scale_factor: f64) -> FontSet {
-    let px = size_pt * PT_TO_PX * scale_factor as f32;
-    FontSet::load(family, px).unwrap_or_else(|e| {
-        tracing::warn!("police « {family} » : {e} — police embarquée");
-        FontSet::embedded(px)
-    })
 }
 
 fn load_icon() -> Option<Icon> {

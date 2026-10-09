@@ -26,6 +26,20 @@ pub fn reload(path: Option<&Path>) -> ReloadOutcome {
     }
 }
 
+/// Écrit la configuration d'exemple complète et commentée à `path`, jamais
+/// par-dessus un fichier existant (`ErrorKind::AlreadyExists`).
+pub fn init_config(path: &Path) -> std::io::Result<()> {
+    use std::io::Write as _;
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    file.write_all(rustty_config::DEFAULT_TOML.as_bytes())
+}
+
 pub struct ConfigWatcher {
     _watcher: RecommendedWatcher,
 }
@@ -62,6 +76,31 @@ impl ConfigWatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn init_config_writes_the_example_once() {
+        let dir = temp_dir("init");
+        let path = dir.join("sous/dossier/rustty.toml");
+        init_config(&path).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            rustty_config::DEFAULT_TOML
+        );
+        assert!(
+            matches!(reload(Some(&path)), ReloadOutcome::Applied(_)),
+            "le fichier écrit est valide"
+        );
+    }
+
+    #[test]
+    fn init_config_never_overwrites() {
+        let dir = temp_dir("init-existing");
+        let path = dir.join("rustty.toml");
+        std::fs::write(&path, "# à moi\n").unwrap();
+        let err = init_config(&path).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "# à moi\n");
+    }
     use std::sync::Arc;
     use std::sync::mpsc::channel;
     use std::time::Duration;

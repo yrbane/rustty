@@ -1,13 +1,16 @@
 //! Une image de la fenêtre : panneaux, sélection, barres de split, barre
 //! d'onglets, bandeau, fond avec opacité, puis présentation.
 
+use std::collections::BTreeMap;
+
 use rustty_config::TabBarPosition;
 use rustty_render::{Chrome, tab_bar_chrome, tab_bar_height};
 
 use crate::appearance;
 use crate::banner::{banner_chrome, banner_height};
 use crate::gpu_surface::Surface;
-use crate::render_frame::{self, PaneView};
+use crate::pane_fonts::SizeKey;
+use crate::render_frame::{self, PaneView, Pass};
 use crate::window_state::{OsWindow, SELECTION_ALPHA};
 
 impl OsWindow {
@@ -19,8 +22,10 @@ impl OsWindow {
         let (w, h) = self.surface.size();
         let metrics = self.metrics();
         let padding = self.config.window.padding;
-        let mut panes = Vec::new();
-        let mut chrome = Chrome::default();
+        let base_key = self.renderers.base_key();
+        // Panneaux (et leur sélection) regroupés par taille de police : une
+        // passe de rendu par taille, la base en premier.
+        let mut groups: BTreeMap<SizeKey, (Vec<PaneView>, Chrome)> = BTreeMap::new();
         if !self.model.workspace.is_empty() {
             let tab = self.model.workspace.active_tab();
             let focused_window = tab.layout.focused();
@@ -31,6 +36,8 @@ impl OsWindow {
                 let Some(tw) = self.terms.get(&term) else {
                     continue;
                 };
+                let key = SizeKey::of(self.pane_fonts.size_of(term));
+                let (panes, chrome) = groups.entry(key).or_default();
                 panes.push(PaneView {
                     rect: *rect,
                     snapshot: tw.snapshot(),
@@ -41,12 +48,18 @@ impl OsWindow {
                     && !sel.is_empty()
                 {
                     let color = self.palette.selection.with_alpha(SELECTION_ALPHA);
+                    let pane_metrics = self.renderers.metrics(key);
                     chrome.quads.extend(render_frame::selection_quads(
-                        sel, *rect, metrics, padding, color,
+                        sel,
+                        *rect,
+                        pane_metrics,
+                        padding,
+                        color,
                     ));
                 }
             }
         }
+        let (panes, mut chrome) = groups.remove(&base_key).unwrap_or_default();
         if !self.model.workspace.is_empty() {
             let tab = self.model.workspace.active_tab();
             let (splits, palette) = (&self.config.splits, &self.palette);
@@ -70,6 +83,7 @@ impl OsWindow {
             chrome.quads.extend(bar_chrome.quads);
             chrome.texts.extend(bar_chrome.texts);
         }
+        let mut overlay = Chrome::default();
         if let Some(banner) = self.model.banner() {
             let bar_at_bottom =
                 self.tab_bar.is_some() && self.config.tabs.position == TabBarPosition::Bottom;
@@ -86,16 +100,33 @@ impl OsWindow {
                 metrics,
                 &self.palette,
             );
-            chrome.quads.extend(b.quads);
-            chrome.texts.extend(b.texts);
+            overlay.quads.extend(b.quads);
+            overlay.texts.extend(b.texts);
         }
         let background = render_frame::background_color(
             self.palette.background,
             self.model.opacity,
             self.surface.premultiplied(),
         );
-        let frame = render_frame::build_frame((w, h), background, &panes, chrome);
-        self.renderer.render(&self.ctx, &view, &frame);
+        let mut base_pass = Some((panes, chrome));
+        let mut overlay = Some(overlay);
+        let keys: Vec<SizeKey> = groups.keys().copied().collect();
+        for pass in render_frame::pass_order(base_key, keys) {
+            let (key, (panes, chrome)) = match pass {
+                Pass::Base => (base_key, base_pass.take().unwrap_or_default()),
+                Pass::Size(key) => (key, groups.remove(&key).unwrap_or_default()),
+                Pass::Overlay => (base_key, (Vec::new(), overlay.take().unwrap_or_default())),
+            };
+            let frame = render_frame::build_frame((w, h), background, &panes, chrome);
+            let Some(renderer) = self.renderers.get_mut(key) else {
+                continue;
+            };
+            if pass == Pass::Base {
+                renderer.render(&self.ctx, &view, &frame);
+            } else {
+                renderer.render_onto(&self.ctx, &view, &frame);
+            }
+        }
         self.ctx.queue.present(texture);
     }
 }

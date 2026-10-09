@@ -4,6 +4,47 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.89 — 2026-10-09 · « Corrections de revue »
+
+- Reflow quinze fois plus rapide (10 000 lignes d'historique : 5,6 ms au lieu de 82 ms) : les lignes qui tiennent déjà sont seulement mises à la largeur, plus de saccade en glissant une barre.
+- Plus aucune ligne perdue quand le curseur est en haut d'un panneau qu'on rétrécit.
+- Redimensionner pendant vim ou less réorganise aussi l'écran principal et l'historique au lieu de les tronquer.
+- Le bandeau (confirmation de fermeture, erreur de configuration) reste au-dessus d'un panneau zoomé.
+
+## 0.1.0-alpha.88 — 2026-10-09 · « Documentation des panneaux »
+
+- README : section « Installer » (`cargo install --path crates/rustty`, `cargo install --git …`, `--install-desktop`, `--init-config`), raccourcis à jour, zoom par panneau, glisser des barres, reflow ; `docs/e2e.md` complété.
+- `rustty` : la molette et le focus quittent `input.rs` pour `wheel_input.rs`.
+
+## 0.1.0-alpha.87 — 2026-10-09 · « Glisser les barres »
+
+- `rustty` : les barres de split se glissent à la souris (saisie élargie à 4 px, même sans bordure), le curseur devient ↔ ou ↕ au survol, le contenu des panneaux se réorganise (reflow).
+
+## 0.1.0-alpha.86 — 2026-10-09 · « Zoom par panneau »
+
+- `rustty` : zoom de police par panneau — `ctrl+molette`, `ctrl+plus`, `ctrl+minus`, `ctrl+0` ne changent que le panneau sous la souris (sinon le panneau actif) ; les autres panneaux, la barre d'onglets et les bandeaux gardent la taille de la config. Un renderer par taille en usage, créé à la demande et libéré quand plus aucun panneau ne s'en sert.
+
+## 0.1.0-alpha.85 — 2026-10-09 · « Rendu par-dessus »
+
+- `rustty-render` : `Renderer::render_onto` dessine par-dessus une image existante (sans effacer), pour composer une même image avec plusieurs tailles de police.
+
+## 0.1.0-alpha.84 — 2026-10-09 · « Reflow »
+
+- `rustty-vt` : reflow au changement de largeur — l'écran principal et l'historique sont redécoupés selon les retours à la ligne automatiques (une ligne longue se replie quand le panneau rétrécit et se déplie quand il s'élargit), curseur reporté sur le même caractère, caractères larges jamais coupés, blancs de fin retirés ; l'écran alternatif n'est pas touché.
+
+## 0.1.0-alpha.83 — 2026-10-09 · « Glisser une barre de split »
+
+- `rustty-layout` : `TabLayout::drag_divider` place la barre d'une division sous la souris (ratio borné à 0,1–0,9, refusé quand un panneau est zoomé) et `split_axis` donne son orientation.
+
+## 0.1.0-alpha.82 — 2026-10-09 · « ctrl+tab et --init-config »
+
+- `ctrl+tab` / `ctrl+shift+tab` changent d'onglet (déliables par `"none"`).
+- `rustty --init-config` écrit la configuration d'exemple complète et commentée (raccourcis compris) au chemin par défaut ou à celui de `--config`, sans jamais écraser un fichier existant.
+
+## 0.1.0-alpha.81 — 2026-10-09 · « Plan 6 : panneaux »
+
+- Plan d'implémentation de la deuxième salve de demandes : `rustty --init-config` pour éditer les raccourcis, `ctrl+tab` / `ctrl+shift+tab`, glisser les barres de split à la souris, reflow des lignes au redimensionnement, zoom de police propre au panneau survolé (barre d'onglets inchangée), installation documentée par `cargo install`. Les images (`img`) passent au plan 7.
+
 ## 0.1.0-alpha.80 — 2026-10-09 · « Corrections de revue »
 
 - Renommage : l'onglet s'élargit à chaque frappe (le nom n'est plus tronqué) ; l'édition s'arrête sur toute autre action, tout clic dans la barre ou dans un panneau (fini le `git push` tapé dans le nom de l'onglet, ou le mauvais onglet renommé après en avoir ouvert un).

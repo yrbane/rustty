@@ -88,7 +88,25 @@ impl Renderer {
         self.palette = palette;
     }
 
+    /// Efface la cible avec `frame.background` puis dessine l'image.
     pub fn render(&mut self, ctx: &GpuContext, view: &wgpu::TextureView, frame: &Frame) {
+        let load = wgpu::LoadOp::Clear(to_wgpu_color(frame.background));
+        self.draw(ctx, view, frame, load);
+    }
+
+    /// Dessine par-dessus ce que la cible contient déjà (`frame.background`
+    /// est ignoré) : une passe par taille de police dans la même image.
+    pub fn render_onto(&mut self, ctx: &GpuContext, view: &wgpu::TextureView, frame: &Frame) {
+        self.draw(ctx, view, frame, wgpu::LoadOp::Load);
+    }
+
+    fn draw(
+        &mut self,
+        ctx: &GpuContext,
+        view: &wgpu::TextureView,
+        frame: &Frame,
+        load: wgpu::LoadOp<wgpu::Color>,
+    ) {
         let metrics = self.metrics();
         let mut backgrounds = Vec::new();
         let mut requests = Vec::new();
@@ -147,7 +165,7 @@ impl Renderer {
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(to_wgpu_color(frame.background)),
+                        load,
                         store: wgpu::StoreOp::Store,
                     },
                 })],

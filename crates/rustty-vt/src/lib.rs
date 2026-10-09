@@ -44,6 +44,7 @@ mod params;
 
 mod sgr;
 
+pub mod reflow;
 pub mod snapshot;
 
 pub use snapshot::Snapshot;

@@ -92,6 +92,8 @@ palette = [
 "ctrl+shift+w" = "close_window"
 "ctrl+shift+right" = "next_tab"
 "ctrl+shift+left" = "prev_tab"
+"ctrl+tab" = "next_tab"
+"ctrl+shift+tab" = "prev_tab"
 "alt+1" = { go_to_tab = 1 }
 "alt+2" = { go_to_tab = 2 }
 "alt+3" = { go_to_tab = 3 }

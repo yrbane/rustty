@@ -87,6 +87,30 @@ pub fn cell_at(
     (col < g.cols && row < g.rows).then_some((col, row))
 }
 
+/// Largeur minimale de saisie d'une barre de split, en pixels.
+pub const GRAB_WIDTH: u32 = 4;
+
+/// La barre de split sous le point : chaque barre est élargie à `grab`
+/// pixels dans son épaisseur pour rester saisissable même fine ou absente.
+pub fn divider_at(dividers: &[(SplitId, PixelRect)], x: f64, y: f64, grab: u32) -> Option<SplitId> {
+    let grab = f64::from(grab);
+    dividers
+        .iter()
+        .find(|(_, r)| {
+            let (mut x0, mut x1) = (f64::from(r.x), f64::from(r.x + r.width));
+            let (mut y0, mut y1) = (f64::from(r.y), f64::from(r.y + r.height));
+            if r.width <= r.height {
+                let pad = ((grab - f64::from(r.width)) / 2.0).max(0.0);
+                (x0, x1) = (x0 - pad, x1 + pad);
+            } else {
+                let pad = ((grab - f64::from(r.height)) / 2.0).max(0.0);
+                (y0, y1) = (y0 - pad, y1 + pad);
+            }
+            x >= x0 && x < x1 && y >= y0 && y < y1
+        })
+        .map(|(id, _)| *id)
+}
+
 pub fn pane_at(rects: &[(WindowId, PixelRect)], x: f64, y: f64) -> Option<WindowId> {
     rects
         .iter()
@@ -102,6 +126,40 @@ pub fn pane_at(rects: &[(WindowId, PixelRect)], x: f64, y: f64) -> Option<Window
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn divider_at_finds_a_thin_bar_with_a_grab_margin() {
+        let bars = [
+            (SplitId(2), PixelRect::new(400, 0, 2, 600)),
+            (SplitId(3), PixelRect::new(402, 300, 398, 0)),
+        ];
+        assert_eq!(
+            divider_at(&bars, 401.0, 100.0, GRAB_WIDTH),
+            Some(SplitId(2))
+        );
+        assert_eq!(
+            divider_at(&bars, 399.0, 100.0, GRAB_WIDTH),
+            Some(SplitId(2)),
+            "1 px à gauche reste saisissable"
+        );
+        assert_eq!(
+            divider_at(&bars, 600.0, 301.0, GRAB_WIDTH),
+            Some(SplitId(3)),
+            "une barre de 0 px (sans bordure) se saisit quand même"
+        );
+    }
+
+    #[test]
+    fn divider_at_misses_far_points() {
+        let bars = [(SplitId(2), PixelRect::new(400, 0, 2, 600))];
+        assert_eq!(divider_at(&bars, 395.0, 100.0, GRAB_WIDTH), None);
+        assert_eq!(
+            divider_at(&bars, 401.0, 700.0, GRAB_WIDTH),
+            None,
+            "sous la barre"
+        );
+        assert_eq!(divider_at(&[], 1.0, 1.0, GRAB_WIDTH), None);
+    }
 
     #[test]
     fn gap_follows_the_border_option() {

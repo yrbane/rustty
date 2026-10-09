@@ -3,13 +3,12 @@
 
 use std::time::Instant;
 
-use rustty_config::{Key as ConfigKey, Mods, NamedKey as ConfigNamed};
+use rustty_config::Mods;
 use rustty_render::HoverTarget;
 use rustty_vt::MouseMode;
-use winit::event::{ElementState, KeyEvent, MouseButton as WinitButton, MouseScrollDelta};
+use winit::event::{ElementState, KeyEvent, MouseButton as WinitButton};
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 
-use crate::font_zoom::wheel_change;
 use crate::geometry;
 use crate::keyboard::{encode_key, key_combo, mods_from_winit};
 use crate::model::{Effect, ScrollRequest};
@@ -17,9 +16,6 @@ use crate::mouse::{CellPos, MouseButton, MouseKind, Selection, encode_mouse};
 use crate::rename::RenameKey;
 use crate::tab::TermId;
 use crate::window_state::OsWindow;
-
-/// Lignes défilées par cran de molette.
-const WHEEL_LINES: f64 = 3.0;
 
 impl OsWindow {
     pub fn on_modifiers(&mut self, state: ModifiersState) {
@@ -93,19 +89,35 @@ impl OsWindow {
     }
 
     /// Le terminal et le rectangle du panneau sous le point, dans l'onglet actif.
-    fn pane_under(&self, x: f64, y: f64) -> Option<(TermId, rustty_render::PixelRect)> {
+    pub(crate) fn pane_under(&self, x: f64, y: f64) -> Option<(TermId, rustty_render::PixelRect)> {
         let wid = geometry::pane_at(&self.pane_rects, x, y)?;
         let rect = self.pane_rects.iter().find(|(w, _)| *w == wid)?.1;
         let term = self.model.workspace.active_tab().term_at(wid)?;
         Some((term, rect))
     }
 
-    fn cell_under(&self, rect: rustty_render::PixelRect, x: f64, y: f64) -> Option<(usize, usize)> {
-        geometry::cell_at(rect, self.metrics(), self.config.window.padding, x, y)
+    pub(crate) fn cell_under(
+        &self,
+        term: TermId,
+        rect: rustty_render::PixelRect,
+        x: f64,
+        y: f64,
+    ) -> Option<(usize, usize)> {
+        geometry::cell_at(
+            rect,
+            self.metrics_of(term),
+            self.config.window.padding,
+            x,
+            y,
+        )
     }
 
     pub fn on_cursor_moved(&mut self, x: f64, y: f64) -> Vec<Effect> {
         self.cursor = (x, y);
+        self.update_cursor_icon(x, y);
+        if let Some(effects) = self.drag_divider_to(x, y) {
+            return effects;
+        }
         let mut effects = Vec::new();
         if self.model.hover_changed(self.bar_target(x, y)) {
             effects.push(Effect::Redraw);
@@ -113,7 +125,7 @@ impl OsWindow {
         let Some((term, rect)) = self.pane_under(x, y) else {
             return effects;
         };
-        let cell = self.cell_under(rect, x, y);
+        let cell = self.cell_under(term, rect, x, y);
         if self.dragging
             && let Some((sel_term, sel)) = &mut self.selection
             && *sel_term == term
@@ -164,6 +176,9 @@ impl OsWindow {
             self.press_target = on_bar;
             return Vec::new();
         }
+        if button == MouseButton::Left && self.start_divider_drag(x, y) {
+            return Vec::new();
+        }
         let Some((term, rect)) = self.pane_under(x, y) else {
             return Vec::new();
         };
@@ -174,7 +189,7 @@ impl OsWindow {
             self.update_title();
             effects.push(Effect::Redraw);
         }
-        let cell = self.cell_under(rect, x, y);
+        let cell = self.cell_under(term, rect, x, y);
         let Some(tw) = self.terms.get(&term) else {
             return effects;
         };
@@ -202,6 +217,9 @@ impl OsWindow {
     }
 
     fn on_release(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if self.end_divider_drag() {
+            return Vec::new();
+        }
         if self.press_target != HoverTarget::None {
             let target = std::mem::replace(&mut self.press_target, HoverTarget::None);
             if target != self.bar_target(x, y) {
@@ -227,7 +245,7 @@ impl OsWindow {
                 && let Some(bytes) = encode_mouse(
                     MouseKind::Release,
                     Some(held),
-                    self.cell_under(rect, x, y),
+                    self.cell_under(term, rect, x, y),
                     self.modifiers,
                     &tw.modes(),
                 )
@@ -243,85 +261,5 @@ impl OsWindow {
             }
         }
         Vec::new()
-    }
-
-    pub fn on_wheel(&mut self, delta: MouseScrollDelta) -> Vec<Effect> {
-        let lines = match delta {
-            MouseScrollDelta::LineDelta(_, y) => f64::from(y) * WHEEL_LINES,
-            MouseScrollDelta::PixelDelta(p) => p.y / f64::from(self.metrics().height.max(1)),
-        };
-        let lines = self.wheel.lines(lines);
-        if lines == 0 {
-            return Vec::new();
-        }
-        if self.modifiers.contains(Mods::CTRL) {
-            return wheel_change(lines)
-                .map(Effect::FontSize)
-                .into_iter()
-                .collect();
-        }
-        let (x, y) = self.cursor;
-        let Some((term, rect)) = self.pane_under(x, y).or_else(|| {
-            self.model
-                .workspace
-                .focused_term()
-                .map(|t| (t, rustty_render::PixelRect::default()))
-        }) else {
-            return Vec::new();
-        };
-        let Some(tw) = self.terms.get(&term) else {
-            return Vec::new();
-        };
-        let modes = tw.modes();
-        let steps = lines.unsigned_abs() as usize;
-        if modes.mouse != MouseMode::None && !self.modifiers.contains(Mods::SHIFT) {
-            let button = if lines > 0 {
-                MouseButton::WheelUp
-            } else {
-                MouseButton::WheelDown
-            };
-            let cell = self.cell_under(rect, x, y);
-            for _ in 0..steps {
-                if let Some(bytes) =
-                    encode_mouse(MouseKind::Press, Some(button), cell, self.modifiers, &modes)
-                {
-                    tw.write(bytes);
-                }
-            }
-            return Vec::new();
-        }
-        if modes.alt_screen {
-            // Pas d'historique sur l'écran alternatif : la molette devient des flèches.
-            let named = if lines > 0 {
-                ConfigNamed::Up
-            } else {
-                ConfigNamed::Down
-            };
-            let combo = Some(rustty_config::KeyCombo {
-                mods: Mods::empty(),
-                key: ConfigKey::Named(named),
-            });
-            let bytes = encode_key(combo, None, Mods::empty(), &modes);
-            for _ in 0..steps {
-                tw.write(bytes.clone());
-            }
-            return Vec::new();
-        }
-        vec![Effect::Scroll(term, ScrollRequest::Lines(lines))]
-    }
-
-    pub fn on_focus(&mut self, focused: bool) -> Vec<Effect> {
-        self.focused = focused;
-        if let Some(term) = self.model.workspace.focused_term()
-            && let Some(tw) = self.terms.get(&term)
-            && tw.modes().focus_events
-        {
-            tw.write(if focused {
-                b"\x1b[I".to_vec()
-            } else {
-                b"\x1b[O".to_vec()
-            });
-        }
-        vec![Effect::Redraw]
     }
 }

@@ -62,6 +62,11 @@ impl Scrollback {
     }
 
     /// Retire et rend la ligne la plus récente (celle juste au-dessus de l'écran).
+    /// Vide l'historique et rend ses lignes, de la plus ancienne à la plus récente.
+    pub fn drain_all(&mut self) -> Vec<Line> {
+        self.lines.drain(..).collect()
+    }
+
     pub fn pop_newest(&mut self) -> Option<Line> {
         self.lines.pop_back()
     }

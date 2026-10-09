@@ -5,9 +5,9 @@ use winit::event_loop::ActiveEventLoop;
 
 use crate::banner::Banner;
 use crate::config_watch::{self, ReloadOutcome};
-use crate::font_zoom::next_size;
 use crate::keyboard::paste_bytes;
 use crate::model::Effect;
+use crate::pane_fonts::zoom_target;
 use crate::tab::TermId;
 use crate::window_state::OsWindow;
 
@@ -33,10 +33,12 @@ impl OsWindow {
                 Effect::Paste => self.paste(),
                 Effect::SetOpacity(_) | Effect::Redraw => self.window.request_redraw(),
                 Effect::FontSize(change) => {
-                    let size = next_size(self.font_size, self.config.font.size, change);
-                    if size != self.font_size {
-                        self.font_size = size;
-                        self.rebuild_fonts();
+                    // Seul le panneau survolé (sinon le focalisé) change de taille.
+                    let (x, y) = self.cursor;
+                    let hovered = self.pane_under(x, y).map(|(term, _)| term);
+                    if let Some(term) = zoom_target(hovered, self.model.workspace.focused_term())
+                        && self.pane_fonts.apply(term, change)
+                    {
                         self.relayout();
                     }
                     self.window.request_redraw();
@@ -55,6 +57,7 @@ impl OsWindow {
         // Le Drop du Pty tue et moissonne le shell dans un thread détaché.
         self.terms.remove(&id);
         self.titles.remove(&id);
+        self.pane_fonts.forget(id);
         if self.selection.as_ref().is_some_and(|(t, _)| *t == id) {
             self.selection = None;
         }

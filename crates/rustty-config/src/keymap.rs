@@ -19,6 +19,8 @@ const DEFAULTS: &[(&str, Action)] = &[
     ("ctrl+shift+w", Action::CloseWindow),
     ("ctrl+shift+right", Action::NextTab),
     ("ctrl+shift+left", Action::PrevTab),
+    ("ctrl+tab", Action::NextTab),
+    ("ctrl+shift+tab", Action::PrevTab),
     ("alt+1", Action::GoToTab(1)),
     ("alt+2", Action::GoToTab(2)),
     ("alt+3", Action::GoToTab(3)),
@@ -126,6 +128,25 @@ impl<'de> Deserialize<'de> for KeyMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ctrl_tab_switches_tabs_by_default() {
+        let k = KeyMap::defaults();
+        assert_eq!(
+            k.resolve("ctrl+tab".parse().unwrap()),
+            Some(Action::NextTab)
+        );
+        assert_eq!(
+            k.resolve("ctrl+shift+tab".parse().unwrap()),
+            Some(Action::PrevTab)
+        );
+    }
+
+    #[test]
+    fn ctrl_tab_can_be_unbound() {
+        let c = crate::config::Config::from_str("[keys]\n\"ctrl+tab\" = \"none\"\n").unwrap();
+        assert_eq!(c.keys.resolve("ctrl+tab".parse().unwrap()), None);
+    }
 
     #[test]
     fn rename_and_zoom_have_default_bindings() {
