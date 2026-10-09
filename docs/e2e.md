@@ -87,6 +87,7 @@ Zoom et sélection
 
 Souris et clavier
 - [ ] Dans une application qui capte la souris (`htop`, ou vim avec `:set mouse=a`), appuyer dans le panneau, relâcher hors du panneau : le relâchement est transmis, aucun bouton « collé ».
+- [ ] Même application : appuyer dans le panneau, alt-tab vers une autre fenêtre, relâcher, revenir et bouger la souris : aucun glisser n'est envoyé (le relâchement part à la perte du focus).
 - [ ] `ctrl+1` et `ctrl+9` envoient le chiffre au programme (`cat -v`, puis les touches) ; `alt+1`…`alt+5` changent toujours d'onglet.
 
 Configuration et fichiers

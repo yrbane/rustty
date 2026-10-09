@@ -100,6 +100,9 @@ impl OsWindow {
             if self.drag.take().is_some() {
                 self.update_cursor_icon(self.cursor.0, self.cursor.1);
             }
+            // Le relâchement du bouton tenu ne nous parviendra pas : on
+            // l'envoie maintenant, sinon vim ou tmux verraient un glisser.
+            self.release_held(self.cursor.0, self.cursor.1);
         }
         if let Some(term) = self.model.workspace.focused_term()
             && let Some(tw) = self.terms.get(&term)

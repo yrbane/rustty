@@ -3,7 +3,7 @@
 use rustty_render::PixelRect;
 
 use crate::geometry;
-use crate::mouse::{MouseButton, MouseKind, encode_mouse};
+use crate::mouse::{MotionFilter, MouseButton, MouseKind, encode_mouse};
 use crate::tab::TermId;
 use crate::window_state::OsWindow;
 
@@ -15,6 +15,16 @@ pub fn release_target(
 ) -> Option<(TermId, MouseButton, PixelRect)> {
     let (term, button) = held?;
     Some((term, button, rect_of(term)?))
+}
+
+/// Oublie le bouton tenu et remet le filtre de mouvement à zéro ; rend le
+/// bouton pour que son relâchement soit envoyé (relâchement ou perte du focus).
+pub fn take_held(
+    held: &mut Option<(TermId, MouseButton)>,
+    motion: &mut MotionFilter,
+) -> Option<(TermId, MouseButton)> {
+    motion.reset();
+    held.take()
 }
 
 impl OsWindow {
@@ -46,8 +56,7 @@ impl OsWindow {
     /// Relâchement d'un bouton tenu : va au terminal de l'appui, cellule
     /// bornée à son panneau. Vrai si un bouton était tenu.
     pub(crate) fn release_held(&mut self, x: f64, y: f64) -> bool {
-        self.motion.reset();
-        let held = self.held.take();
+        let held = take_held(&mut self.held, &mut self.motion);
         let tab = self.model.workspace.active_tab();
         let rect_of = |term: TermId| {
             self.pane_rects
@@ -83,6 +92,23 @@ impl OsWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn taking_the_held_button_forgets_it_and_resets_motion() {
+        let mut held = Some((TermId(1), MouseButton::Left));
+        let mut motion = MotionFilter::default();
+        assert!(motion.should_report(TermId(1), (2, 3)));
+        assert_eq!(
+            take_held(&mut held, &mut motion),
+            Some((TermId(1), MouseButton::Left))
+        );
+        assert_eq!(held, None, "plus de bouton « collé » après alt-tab");
+        assert!(
+            motion.should_report(TermId(1), (2, 3)),
+            "le filtre repart de zéro"
+        );
+        assert_eq!(take_held(&mut held, &mut motion), None);
+    }
 
     #[test]
     fn release_goes_to_the_term_that_got_the_press() {

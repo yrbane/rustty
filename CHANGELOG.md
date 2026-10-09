@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.117 — 2026-10-09 · « Plus de bouton collé après alt-tab »
+
+- Souris : à la perte du focus, le bouton tenu est relâché auprès du terminal qui a reçu l'appui (cellule bornée à son panneau) et le filtre de mouvement est remis à zéro ; après un alt-tab, vim ou tmux ne reçoivent plus de glisser fantôme.
+- `mouse_input::take_held`, fonction pure partagée par le relâchement et la perte du focus.
+- `docs/e2e.md` : parcours alt-tab avec un bouton tenu.
+
 ## 0.1.0-alpha.116 — 2026-10-09 · « L'atlas de glyphes s'agrandit au lieu de se vider »
 
 - Rendu : un atlas de glyphes plein double de taille (512 → 1024 → 2048) au lieu d'être reconstruit à taille égale ; il n'est vidé qu'à 2048. Une page CJK pleine en petite police n'entraîne plus une reconstruction à chaque image ni des glyphes faux.
