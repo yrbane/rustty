@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.65 — 2026-10-09 · « Modèle d'interface »
+
+- `rustty` : modèle pur des décisions d'interface — actions de la configuration, clics sur la barre d'onglets, confirmation de fermeture quand des programmes tournent, fermeture de la fenêtre, fin de shell avec ou sans `--hold`, opacité bornée — rendues sous forme d'effets testés.
+
 ## 0.1.0-alpha.64 — 2026-10-09 · « Titres et bandeau »
 
 - `rustty` : gabarit des titres d'onglet, titre de fenêtre avec la version, bandeau d'une ligne (erreur, information, confirmation) rendu en chrome.

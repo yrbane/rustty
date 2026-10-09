@@ -14,6 +14,8 @@ mod geometry;
 #[allow(unused)]
 mod banner;
 #[allow(unused)]
+mod model;
+#[allow(unused)]
 mod tab;
 #[allow(unused)]
 mod title;
