@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.98 — 2026-10-09 · « Images décodées et bandes rattachées aux lignes »
+
+- `rustty-vt` : `graphics::decode` convertit PNG, RGB et RGBA bruts en RGBA (côté max 8192 px, longueur brute vérifiée), `ImageData` reçoit un identifiant unique au processus.
+- `Placement` et `ImageStrip` (partagés par `Arc`, égalité par pointeur) décrivent une image posée et sa tranche par ligne ; `Line` porte `images()` / `push_image()`.
+- Les bandes sont retirées par `reset`, `erase_range`, `insert_blank` et `delete` quand elles coupent la plage, et par `resize` si elles débordent ; écrire du texte par-dessus les conserve.
+- Dépendance `image` (PNG seulement) ajoutée à `rustty-vt` ; rien n'est encore branché dans `Term`.
+
 ## 0.1.0-alpha.97 — 2026-10-09 · « Action graphique par défaut alignée sur kitty »
 
 - `rustty-vt` : sans `a=`, une commande graphique est désormais `Transmit` (comme kitty) et non `TransmitAndPut`.

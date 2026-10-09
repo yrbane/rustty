@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 
 use crate::cell::Cell;
+use crate::graphics::ImageStrip;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Line {
@@ -13,6 +14,8 @@ pub struct Line {
     zerowidth: BTreeMap<usize, String>,
     /// Vrai si la ligne a débordé sur la suivante (saut de ligne implicite).
     pub wrapped: bool,
+    /// Tranches d'images affichées sur cette ligne (partagées, donc peu coûteuses à cloner).
+    pub(crate) images: Vec<ImageStrip>,
 }
 
 impl Line {
@@ -25,6 +28,7 @@ impl Line {
             cells: vec![template; cols],
             zerowidth: BTreeMap::new(),
             wrapped: false,
+            images: Vec::new(),
         }
     }
 
@@ -65,12 +69,14 @@ impl Line {
     pub fn reset(&mut self, template: Cell) {
         self.cells.fill(template);
         self.zerowidth.clear();
+        self.images.clear();
         self.wrapped = false;
     }
 
     pub fn erase_range(&mut self, range: Range<usize>, template: Cell) {
         let range = range.start.min(self.len())..range.end.min(self.len());
         self.zerowidth.retain(|col, _| !range.contains(col));
+        self.drop_strips_in(range.clone());
         self.cells[range].fill(template);
     }
 
@@ -82,6 +88,7 @@ impl Line {
             return;
         }
         let n = n.min(cols - col);
+        self.drop_strips_in(col..cols);
         self.cells[col..].rotate_right(n);
         self.cells[col..col + n].fill(template);
         let moved: Vec<(usize, String)> = self
@@ -102,6 +109,7 @@ impl Line {
             return;
         }
         let n = n.min(cols - col);
+        self.drop_strips_in(col..cols);
         self.cells[col..].rotate_left(n);
         self.cells[cols - n..].fill(template);
         let moved: Vec<(usize, String)> = self
@@ -116,6 +124,7 @@ impl Line {
     pub fn resize(&mut self, cols: usize, template: Cell) {
         self.cells.resize(cols, template);
         self.zerowidth.retain(|c, _| *c < cols);
+        self.drop_strips_from(cols);
     }
 
     /// Texte de la ligne, combinants inclus, continuations de caractères larges exclues.

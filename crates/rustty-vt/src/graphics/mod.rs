@@ -6,6 +6,8 @@
 
 mod chunks;
 mod command;
+mod image;
 
+pub use self::image::{ImageData, ImageStrip, MAX_SIDE, Placement, decode};
 pub use chunks::{ChunkResult, Chunks, GraphicsError, MAX_PAYLOAD};
 pub use command::{Action, Format, GraphicsCommand, parse};
