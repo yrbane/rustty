@@ -1,6 +1,8 @@
 //! Réactions aux entrées winit : clavier (raccourcis puis encodage), souris
 //! (barre d'onglets, sélection, rapports aux applications, molette), focus.
 
+use std::time::Instant;
+
 use rustty_config::{Key as ConfigKey, Mods, NamedKey as ConfigNamed};
 use rustty_render::HoverTarget;
 use rustty_vt::MouseMode;
@@ -11,6 +13,7 @@ use crate::geometry;
 use crate::keyboard::{encode_key, key_combo, mods_from_winit};
 use crate::model::{Effect, ScrollRequest};
 use crate::mouse::{CellPos, MouseButton, MouseKind, Selection, encode_mouse};
+use crate::rename::RenameKey;
 use crate::tab::TermId;
 use crate::window_state::OsWindow;
 
@@ -25,6 +28,18 @@ impl OsWindow {
     pub fn on_key(&mut self, event: &KeyEvent) -> Vec<Effect> {
         if event.state != ElementState::Pressed {
             return Vec::new();
+        }
+        if self.model.renaming.is_some() {
+            let key = match &event.logical_key {
+                Key::Named(NamedKey::Enter) => RenameKey::Commit,
+                Key::Named(NamedKey::Escape) => RenameKey::Cancel,
+                Key::Named(NamedKey::Backspace) => RenameKey::Backspace,
+                _ => match event.text.as_deref() {
+                    Some(text) => RenameKey::Text(text.to_string()),
+                    None => return Vec::new(),
+                },
+            };
+            return self.model.rename_key(key);
         }
         if self.model.pending_close.is_some() {
             return match &event.logical_key {
@@ -189,6 +204,11 @@ impl OsWindow {
             let target = std::mem::replace(&mut self.press_target, HoverTarget::None);
             if target != self.bar_target(x, y) {
                 return Vec::new();
+            }
+            if let (HoverTarget::Tab(i), MouseButton::Left) = (target, button)
+                && self.tab_clicks.register(i, Instant::now())
+            {
+                return self.model.start_rename(i);
             }
             let confirm = self.config.window.confirm_close_with_running_children;
             let terms = &self.terms;

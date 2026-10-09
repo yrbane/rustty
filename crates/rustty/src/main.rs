@@ -13,6 +13,7 @@ mod input;
 mod keyboard;
 mod model;
 mod mouse;
+mod rename;
 mod render_frame;
 mod tab;
 mod term_window;

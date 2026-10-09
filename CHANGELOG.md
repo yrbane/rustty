@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.77 — 2026-10-09 · « Renommage des onglets »
+
+- `rustty` : renommage des onglets au double clic ou par `ctrl+shift+alt+t` — édition dans la barre (Entrée valide, Échap annule, retour arrière), caractères de contrôle ignorés, 64 caractères au plus, nom vide = titre du shell ; le nom remplace `{title}` dans le gabarit.
+
 ## 0.1.0-alpha.76 — 2026-10-09 · « Accents et titres d'onglet »
 
 - `rustty` : tirage reproductible de couleurs d'accent parmi les 12 couleurs vives de la palette (jamais deux fois de suite la même) ; chaque onglet et chaque division reçoivent la leur à la création ; un onglet peut porter un nom personnalisé.

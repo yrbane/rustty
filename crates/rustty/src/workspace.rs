@@ -41,7 +41,6 @@ impl Workspace {
         (ws, first)
     }
 
-    #[allow(dead_code)] // Consommé à la tâche 5 (provisoire).
     /// Nom personnalisé de l'onglet `index` ; `None` rend le titre du shell.
     pub fn rename(&mut self, index: usize, title: Option<String>) {
         if let Some(tab) = self.tabs.get_mut(index) {

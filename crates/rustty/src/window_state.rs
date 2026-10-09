@@ -23,7 +23,7 @@ use crate::events::Waker;
 use crate::geometry;
 use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
-use crate::mouse::{MouseButton, Selection, WheelAccumulator};
+use crate::mouse::{DoubleClick, MouseButton, Selection, WheelAccumulator};
 use crate::render_frame::{self, PaneView};
 use crate::tab::TermId;
 use crate::term_window::TermWindow;
@@ -53,6 +53,7 @@ pub struct OsWindow {
     pub selection: Option<(TermId, Selection)>,
     pub dragging: bool,
     pub held: Option<MouseButton>,
+    pub tab_clicks: DoubleClick,
     pub wheel: WheelAccumulator,
     pub press_target: HoverTarget,
     pub tab_bar: Option<TabBarLayout>,
@@ -119,6 +120,7 @@ impl OsWindow {
             selection: None,
             dragging: false,
             held: None,
+            tab_clicks: DoubleClick::default(),
             wheel: WheelAccumulator::default(),
             press_target: HoverTarget::None,
             tab_bar: None,
@@ -166,7 +168,13 @@ impl OsWindow {
                     .and_then(|t| self.titles.get(&t))
                     .map(String::as_str)
                     .unwrap_or("");
-                title::tab_title(template, i, raw)
+                let editing = self
+                    .model
+                    .renaming
+                    .as_ref()
+                    .filter(|r| r.tab == i)
+                    .map(|r| r.buffer.as_str());
+                title::display_title(template, i, raw, tab.custom_title.as_deref(), editing)
             })
             .collect()
     }
