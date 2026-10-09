@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.87 — 2026-10-09 · « Glisser les barres »
+
+- `rustty` : les barres de split se glissent à la souris (saisie élargie à 4 px, même sans bordure), le curseur devient ↔ ou ↕ au survol, le contenu des panneaux se réorganise (reflow).
+
 ## 0.1.0-alpha.86 — 2026-10-09 · « Zoom par panneau »
 
 - `rustty` : zoom de police par panneau — `ctrl+molette`, `ctrl+plus`, `ctrl+minus`, `ctrl+0` ne changent que le panneau sous la souris (sinon le panneau actif) ; les autres panneaux, la barre d'onglets et les bandeaux gardent la taille de la config. Un renderer par taille en usage, créé à la demande et libéré quand plus aucun panneau ne s'en sert.

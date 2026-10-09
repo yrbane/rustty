@@ -55,6 +55,7 @@ impl OsWindow {
         let tab = self.model.workspace.active_tab();
         self.pane_rects = geometry::pane_rects(&tab.layout, g.content, gap);
         self.dividers = geometry::divider_rects(&tab.layout, g.content, gap);
+        self.content = g.content;
         for (wid, rect) in &self.pane_rects {
             if let Some(term) = tab.term_at(*wid)
                 && let Some(tw) = self.terms.get_mut(&term)

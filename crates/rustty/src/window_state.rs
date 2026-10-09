@@ -8,14 +8,14 @@ use std::sync::Arc;
 
 use anyhow::Context as _;
 use rustty_config::{Config, Mods};
-use rustty_layout::{SplitId, WindowId};
+use rustty_layout::{Rect, SplitId, WindowId};
 use rustty_pty::Shell;
 use rustty_render::{
     CellMetrics, GpuContext, HoverTarget, Palette, PixelRect, TabBarLayout, TabBarStyle,
 };
 use winit::dpi::LogicalSize;
 use winit::event_loop::ActiveEventLoop;
-use winit::window::{Icon, Window, WindowAttributes};
+use winit::window::{CursorIcon, Icon, Window, WindowAttributes};
 
 use crate::banner::Banner;
 use crate::events::Waker;
@@ -61,6 +61,11 @@ pub struct OsWindow {
     pub tab_bar: Option<TabBarLayout>,
     pub pane_rects: Vec<(WindowId, PixelRect)>,
     pub dividers: Vec<(SplitId, PixelRect)>,
+    /// Zone des panneaux (sous ou sur la barre d'onglets).
+    pub content: Rect,
+    /// Barre de split en cours de glisser.
+    pub drag: Option<SplitId>,
+    pub cursor_icon: CursorIcon,
     pub focused: bool,
     pub clipboard: Option<arboard::Clipboard>,
     pub shell: Shell,
@@ -135,6 +140,9 @@ impl OsWindow {
             tab_bar: None,
             pane_rects: Vec::new(),
             dividers: Vec::new(),
+            content: Rect::new(0, 0, 0, 0),
+            drag: None,
+            cursor_icon: CursorIcon::Default,
             focused: true,
             clipboard,
             shell: Shell::default_for_platform(),

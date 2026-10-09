@@ -7,6 +7,7 @@ mod banner;
 mod cli;
 mod config_watch;
 mod desktop;
+mod divider_drag;
 mod effects;
 mod events;
 mod font_zoom;

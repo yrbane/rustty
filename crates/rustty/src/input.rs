@@ -118,6 +118,10 @@ impl OsWindow {
 
     pub fn on_cursor_moved(&mut self, x: f64, y: f64) -> Vec<Effect> {
         self.cursor = (x, y);
+        self.update_cursor_icon(x, y);
+        if let Some(effects) = self.drag_divider_to(x, y) {
+            return effects;
+        }
         let mut effects = Vec::new();
         if self.model.hover_changed(self.bar_target(x, y)) {
             effects.push(Effect::Redraw);
@@ -176,6 +180,9 @@ impl OsWindow {
             self.press_target = on_bar;
             return Vec::new();
         }
+        if button == MouseButton::Left && self.start_divider_drag(x, y) {
+            return Vec::new();
+        }
         let Some((term, rect)) = self.pane_under(x, y) else {
             return Vec::new();
         };
@@ -214,6 +221,9 @@ impl OsWindow {
     }
 
     fn on_release(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if self.end_divider_drag() {
+            return Vec::new();
+        }
         if self.press_target != HoverTarget::None {
             let target = std::mem::replace(&mut self.press_target, HoverTarget::None);
             if target != self.bar_target(x, y) {
