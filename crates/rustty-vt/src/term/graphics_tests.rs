@@ -187,3 +187,12 @@ fn ris_forgets_stored_images() {
     feed(&mut t, &apc("a=p,i=4"));
     assert!(reply(&mut t).contains("ENOENT"));
 }
+
+#[test]
+fn huge_row_request_is_capped_to_four_screens() {
+    let mut t = term(10, 5);
+    feed(&mut t, &apc_png("a=T,f=100,c=1,r=65535", 10, 20));
+    let p = &t.grid().line(4).images()[0].placement;
+    assert_eq!(p.rows, 20);
+    assert!(t.scrollback().len() <= 20);
+}

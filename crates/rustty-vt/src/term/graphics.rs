@@ -9,6 +9,10 @@ use crate::graphics::{
     extent, parse,
 };
 
+/// Plafond de hauteur d'un placement, en écrans : `r=65535` n'inonde pas
+/// l'historique.
+const MAX_SCREENS_PER_IMAGE: usize = 4;
+
 impl Term {
     /// Charge d'une séquence APC complète ; seules les commandes `G…` comptent.
     pub(crate) fn apc(&mut self, payload: &[u8]) {
@@ -61,7 +65,7 @@ impl Term {
         let (c, r, width_cells, height_cells) = extent(
             (image.width, image.height),
             self.cell_pixels,
-            self.cols(),
+            (self.cols(), self.rows() * MAX_SCREENS_PER_IMAGE),
             cols,
             rows,
         );

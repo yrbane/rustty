@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.114 — 2026-10-09 · « Hauteur des images bornée »
+
+- Protocole graphique : l'emprise d'un placement est bornée à la largeur du terminal et à 4 écrans de haut (`MAX_SCREENS_PER_IMAGE`), rapport d'aspect conservé ; `c=1,r=65535` ou une image très haute n'inondent plus l'historique.
+- `graphics::extent` prend désormais le maximum `(colonnes, rangées)` au lieu de la seule largeur.
+
 ## 0.1.0-alpha.113 — 2026-10-09 · « Transferts graphiques interrompus abandonnés »
 
 - Protocole graphique : un morceau dont la partie contrôle porte d'autres clés que `m=`, `q=` et `i=`, ou un `i=` différent, ouvre une nouvelle commande et abandonne la transmission interrompue (`m=1` sans `m=0`) au lieu d'y être avalé ; `a=p` et `a=d` ne sont donc jamais ajoutés à un transfert en attente.
