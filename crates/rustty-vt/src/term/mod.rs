@@ -13,6 +13,9 @@ mod perform;
 mod print;
 mod reports;
 mod reset;
+mod resize;
+#[cfg(test)]
+mod resize_tests;
 mod scroll;
 mod view;
 

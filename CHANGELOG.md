@@ -4,6 +4,15 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.101 — 2026-10-09 · « Reflow des images, du curseur sauvegardé et de l'historique plein »
+
+- `rustty-vt` : les bandes d'image survivent au reflow ; sur le chemin rapide la ligne garde toutes ses bandes (même au-delà de la nouvelle largeur, le rendu rogne), et les bandes de toutes les lignes source d'une ligne logique enroulée vont à sa première ligne produite, colonne conservée.
+- `reflow` accepte plusieurs curseurs (`&[(ligne, colonne)]`) et rend leurs positions dans le même ordre ; sur l'écran principal, le curseur sauvegardé par `ESC 7` suit son caractère comme le curseur vivant (`ESC 8` y revient après un redimensionnement), retour à la ligne en attente compris.
+- Historique plein : après le reflow, les lignes en trop sont retirées en tête jusqu'au début d'une ligne logique, plus aucune ligne d'historique ne commence par la suite d'une ligne enroulée.
+- Une espace sans attribut compte comme blanc quelle que soit sa couleur : une queue à fond coloré ne fabrique plus de lignes vides au reflow (son fond est perdu) ; une seconde moitié de caractère large n'est jamais un blanc.
+- Les rangées d'écran portant une image sous le curseur ne sont plus perdues au reflow.
+- `reset.rs` repassé sous 300 lignes : le redimensionnement vit dans `term/resize.rs` (tests dans `term/resize_tests.rs`), les tests du reflow dans `reflow/tests.rs` et `reflow/perf.rs`.
+
 ## 0.1.0-alpha.100 — 2026-10-09 · « Affichage des images du protocole kitty »
 
 - `rustty-vt` : `Term` exécute les commandes graphiques APC (`a=t`, `a=T`, `a=p`, `a=d`) ; l'image est posée à partir du curseur, une bande par rangée, avec défilement de l'écran et passage dans l'historique comme n'importe quelle ligne.
