@@ -21,7 +21,8 @@ const ICON_SVG: &[u8] = include_bytes!("../../../assets/icon.svg");
 
 /// L'argument `Exec=` selon la spécification desktop-entry : `%` doublé,
 /// guillemets si le chemin contient un caractère réservé, et `\"`, `` ` ``,
-/// `$`, `\` précédés d'un `\` à l'intérieur des guillemets.
+/// `$`, `\` précédés d'un `\` à l'intérieur des guillemets ; puis les
+/// échappements du type « string » sur le tout.
 fn exec_argument(exec: &Path) -> String {
     let raw = exec.display().to_string().replace('%', "%%");
     let reserved = |c: char| " \t\n\"'\\><~|&;$*?#()`".contains(c);
@@ -37,7 +38,23 @@ fn exec_argument(exec: &Path) -> String {
         quoted.push(c);
     }
     quoted.push('"');
-    quoted
+    string_escape(&quoted)
+}
+
+/// Échappements du type « string » de la spécification : `\\`, `\n`, `\t`,
+/// `\r` (une valeur ne doit jamais s'étendre sur plusieurs lignes).
+fn string_escape(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for c in value.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\t' => out.push_str("\\t"),
+            '\r' => out.push_str("\\r"),
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 /// Le fichier `.desktop` qui lance `exec`.
@@ -151,17 +168,26 @@ mod tests {
 
     #[test]
     fn exec_quotes_and_escapes_reserved_characters() {
+        // Deux couches : citation de l'argument, puis échappement de la chaîne.
         for (path, exec) in [
-            ("/a\"b/r", "Exec=\"/a\\\"b/r\""),
-            ("/a$b/r", "Exec=\"/a\\$b/r\""),
-            ("/a`b/r", "Exec=\"/a\\`b/r\""),
-            ("/a\\b/r", "Exec=\"/a\\\\b/r\""),
-            ("/a'b/r", "Exec=\"/a'b/r\""),
-            ("/a b%/r", "Exec=\"/a b%%/r\""),
+            (r#"/a"b/r"#, r#"Exec="/a\\"b/r""#),
+            ("/a$b/r", r#"Exec="/a\\$b/r""#),
+            ("/a`b/r", r#"Exec="/a\\`b/r""#),
+            (r"/a\b/r", r#"Exec="/a\\\\b/r""#),
+            ("/a'b/r", r#"Exec="/a'b/r""#),
+            ("/a b%/r", r#"Exec="/a b%%/r""#),
         ] {
             let entry = desktop_entry(Path::new(path));
             assert!(entry.contains(&format!("{exec}\n")), "{path} -> {entry}");
         }
+    }
+
+    #[test]
+    fn exec_with_a_newline_stays_on_one_line() {
+        let entry = desktop_entry(Path::new("/a\nb\tc/r"));
+        let execs: Vec<_> = entry.lines().filter(|l| l.starts_with("Exec=")).collect();
+        assert_eq!(execs, [r#"Exec="/a\nb\tc/r""#], "{entry}");
+        assert!(entry.lines().any(|l| l == "Icon=rustty"), "{entry}");
     }
 
     #[test]

@@ -191,7 +191,7 @@ pub fn run(
 }
 
 /// Le terminal a-t-il le droit d'écrire dans le presse-papiers (OSC 52) ?
-pub fn clipboard_write_allowed(config: &Config) -> bool {
+pub(crate) fn clipboard_write_allowed(config: &Config) -> bool {
     config.window.osc52_clipboard
 }
 

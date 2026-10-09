@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.111 — 2026-10-09 · « Lanceur et surface : finitions »
+
+- `Exec=` du `.desktop` : deuxième couche d'échappement du type « string » (`\\`, `\n`, `\t`, `\r`) après la citation, une valeur ne s'étend plus sur plusieurs lignes.
+- Surface perdue de façon durable : un seul redessin immédiat par série d'échecs, puis saut jusqu'à une image réussie (plus de boucle à 100 % de processeur).
+- `--init-config` : repli sur une création exclusive quand le système de fichiers n'accepte pas les liens durs (jamais d'écrasement).
+- Bandeau d'un `--config` introuvable : message neutre (« <chemin> introuvable »), exact au démarrage comme au rechargement à chaud.
+
 ## 0.1.0-alpha.110 — 2026-10-09 · « Démarrage, presse-papiers et lanceur plus robustes »
 
 - `--config` vers un fichier inexistant n'est plus silencieux : bandeau « introuvable : valeurs par défaut ».

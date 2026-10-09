@@ -20,10 +20,7 @@ pub fn reload(path: Option<&Path>) -> ReloadOutcome {
     let result = match path {
         Some(p) if p.exists() => Config::load(p),
         Some(p) => {
-            return ReloadOutcome::Rejected(format!(
-                "{} introuvable : valeurs par défaut",
-                p.display()
-            ));
+            return ReloadOutcome::Rejected(format!("{} introuvable", p.display()));
         }
         None => Config::load_default(),
     };
@@ -41,11 +38,31 @@ pub fn init_config(path: &Path) -> std::io::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
+    publish(path, rustty_config::DEFAULT_TOML, |tmp, dest| {
+        std::fs::hard_link(tmp, dest)
+    })
+}
+
+/// Écrit `content` dans un temporaire voisin puis le publie avec `link`. Si
+/// le système de fichiers refuse les liens durs (FAT, certains montages
+/// réseau), repli sur une création exclusive : jamais d'écrasement.
+fn publish(
+    path: &Path,
+    content: &str,
+    link: impl Fn(&Path, &Path) -> std::io::Result<()>,
+) -> std::io::Result<()> {
+    use std::io::{ErrorKind, Write as _};
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);
-    let result = std::fs::write(&tmp, rustty_config::DEFAULT_TOML)
-        .and_then(|()| std::fs::hard_link(&tmp, path));
+    let result = std::fs::write(&tmp, content).and_then(|()| match link(&tmp, path) {
+        Err(e) if e.kind() != ErrorKind::AlreadyExists => std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)
+            .and_then(|mut f| f.write_all(content.as_bytes())),
+        other => other,
+    });
     let _ = std::fs::remove_file(&tmp);
     result
 }
@@ -139,6 +156,26 @@ mod tests {
         std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
         assert!(result.is_err());
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn init_config_falls_back_when_hard_links_are_unsupported() {
+        let dir = temp_dir("no-hardlink");
+        let path = dir.join("rustty.toml");
+        let no_links = |_: &Path, _: &Path| Err(std::io::Error::other("liens durs non gérés"));
+        publish(&path, rustty_config::DEFAULT_TOML, no_links).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            rustty_config::DEFAULT_TOML
+        );
+        // Jamais d'écrasement, même en repli.
+        let err = publish(&path, "autre", no_links).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            rustty_config::DEFAULT_TOML
+        );
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
     }
 
     #[test]

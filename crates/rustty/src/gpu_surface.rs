@@ -77,10 +77,32 @@ pub fn classify(current: &wgpu::CurrentSurfaceTexture) -> AcquireKind {
     }
 }
 
+/// Borne les relances : seule la première tentative consécutive perdue
+/// redemande un dessin ; ensuite on saute jusqu'à une image réussie, pour
+/// qu'une surface durablement perdue ne fasse pas tourner le processeur.
+pub fn throttle(kind: AcquireKind, retries: &mut u32) -> AcquireKind {
+    match kind {
+        AcquireKind::Retry => {
+            *retries += 1;
+            if *retries > 1 {
+                AcquireKind::Skip
+            } else {
+                AcquireKind::Retry
+            }
+        }
+        AcquireKind::Frame => {
+            *retries = 0;
+            kind
+        }
+        AcquireKind::Skip => kind,
+    }
+}
+
 pub struct Surface {
     surface: wgpu::Surface<'static>,
     config: wgpu::SurfaceConfiguration,
     view_format: TextureFormat,
+    retries: u32,
 }
 
 impl Surface {
@@ -108,6 +130,7 @@ impl Surface {
             surface,
             config,
             view_format,
+            retries: 0,
         })
     }
 
@@ -135,10 +158,11 @@ impl Surface {
     /// L'image à dessiner, de quoi réessayer tout de suite, ou la sauter.
     pub fn acquire(&mut self, ctx: &GpuContext) -> Acquire {
         let current = self.surface.get_current_texture();
-        let kind = classify(&current);
-        if kind == AcquireKind::Retry {
+        let raw = classify(&current);
+        if raw == AcquireKind::Retry {
             self.surface.configure(&ctx.device, &self.config);
         }
+        let kind = throttle(raw, &mut self.retries);
         match current {
             wgpu::CurrentSurfaceTexture::Success(t)
             | wgpu::CurrentSurfaceTexture::Suboptimal(t) => Acquire::Frame(t),
@@ -168,6 +192,32 @@ mod tests {
         assert_eq!(classify(&C::Timeout), AcquireKind::Skip);
         assert_eq!(classify(&C::Occluded), AcquireKind::Skip);
         assert_eq!(classify(&C::Validation), AcquireKind::Skip);
+    }
+
+    #[test]
+    fn only_the_first_consecutive_retry_asks_for_a_redraw() {
+        let mut retries = 0;
+        assert_eq!(
+            throttle(AcquireKind::Retry, &mut retries),
+            AcquireKind::Retry
+        );
+        assert_eq!(
+            throttle(AcquireKind::Retry, &mut retries),
+            AcquireKind::Skip
+        );
+        assert_eq!(
+            throttle(AcquireKind::Retry, &mut retries),
+            AcquireKind::Skip
+        );
+        assert_eq!(
+            throttle(AcquireKind::Frame, &mut retries),
+            AcquireKind::Frame
+        );
+        assert_eq!(
+            throttle(AcquireKind::Retry, &mut retries),
+            AcquireKind::Retry
+        );
+        assert_eq!(throttle(AcquireKind::Skip, &mut retries), AcquireKind::Skip);
     }
 
     #[test]
