@@ -4,6 +4,77 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.71 — 2026-10-09 · « Corrections de revue »
+
+- `rustty-pty` : la libération d'un `Pty` ne bloque plus l'appelant — le shell est tué et moissonné dans un thread détaché (SIGHUP, grâce, SIGKILL) ; le thread lecteur capture une panique du traitement et la signale par `PtyEvent::Failed` au lieu de disparaître.
+- `rustty` : un panneau dont le lecteur a paniqué est fermé avec un bandeau d'erreur, l'application continue ; la molette au pixel (pavé tactile) accumule les fractions de ligne au lieu de les perdre.
+
+## 0.1.0-alpha.70 — 2026-10-09 · « Harnais pty et écrivain cédé »
+
+- `rustty-pty` : le harnais de tests répond aux demandes de ConPTY par l'écrivain disponible (y compris celui cédé par `take_writer`), ce qui faisait échouer un test sur Windows.
+
+## 0.1.0-alpha.69 — 2026-10-09 · « Le terminal s'ouvre »
+
+- `rustty` : fenêtre winit + surface wgpu, un shell par panneau, clavier (raccourcis puis encodage), souris (barre d'onglets avec ✕ au survol, sélection avec copie, collage, molette, rapports aux applications), onglets et splits, opacité, bandeaux, rechargement de la configuration à chaud, fin de shell avec `--hold`, icône et titre avec la version.
+- CI : bibliothèques Wayland et xkbcommon sur Linux pour compiler winit.
+- Docs : `docs/e2e.md` (parcours manuel) et README (lancement, raccourcis).
+
+## 0.1.0-alpha.68 — 2026-10-09 · « Surface et frame »
+
+- `rustty` : surface wgpu (format non-sRGB ou vue linéaire, composition alpha prémultipliée pour l'opacité, acquisition robuste), et construction pure de la `Frame` (panneaux, onglets, sélection, fond avec opacité).
+
+## 0.1.0-alpha.67 — 2026-10-09 · « Rechargement de la config »
+
+- `rustty` : surveillance du fichier de configuration (`notify`, répertoire parent) et rechargement sûr — fichier absent = défauts, fichier invalide = ancienne config conservée avec le message d'erreur.
+
+## 0.1.0-alpha.66 — 2026-10-09 · « TermWindow »
+
+- `rustty` : réveils de l'interface (`UserEvent`, `Wake`) et `TermWindow` — `Term` sous verrou, thread lecteur qui alimente l'émulation, renvoie ses réponses au PTY et réveille la boucle, thread écrivain, resize, défilement, sondage de fin de shell.
+
+## 0.1.0-alpha.65 — 2026-10-09 · « Modèle d'interface »
+
+- `rustty` : modèle pur des décisions d'interface — actions de la configuration, clics sur la barre d'onglets, confirmation de fermeture quand des programmes tournent, fermeture de la fenêtre, fin de shell avec ou sans `--hold`, opacité bornée — rendues sous forme d'effets testés.
+
+## 0.1.0-alpha.64 — 2026-10-09 · « Titres et bandeau »
+
+- `rustty` : gabarit des titres d'onglet, titre de fenêtre avec la version, bandeau d'une ligne (erreur, information, confirmation) rendu en chrome.
+
+## 0.1.0-alpha.63 — 2026-10-09 · « Onglets et panneaux »
+
+- `rustty` : `Tab` (arbre de panneaux ↔ terminaux) et `Workspace` (onglets, actif, nouveau/fermer/suivant/précédent/numéro, split, focus directionnel, redimensionnement, rotation, zoom), purs et testés.
+
+## 0.1.0-alpha.62 — 2026-10-09 · « Géométrie de fenêtre »
+
+- `rustty` : barre d'onglets (haut, bas, cachée, seuil `min_tabs`), zone de contenu, rectangles des panneaux avec interstice, cellule et panneau sous la souris.
+
+## 0.1.0-alpha.61 — 2026-10-09 · « Sélection »
+
+- `rustty` : sélection en cellules (ancre, tête, ordre de lecture) et extraction du texte depuis un instantané (caractères larges, lignes repliées, fins de ligne nettoyées).
+
+## 0.1.0-alpha.60 — 2026-10-09 · « Rapports souris »
+
+- `rustty` : encodage des événements souris pour les applications (modes X10, normal, bouton, tous mouvements ; legacy et SGR ; modificateurs ; molette).
+
+## 0.1.0-alpha.59 — 2026-10-09 · « Encodage clavier »
+
+- `rustty` : encodage xterm des touches (contrôle, alt, touches nommées, F1–F12, paramètre de modificateurs, mode curseur application) et collage assaini avec encadrement (mode 2004).
+
+## 0.1.0-alpha.58 — 2026-10-09 · « Touches → raccourcis »
+
+- `rustty` : traduction des touches winit en combinaisons de la configuration (minuscules, touches nommées, F1–F12, modificateurs).
+
+## 0.1.0-alpha.57 — 2026-10-09 · « Écrivain PTY »
+
+- `rustty-pty` : `PtyWriter` + `spawn_writer` (thread écrivain alimenté par un canal, l'interface ne bloque jamais), `Pty::take_writer`, `Pty::has_running_children` (groupe de premier plan sur Unix).
+
+## 0.1.0-alpha.56 — 2026-10-09 · « Crate rustty »
+
+- Nouvelle crate binaire `rustty` : ligne de commande (`--config`, `--hold`, `--version`, `--help`), journalisation `tracing` pilotée par `RUSTTY_LOG`, chargement de la configuration avec repli sur les défauts.
+
+## 0.1.0-alpha.55 — 2026-10-08 · « Plan 4 : le binaire »
+
+- Plan d'implémentation du binaire `rustty` (14 tâches) : ligne de commande, thread écrivain PTY, clavier (raccourcis, encodage xterm, collage), souris (rapports, sélection), géométrie, onglets et espace de travail, titres et bandeau, modèle d'interface à effets, `TermWindow`, rechargement de la configuration, surface wgpu et frame, boucle winit.
+
 ## 0.1.0-alpha.54 — 2026-10-08 · « Lignes sous ConPTY »
 
 - `rustty-pty` : le test des 2 000 lignes extrait les numéros indépendamment des séquences de contrôle que ConPTY intercale sur la même ligne ; vérifie toujours l'ordre strict, sans perte ni doublon.

@@ -15,3 +15,6 @@ pub use pty::{ExitStatus, Pty};
 pub mod reader;
 
 pub use reader::{PtyEvent, READ_CHUNK, spawn_reader, spawn_reader_with};
+pub mod writer;
+
+pub use writer::{PtyWriter, spawn_writer};

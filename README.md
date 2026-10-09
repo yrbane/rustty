@@ -7,10 +7,10 @@
 Émulateur de terminal accéléré par GPU, écrit en Rust, inspiré de
 [kitty](https://sw.kovidgoyal.net/kitty/).
 
-> Statut : fondations. Cinq crates sont fonctionnelles et testées : `rustty-vt`
-> (émulation), `rustty-layout` (onglets et divisions), `rustty-config` (TOML),
-> `rustty-pty` (shell dans un pseudo-terminal) et `rustty-render` (rendu wgpu,
-> testé hors écran sur les trois OS). Reste le binaire qui les assemble.
+> Statut : alpha utilisable. Le binaire `rustty` ouvre une fenêtre GPU, lance
+> le shell, gère onglets (bouton ✕ au survol), splits, sélection, presse-papiers,
+> scrollback, opacité et rechargement de la configuration à chaud. Les tests
+> couvrent toute la logique ; le parcours manuel est dans `docs/e2e.md`.
 
 ## Développement
 
@@ -24,6 +24,20 @@ Les tests de rendu comparent des images de référence (`crates/rustty-render/te
 produites avec la police embarquée DejaVu Sans Mono. Pour les régénérer après un
 changement voulu du rendu : `UPDATE_GOLDEN=1 cargo test -p rustty-render --test offscreen`,
 puis vérifier les PNG à l'œil avant de les committer.
+
+## Lancer
+
+```bash
+cargo run -p rustty                      # fenêtre avec le shell par défaut
+cargo run -p rustty -- --config ~/r.toml # autre fichier de configuration
+cargo run -p rustty -- --hold            # garder le panneau quand le shell sort
+RUSTTY_LOG=debug cargo run -p rustty     # journal détaillé
+```
+
+Raccourcis par défaut (modifiables dans `[keys]`) : `ctrl+shift+t` nouvel onglet,
+`ctrl+shift+q` fermer l'onglet, `ctrl+shift+e` / `ctrl+shift+o` split vertical /
+horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+c` /
+`ctrl+shift+v` copier / coller, `shift+page_up` / `shift+page_down` historique, `ctrl+shift+left` / `ctrl+shift+right` onglet précédent / suivant, `alt+1`…`alt+5` onglet n, `ctrl+shift+z` zoom, `ctrl+shift+r` rotation, `ctrl+shift+f5` recharger la config.
 
 ## Objectifs de la v0.1
 

@@ -1,0 +1,33 @@
+[package]
+name = "rustty"
+description = "Émulateur de terminal GPU inspiré de kitty"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "rustty"
+path = "src/main.rs"
+
+[dependencies]
+rustty-config = { path = "../rustty-config" }
+rustty-layout = { path = "../rustty-layout" }
+rustty-pty = { path = "../rustty-pty" }
+rustty-render = { path = "../rustty-render" }
+rustty-vt = { path = "../rustty-vt" }
+anyhow.workspace = true
+arboard.workspace = true
+image.workspace = true
+wgpu.workspace = true
+pollster.workspace = true
+notify.workspace = true
+parking_lot.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+winit.workspace = true
+unicode-width.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

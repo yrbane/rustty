@@ -19,8 +19,9 @@ pub enum ExitStatus {
 
 pub struct Pty {
     master: Box<dyn MasterPty + Send>,
-    writer: Box<dyn Write + Send>,
-    child: Box<dyn Child + Send + Sync>,
+    writer: Option<Box<dyn Write + Send>>,
+    /// `None` seulement pendant `Drop`, quand l'enfant part dans le thread moissonneur.
+    child: Option<Box<dyn Child + Send + Sync>>,
     program: String,
 }
 
@@ -34,6 +35,17 @@ fn to_native(size: PtySize) -> portable_pty::PtySize {
 }
 
 impl Pty {
+    fn child(&self) -> Option<&(dyn Child + Send + Sync)> {
+        self.child.as_deref()
+    }
+
+    /// Toujours présent hors de `Drop`.
+    fn child_mut(&mut self) -> &mut (dyn Child + Send + Sync) {
+        self.child
+            .as_deref_mut()
+            .expect("enfant présent hors de Drop")
+    }
+
     /// Ouvre un pseudo-terminal de `size` et y lance `shell` avec `env` en plus
     /// de l'environnement hérité, dans `cwd` s'il est donné.
     pub fn spawn(
@@ -67,8 +79,8 @@ impl Pty {
             .map_err(|e| PtyError::Open(e.to_string()))?;
         Ok(Self {
             master: pair.master,
-            writer,
-            child,
+            writer: Some(writer),
+            child: Some(child),
             program: shell.program.clone(),
         })
     }
@@ -88,9 +100,38 @@ impl Pty {
     }
 
     pub fn write(&mut self, bytes: &[u8]) -> Result<(), PtyError> {
-        self.writer.write_all(bytes)?;
-        self.writer.flush()?;
+        let writer = self.writer.as_mut().ok_or_else(|| {
+            PtyError::Io(std::io::Error::new(
+                std::io::ErrorKind::BrokenPipe,
+                "écrivain déjà pris par take_writer",
+            ))
+        })?;
+        writer.write_all(bytes)?;
+        writer.flush()?;
         Ok(())
+    }
+
+    /// Cède l'écrivain (une seule fois) à un thread dédié ; `write` échoue ensuite.
+    pub fn take_writer(&mut self) -> Option<Box<dyn Write + Send>> {
+        self.writer.take()
+    }
+
+    /// Vrai si un programme autre que le shell est au premier plan du terminal.
+    #[cfg(unix)]
+    pub fn has_running_children(&self) -> bool {
+        match (
+            self.master.process_group_leader(),
+            self.child().and_then(|c| c.process_id()),
+        ) {
+            (Some(leader), Some(pid)) => leader != pid as libc::pid_t,
+            _ => false,
+        }
+    }
+
+    /// Windows n'expose pas le groupe de premier plan de ConPTY.
+    #[cfg(windows)]
+    pub fn has_running_children(&self) -> bool {
+        false
     }
 
     pub fn resize(&self, size: PtySize) -> Result<(), PtyError> {
@@ -100,20 +141,20 @@ impl Pty {
     }
 
     pub fn process_id(&self) -> Option<u32> {
-        self.child.process_id()
+        self.child()?.process_id()
     }
 
     /// `None` tant que le processus tourne.
     pub fn try_wait(&mut self) -> Result<Option<ExitStatus>, PtyError> {
-        Ok(self.child.try_wait()?.map(convert_status))
+        Ok(self.child_mut().try_wait()?.map(convert_status))
     }
 
     pub fn wait(&mut self) -> Result<ExitStatus, PtyError> {
-        Ok(convert_status(self.child.wait()?))
+        Ok(convert_status(self.child_mut().wait()?))
     }
 
     pub fn kill(&mut self) -> Result<(), PtyError> {
-        self.child.kill()?;
+        self.child_mut().kill()?;
         Ok(())
     }
 
@@ -123,10 +164,24 @@ impl Pty {
 }
 
 impl Drop for Pty {
+    /// Le shell est tué et moissonné dans un thread détaché : `kill` accorde
+    /// 200 ms de grâce après SIGHUP, ce que le thread d'interface ne doit
+    /// jamais attendre.
     fn drop(&mut self) {
-        if let Ok(None) = self.child.try_wait() {
-            let _ = self.child.kill();
-            let _ = self.child.wait();
+        let Some(mut child) = self.child.take() else {
+            return;
+        };
+        if let Ok(Some(_)) = child.try_wait() {
+            return;
+        }
+        let spawned = std::thread::Builder::new()
+            .name("rustty-pty-reaper".into())
+            .spawn(move || {
+                let _ = child.kill();
+                let _ = child.wait();
+            });
+        if spawned.is_err() {
+            // Sans thread disponible, on reste correct : on bloque ici.
         }
     }
 }
