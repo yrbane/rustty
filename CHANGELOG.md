@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.121 — 2026-10-19 · « Insertion d'un panneau d'un côté donné »
+
+- `rustty-layout` : nouveau type `Side` (haut, bas, gauche, droite) avec l'axe de division et l'ordre du nouveau panneau.
+- `TabLayout::insert` place un nouveau panneau d'un côté d'un panneau cible, `insert_root` enveloppe tout l'arbre (ou crée la racine d'un onglet vide), `parent_split` donne la division qui contient directement un panneau.
+- `split` s'appuie désormais sur `insert` (droite ou bas) : le doublon dans `node.rs` disparaît, l'insertion vit dans `insert.rs`.
+- Tests unitaires et propriétés (`insert`, `close`, `insert_root` mêlés aux opérations existantes).
+
 ## 0.1.0-alpha.120 — 2026-10-19 · « Le nouveau panneau part du dossier courant »
 
 - Diviser un panneau ou ouvrir un onglet (raccourci, menu contextuel ou bouton « + ») lance le nouveau shell dans le dossier courant du panneau actif, comme `--cwd=current` de kitty.

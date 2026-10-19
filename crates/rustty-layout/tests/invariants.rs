@@ -2,7 +2,7 @@
 //! rectangles couvrent les bornes sans se chevaucher et chaque fenêtre en a un.
 
 use proptest::prelude::*;
-use rustty_layout::{Axis, Direction, Rect, TabLayout, WindowId};
+use rustty_layout::{Axis, Direction, Rect, Side, TabLayout, WindowId};
 
 #[derive(Clone, Debug)]
 enum Op {
@@ -12,6 +12,8 @@ enum Op {
     Rotate(usize),
     Zoom(usize),
     Focus(usize, Direction),
+    Insert(usize, Side),
+    InsertRoot(Side),
 }
 
 fn op() -> impl Strategy<Value = Op> {
@@ -22,7 +24,15 @@ fn op() -> impl Strategy<Value = Op> {
         Just(Direction::Up),
         Just(Direction::Down)
     ];
+    let side = prop_oneof![
+        Just(Side::Top),
+        Just(Side::Bottom),
+        Just(Side::Left),
+        Just(Side::Right)
+    ];
     prop_oneof![
+        (0..8usize, side.clone()).prop_map(|(i, s)| Op::Insert(i, s)),
+        side.prop_map(Op::InsertRoot),
         (0..8usize, axis.clone()).prop_map(|(i, a)| Op::Split(i, a)),
         (0..8usize).prop_map(Op::Close),
         (0..8usize, axis, -0.5f32..0.5).prop_map(|(i, a, d)| Op::Resize(i, a, d)),
@@ -64,6 +74,14 @@ fn apply(layout: &mut TabLayout, op: &Op) {
             if let Some(w) = pick(layout, i) {
                 let _ = layout.toggle_zoom(w);
             }
+        }
+        Op::Insert(i, side) => {
+            if let Some(w) = pick(layout, i) {
+                let _ = layout.insert(w, side);
+            }
+        }
+        Op::InsertRoot(side) => {
+            let _ = layout.insert_root(side);
         }
         Op::Focus(i, dir) => {
             if let Some(w) = pick(layout, i)

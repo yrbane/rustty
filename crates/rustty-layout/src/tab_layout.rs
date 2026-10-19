@@ -1,6 +1,6 @@
 //! Façade d'un onglet : l'arbre de divisions, la fenêtre focalisée et le zoom.
 
-use crate::geometry::{Axis, Direction, Rect, SplitId, WindowId};
+use crate::geometry::{Axis, Direction, Rect, Side, SplitId, WindowId};
 use crate::node::Node;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -58,15 +58,44 @@ impl TabLayout {
     /// Divise `target` selon `axis` ; la nouvelle fenêtre est le second
     /// panneau (droite ou bas) et prend le focus.
     pub fn split(&mut self, target: WindowId, axis: Axis) -> Option<WindowId> {
-        let root = self.root.as_mut()?;
+        let side = match axis {
+            Axis::Vertical => Side::Right,
+            Axis::Horizontal => Side::Bottom,
+        };
+        self.insert(target, side)
+    }
+
+    /// Insère une nouvelle fenêtre du côté `side` de `target` (ratio 0.5), la
+    /// focalise et lève le zoom. La division porte `SplitId(new.0)`.
+    pub fn insert(&mut self, target: WindowId, side: Side) -> Option<WindowId> {
         let new_id = WindowId(self.next_id);
-        if !root.split_leaf(target, axis, new_id) {
+        if !self.root.as_mut()?.insert_leaf(target, side, new_id) {
             return None;
         }
+        Some(self.adopt(new_id))
+    }
+
+    /// Comme `insert`, mais enveloppe toute la racine ; crée la racine si l'arbre est vide.
+    pub fn insert_root(&mut self, side: Side) -> WindowId {
+        let new_id = WindowId(self.next_id);
+        self.root = Some(match self.root.take() {
+            Some(root) => root.wrap(side, new_id),
+            None => Node::Leaf(new_id),
+        });
+        self.adopt(new_id)
+    }
+
+    /// Division qui contient directement la feuille `id` (`None` pour la racine ou une absente).
+    pub fn parent_split(&self, id: WindowId) -> Option<SplitId> {
+        self.root.as_ref()?.parent_split(id)
+    }
+
+    /// Consomme l'id fraîchement inséré : focus, zoom levé.
+    fn adopt(&mut self, new_id: WindowId) -> WindowId {
         self.next_id += 1;
         self.focused = Some(new_id);
         self.zoomed = None;
-        Some(new_id)
+        new_id
     }
 
     pub fn zoomed(&self) -> Option<WindowId> {
