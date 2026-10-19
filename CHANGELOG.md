@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.133 — 2026-10-19 · « Corrections de la revue finale des bandeaux »
+
+- Nuancier : la pastille de chaque couleur montre désormais la couleur que prend l'onglet au choix (indice ANSI de la palette), et non plus une couleur d'accent décalée (« Rouge » affichait du vert).
+- Glisser : il est annulé, sans dépôt ni retour à un mauvais onglet de départ, dès que les onglets changent pendant l'appui (nouvel onglet, fermeture, réordonnancement), car les indices ne désignent plus les mêmes onglets.
+- Bandeau : un glisser de plus de 4 px suivi d'un clic sur le même bandeau n'ouvre plus le renommage ; le suivi du double clic est remis à zéro au franchissement du seuil.
+- README : le nom d'un panneau remplace le titre de l'onglet sans nom ; le ✕ du bandeau demande confirmation quand un programme tourne.
+
 ## 0.1.0-alpha.132 — 2026-10-19 · « Documentation des bandeaux et du glisser-déposer »
 
 - README : le texte sur les bandeaux de panneau, le glisser-déposer, les menus d'onglet et de bandeau et le nuancier est regroupé dans une section « Souris » ; la phrase du clic droit n'est plus dupliquée dans le paragraphe des raccourcis.

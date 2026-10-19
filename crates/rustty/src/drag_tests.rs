@@ -31,24 +31,27 @@ fn drop_side_respects_the_rect_origin() {
 
 #[test]
 fn small_moves_stay_a_click() {
-    let mut d = Drag::press(DragSource::Tab(0), 0, 10.0, 10.0);
+    let mut d = Drag::press(DragSource::Tab(0), 0, vec![], 10.0, 10.0);
     assert!(!d.moved(13.0, 10.0));
     assert!(!d.is_active());
     assert!(d.moved(15.0, 10.0));
     assert!(d.is_active());
-    assert_eq!(Drag::press(DragSource::Tab(0), 0, 0.0, 0.0).finish(), None);
+    assert_eq!(
+        Drag::press(DragSource::Tab(0), 0, vec![], 0.0, 0.0).finish(),
+        None
+    );
 }
 
 #[test]
 fn threshold_is_crossed_only_once() {
-    let mut d = Drag::press(DragSource::Tab(0), 0, 0.0, 0.0);
+    let mut d = Drag::press(DragSource::Tab(0), 0, vec![], 0.0, 0.0);
     assert!(d.moved(10.0, 0.0));
     assert!(!d.moved(20.0, 0.0), "déjà actif");
 }
 
 #[test]
 fn finish_returns_source_and_target_once_active() {
-    let mut d = Drag::press(DragSource::Pane(TermId(3)), 1, 0.0, 0.0);
+    let mut d = Drag::press(DragSource::Pane(TermId(3)), 1, vec![], 0.0, 0.0);
     d.moved(50.0, 0.0);
     let target = DropTarget::Pane {
         term: TermId(4),
@@ -62,7 +65,7 @@ fn finish_returns_source_and_target_once_active() {
 #[test]
 fn hovering_a_tab_half_a_second_switches_once() {
     let t0 = Instant::now();
-    let mut d = Drag::press(DragSource::Pane(TermId(1)), 0, 0.0, 0.0);
+    let mut d = Drag::press(DragSource::Pane(TermId(1)), 0, vec![], 0.0, 0.0);
     d.moved(50.0, 0.0);
     d.set_target(DropTarget::OnTab(2), t0);
     assert_eq!(d.due_tab_switch(t0 + Duration::from_millis(499)), None);
@@ -73,7 +76,7 @@ fn hovering_a_tab_half_a_second_switches_once() {
 #[test]
 fn tab_switch_fires_once_per_hover() {
     let t0 = Instant::now();
-    let mut d = Drag::press(DragSource::Pane(TermId(1)), 0, 0.0, 0.0);
+    let mut d = Drag::press(DragSource::Pane(TermId(1)), 0, vec![], 0.0, 0.0);
     d.moved(50.0, 0.0);
     d.set_target(DropTarget::OnTab(2), t0);
     d.set_target(DropTarget::OnTab(2), t0 + Duration::from_millis(300));
@@ -88,7 +91,7 @@ fn tab_switch_fires_once_per_hover() {
 #[test]
 fn leaving_the_tab_resets_the_hover() {
     let t0 = Instant::now();
-    let mut d = Drag::press(DragSource::Pane(TermId(1)), 0, 0.0, 0.0);
+    let mut d = Drag::press(DragSource::Pane(TermId(1)), 0, vec![], 0.0, 0.0);
     d.moved(50.0, 0.0);
     d.set_target(DropTarget::OnTab(2), t0);
     d.set_target(DropTarget::None, t0 + Duration::from_millis(100));
@@ -112,4 +115,17 @@ fn tab_slot_uses_tab_midpoints() {
     assert_eq!(tab_slot(&tabs, 60.0), 1);
     assert_eq!(tab_slot(&tabs, 290.0), 3);
     assert_eq!(tab_slot(&[], 10.0), 0);
+}
+
+#[test]
+fn a_drag_is_stale_once_the_tabs_change() {
+    let tabs = vec![TermId(1), TermId(2), TermId(3)];
+    let d = Drag::press(DragSource::Tab(2), 0, tabs.clone(), 0.0, 0.0);
+    assert!(!d.tabs_changed(&tabs));
+    // Ctrl+T : un onglet de plus, l'indice 2 ne désigne plus le même.
+    assert!(d.tabs_changed(&[TermId(1), TermId(2), TermId(3), TermId(4)]));
+    // Même nombre mais autre ordre.
+    assert!(d.tabs_changed(&[TermId(1), TermId(3), TermId(2)]));
+    // Un onglet fermé puis un autre ouvert.
+    assert!(d.tabs_changed(&[TermId(1), TermId(2), TermId(5)]));
 }

@@ -6,7 +6,6 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use super::layout::{ITEM_PADDING, MenuLayout, SWATCH_CELLS};
 use super::{ContextMenu, MenuEntry};
-use crate::accent::accent_color;
 
 /// Coupe `text` à `cells` cellules, avec `…` quand il faut couper.
 pub fn truncate_to_cells(text: &str, cells: usize) -> String {
@@ -78,11 +77,11 @@ pub fn menu_chrome(
                 let mut avail = (row.width / cw).saturating_sub(2) as usize;
                 let mut label_x = row.x + cw;
                 if let Some(slot) = item.swatch() {
-                    // Pastille carrée d'une cellule de côté, centrée dans la rangée.
+                    // Pastille carrée d'une cellule de côté ; `slot` est un indice ANSI, comme pour l'onglet.
                     let side = cw.min(row.height);
                     chrome.quads.push(ChromeQuad {
                         rect: PixelRect::new(label_x, row.y + (row.height - side) / 2, side, side),
-                        color: accent_color(palette, slot),
+                        color: palette.ansi[slot % palette.ansi.len()],
                     });
                     label_x += SWATCH_CELLS * cw;
                     avail = avail.saturating_sub(SWATCH_CELLS as usize);

@@ -61,6 +61,8 @@ pub fn tab_slot(tabs: &[TabRect], x: f64) -> usize {
 pub struct Drag {
     source: DragSource,
     start_tab: usize,
+    /// Onglets à l'appui (un terme par onglet) : les indices n'ont de sens que tant qu'ils ne bougent pas.
+    tabs: Vec<TermId>,
     origin: (f64, f64),
     active: bool,
     target: DropTarget,
@@ -70,10 +72,11 @@ pub struct Drag {
 }
 
 impl Drag {
-    pub fn press(source: DragSource, start_tab: usize, x: f64, y: f64) -> Self {
+    pub fn press(source: DragSource, start_tab: usize, tabs: Vec<TermId>, x: f64, y: f64) -> Self {
         Self {
             source,
             start_tab,
+            tabs,
             origin: (x, y),
             active: false,
             target: DropTarget::None,
@@ -90,6 +93,12 @@ impl Drag {
         let (dx, dy) = (x - self.origin.0, y - self.origin.1);
         self.active = dx.hypot(dy) >= DRAG_THRESHOLD;
         self.active
+    }
+
+    /// Vrai quand les onglets ne sont plus ceux de l'appui (ajout, retrait, ordre) :
+    /// `Tab(i)`, `OnTab(i)` et l'onglet de départ désigneraient un autre onglet.
+    pub fn tabs_changed(&self, now: &[TermId]) -> bool {
+        self.tabs != now
     }
 
     pub fn is_active(&self) -> bool {

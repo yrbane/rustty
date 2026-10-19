@@ -236,7 +236,7 @@ fn chrome_draws_a_swatch_before_color_labels_only() {
     let swatch = c
         .quads
         .iter()
-        .find(|q| q.color == crate::accent::accent_color(&palette, 1) && q.rect.y > row.y - 1)
+        .find(|q| q.color == palette.ansi[1] && q.rect.y > row.y - 1)
         .expect("pastille");
     assert_eq!(swatch.rect.width, swatch.rect.height, "carrée");
     let label = c.texts.iter().find(|t| t.text == "Rouge").unwrap();
@@ -257,4 +257,30 @@ fn chrome_draws_a_swatch_before_color_labels_only() {
     for t in &c.texts {
         assert!(t.x + t.text.width() as u32 * 10 <= l.rect.x + l.rect.width);
     }
+}
+
+#[test]
+fn each_swatch_shows_the_colour_the_tab_gets() {
+    let palette = Palette::from_config(&Colors::default(), false);
+    let m = ContextMenu::palette(0, 100, 20);
+    let l = layout(&m, (800, 600), metrics());
+    let c = menu_chrome(&m, &l, &palette, metrics());
+    let mut seen = 0;
+    for (i, row) in l.rows.iter().map(|(i, r)| (*i, r)) {
+        let MenuEntry::Item(MenuItem::Color(slot)) = &m.entries[i] else {
+            continue;
+        };
+        let mut tab = crate::tab::Tab::new(TermId(1), 0);
+        tab.color = Some(*slot);
+        let applied =
+            crate::appearance::tab_accents(&rustty_config::Tabs::default(), &palette, &[tab]);
+        let swatch = c
+            .quads
+            .iter()
+            .find(|q| q.rect.x == row.x + 10 && q.rect.y >= row.y && q.rect.y < row.y + row.height)
+            .unwrap_or_else(|| panic!("pastille de la rangée {i}"));
+        assert_eq!(Some(swatch.color), applied[0], "rangée {i}, ANSI {slot}");
+        seen += 1;
+    }
+    assert_eq!(seen, 12);
 }

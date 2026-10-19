@@ -72,10 +72,14 @@ horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+
   nom donné au panneau, sinon le titre annoncé par le shell, tronqué avec `…`)
   à gauche, et à droite un bouton ✕ qui apparaît au survol (masqué sur un
   bandeau de moins de 6 cellules) et ferme le panneau. Il prend la couleur de
-  la division qui contient le panneau (réglages `[splits]`). Un onglet à un
+  la division qui contient le panneau (réglages `[splits]`). Le nom d'un panneau
+  remplace aussi le titre de l'onglet quand ce panneau a le focus et que
+  l'onglet n'a pas de nom à lui. Un onglet à un
   seul panneau, ou un panneau agrandi, n'a pas de bandeau. Un clic sur le
   bandeau focalise le panneau, un double clic le renomme ; le bandeau n'est
-  jamais transmis aux applications qui captent la souris.
+  jamais transmis aux applications qui captent la souris. Le ✕ du bandeau
+  demande confirmation quand un programme tourne dans le panneau, comme la
+  fermeture d'un panneau.
 - **Déplacer un panneau.** On le tire par son bandeau (au-delà de 4 px ; en
   dessous, c'est un clic) : la moitié visée d'un autre panneau (haut, bas,
   gauche ou droite, délimitées par les diagonales) s'éclaire et le panneau s'y

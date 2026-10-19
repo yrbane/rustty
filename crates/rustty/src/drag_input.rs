@@ -93,7 +93,7 @@ impl OsWindow {
             return;
         }
         let start = self.model.workspace.active();
-        self.drag = Some(Drag::press(source, start, x, y));
+        self.drag = Some(Drag::press(source, start, self.tab_signature(), x, y));
     }
 
     /// Appui sur la barre : un onglet pressé au bouton gauche peut être tiré.
@@ -127,7 +127,9 @@ impl OsWindow {
             if !drag.moved(x, y) {
                 return None;
             }
-            // Le seuil est franchi : ce n'est plus un clic sur l'onglet.
+            // Le seuil est franchi : ce n'est plus un clic sur l'onglet,
+            // ni la première moitié d'un double clic sur un bandeau.
+            self.header_clicks.reset();
             self.press_target = HoverTarget::None;
             self.update_cursor_icon(x, y);
         }
@@ -218,11 +220,27 @@ impl OsWindow {
     /// Mise en page : un glisser dont la source a disparu s'arrête sans dépôt.
     pub(crate) fn drop_vanished_drag(&mut self) {
         let Some(drag) = &self.drag else { return };
+        if drag.tabs_changed(&self.tab_signature()) {
+            // Les indices ne désignent plus les mêmes onglets : ni dépôt ni retour à l'onglet de départ.
+            self.drag = None;
+            self.update_cursor_icon(self.cursor.0, self.cursor.1);
+            return;
+        }
         if source_alive(drag.source(), &self.model.workspace) {
             return;
         }
         // La mise en page qui nous appelle prend en compte l'onglet rendu.
         let _ = self.cancel_drag();
+    }
+
+    /// Un terminal par onglet (le plus ancien) : change dès qu'un onglet apparaît, disparaît ou bouge.
+    fn tab_signature(&self) -> Vec<TermId> {
+        self.model
+            .workspace
+            .tabs()
+            .iter()
+            .filter_map(|t| t.terms().into_iter().min())
+            .collect()
     }
 
     /// Rectangles complets (bandeau compris) des panneaux de l'onglet affiché.
