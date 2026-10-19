@@ -178,5 +178,14 @@ fn pane_target_keeps_the_current_behavior() {
         false,
         &idle,
     );
-    assert_eq!(effects.len(), 2);
+    assert_eq!(
+        effects,
+        vec![
+            Effect::SpawnTerm {
+                term: TermId(2),
+                cwd_of: Some(first)
+            },
+            Effect::Relayout
+        ]
+    );
 }

@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.129 — 2026-10-19 · « Menu d'onglet invalidé par la fin d'un shell »
+
+- Un menu d'onglet ou le nuancier ouvert se ferme dès qu'un terminal se termine ou est fermé : l'index d'onglet visé pouvait se décaler et « Fermer l'onglet », « Fermer les autres onglets » ou la couleur touchaient un autre onglet.
+
 ## 0.1.0-alpha.128 — 2026-10-19 · « Menus d'onglet et de bandeau »
 
 - Clic droit sur un onglet : menu de l'onglet cliqué (renommer, changer la couleur, nouvel onglet, fermer, fermer les autres).

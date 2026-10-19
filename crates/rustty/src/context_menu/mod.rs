@@ -77,11 +77,13 @@ impl ContextMenu {
         Self::build(MenuTarget::Palette(tab), x, y, None)
     }
 
-    /// Le terminal visé par le menu (panneau ou bandeau), s'il y en a un.
-    pub fn term(&self) -> Option<TermId> {
+    /// La fin du terminal `term` invalide-t-elle ce menu ? Panneau et bandeau
+    /// visent un terminal ; onglet et nuancier visent un index que la
+    /// disparition d'un onglet décalerait.
+    pub fn dropped_by_exit_of(&self, term: TermId) -> bool {
         match self.target {
-            MenuTarget::Pane(t) | MenuTarget::Header(t) => Some(t),
-            MenuTarget::Tab(_) | MenuTarget::Palette(_) => None,
+            MenuTarget::Pane(t) | MenuTarget::Header(t) => t == term,
+            MenuTarget::Tab(_) | MenuTarget::Palette(_) => true,
         }
     }
 

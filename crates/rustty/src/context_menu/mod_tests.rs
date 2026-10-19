@@ -160,3 +160,22 @@ fn shortcut_is_the_shortest_binding() {
     );
     assert_eq!(shortcut_for(&KeyMap::empty(), Action::Copy), None);
 }
+
+#[test]
+fn tab_and_palette_menus_are_dropped_when_any_term_goes_away() {
+    // Un onglet qui disparaît décale les index : ces menus n'ont plus de cible sûre.
+    let keys = KeyMap::default();
+    assert!(ContextMenu::tab(2, 0, 0, true, &keys).dropped_by_exit_of(TermId(7)));
+    assert!(ContextMenu::palette(2, 0, 0).dropped_by_exit_of(TermId(7)));
+}
+
+#[test]
+fn pane_and_header_menus_are_dropped_only_by_their_own_term() {
+    let keys = KeyMap::default();
+    let pane = ContextMenu::pane(TermId(1), 0, 0, false, false, &keys);
+    let header = ContextMenu::header(TermId(1), 0, 0, &keys);
+    for menu in [pane, header] {
+        assert!(menu.dropped_by_exit_of(TermId(1)));
+        assert!(!menu.dropped_by_exit_of(TermId(2)));
+    }
+}
