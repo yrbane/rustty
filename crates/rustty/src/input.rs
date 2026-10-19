@@ -202,6 +202,9 @@ impl OsWindow {
             self.press_target = on_bar;
             return Vec::new();
         }
+        if let Some(effects) = self.header_press(button, x, y, Instant::now()) {
+            return effects;
+        }
         if button == MouseButton::Left && self.start_divider_drag(x, y) {
             return Vec::new();
         }

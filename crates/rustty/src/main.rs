@@ -15,6 +15,7 @@ mod events;
 mod font_zoom;
 mod geometry;
 mod gpu_surface;
+mod header_input;
 mod img;
 mod img_fetch;
 mod input;

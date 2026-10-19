@@ -6,6 +6,7 @@ use rustty_render::{
 };
 
 use crate::appearance;
+use crate::rename::RenameTarget;
 use crate::tab::{Tab, TermId};
 use crate::window_state::OsWindow;
 
@@ -143,17 +144,27 @@ impl OsWindow {
         }
         let tab = self.model.workspace.active_tab();
         let focused = tab.focused_term();
+        // Pendant l'édition, le bandeau montre le tampon suivi du curseur.
+        let titles: Vec<String> = self
+            .headers
+            .iter()
+            .map(|h| match &self.model.renaming {
+                Some(r) if r.target == RenameTarget::Pane(h.term) => format!("{}▌", r.buffer),
+                _ => self.pane_title(h.term).to_string(),
+            })
+            .collect();
         let specs: Vec<_> = self
             .headers
             .iter()
-            .map(|h| {
+            .zip(&titles)
+            .map(|(h, title)| {
                 let hovered = match self.header_hover {
                     Some(HeaderHit::Title(t) | HeaderHit::Close(t)) => t == h.term,
                     None => false,
                 };
                 PaneHeaderSpec {
                     rect: h.rect,
-                    title: self.pane_title(h.term),
+                    title,
                     color: appearance::header_color(
                         &self.config.splits,
                         &self.palette,

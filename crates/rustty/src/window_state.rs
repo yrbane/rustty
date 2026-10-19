@@ -25,6 +25,7 @@ use crate::model::Model;
 use crate::mouse::{DoubleClick, MotionFilter, MouseButton, Selection, WheelAccumulator};
 use crate::pane_fonts::{PaneFonts, SizeKey};
 use crate::pane_header::{HeaderHit, PaneHeader};
+use crate::rename::RenameTarget;
 use crate::renderers::{RendererSpec, Renderers};
 use crate::tab::TermId;
 use crate::term_window::{Launch, TermWindow};
@@ -62,6 +63,7 @@ pub struct OsWindow {
     /// Dernière cellule rapportée en mouvement (une fois par cellule).
     pub motion: MotionFilter,
     pub tab_clicks: DoubleClick,
+    pub header_clicks: DoubleClick,
     pub wheel: WheelAccumulator,
     pub press_target: HoverTarget,
     pub tab_bar: Option<TabBarLayout>,
@@ -148,6 +150,7 @@ impl OsWindow {
             held: None,
             motion: MotionFilter::default(),
             tab_clicks: DoubleClick::default(),
+            header_clicks: DoubleClick::default(),
             wheel: WheelAccumulator::default(),
             press_target: HoverTarget::None,
             tab_bar: None,
@@ -228,7 +231,7 @@ impl OsWindow {
                     .model
                     .renaming
                     .as_ref()
-                    .filter(|r| r.tab == i)
+                    .filter(|r| r.target == RenameTarget::Tab(i))
                     .map(|r| r.buffer.as_str());
                 title::display_title(template, i, raw, tab.custom_title.as_deref(), editing)
             })

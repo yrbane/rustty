@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.126 — 2026-10-19 · « Bandeau cliquable : focus, fermeture, renommage du panneau »
+
+- Un clic sur le titre d'un bandeau donne le focus au panneau ; le ✕ le ferme (avec confirmation si un programme tourne).
+- Un double clic sur le titre renomme le panneau : le bandeau montre le texte tapé suivi de « ▌ » ; un nom vide rend le titre du shell.
+- Un clic droit sur un bandeau est absorbé ; aucun clic sur un bandeau n'est jamais transmis au terminal (vim, htop).
+- Un seul renommage à la fois : démarrer celui d'un panneau annule celui d'un onglet, et inversement.
+
 ## 0.1.0-alpha.125 — 2026-10-19 · « Bandeau de titre sur chaque panneau d'un onglet divisé »
 
 - Module `pane_header` : géométrie pure (`split_header`, `header_at`, `headers_visible`) ; le bandeau (une rangée de la police de base) apparaît quand l'onglet montre au moins deux panneaux, sans zoom.
