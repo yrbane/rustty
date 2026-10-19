@@ -4,6 +4,16 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.131 — 2026-10-19 · « Glisser-déposer des panneaux et des onglets »
+
+- On tire un panneau par son bandeau (au-delà de 4 px) : la moitié visée d'un autre panneau s'éclaire (découpe par les diagonales), et au lâcher le panneau s'y installe ; lâché sur un onglet de la barre, il passe à droite de tout cet onglet.
+- Survoler un onglet 0,5 s pendant le glisser l'affiche (réveil de la boucle à l'échéance, une seule bascule par survol) ; on peut alors lâcher sur l'un de ses panneaux.
+- On tire un onglet le long de la barre pour le réordonner : un repère vertical montre la place d'insertion ; un simple clic garde son effet (activation, double clic pour renommer).
+- Échap, un lâcher hors cible, un autre bouton pressé, la perte du focus ou l'ouverture d'un menu annulent le glisser sans toucher à la disposition, et réaffichent l'onglet de départ si un survol en avait affiché un autre ; Échap n'est alors pas transmis au terminal.
+- Pendant un glisser, la souris (mouvements, molette) n'est jamais rapportée à l'application du terminal ; le curseur prend la forme « saisie ».
+- Un glisser ne démarre ni pendant un menu, une confirmation de fermeture, un renommage ou un glisser de barre ; il s'annule sans panique si le shell du panneau tiré se termine ou si l'onglet tiré disparaît.
+- Le champ du glisser de barre de split devient `divider_drag` ; « Déplacer dans un nouvel onglet » passe par `Model::move_pane`.
+
 ## 0.1.0-alpha.130 — 2026-10-19 · « Machine de glisser-déposer »
 
 - Nouveau module `drag` : seuil de 4 px, côté de dépôt par les deux diagonales du rectangle, index d'insertion d'onglet d'après le milieu des onglets, survol d'onglet de 500 ms (une seule bascule par survol).

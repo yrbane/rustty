@@ -1,6 +1,5 @@
 //! Machine de glisser pure : seuil, cible de dépôt et survol d'onglet,
 //! sans fenêtre ni modèle (le câblage est dans la fenêtre).
-#![allow(dead_code)] // câblé par la tâche 10
 
 use std::time::{Duration, Instant};
 
@@ -142,6 +141,10 @@ impl Drag {
     /// Source et cible du dépôt ; `None` si le seuil n'a jamais été franchi.
     pub fn finish(self) -> Option<(DragSource, DropTarget)> {
         self.active.then_some((self.source, self.target))
+    }
+
+    pub fn source(&self) -> DragSource {
+        self.source
     }
 
     pub fn start_tab(&self) -> usize {

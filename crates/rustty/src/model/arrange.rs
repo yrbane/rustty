@@ -5,7 +5,6 @@ use super::{Effect, Model};
 use crate::drag::PaneDrop;
 use crate::tab::TermId;
 
-#[allow(dead_code)] // câblé par la tâche 10
 impl Model {
     /// Déplace le panneau `term` ; un terme ou une cible disparus annulent le dépôt.
     pub fn move_pane(&mut self, term: TermId, drop: PaneDrop) -> Vec<Effect> {

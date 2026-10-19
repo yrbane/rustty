@@ -12,13 +12,13 @@ use crate::window_state::OsWindow;
 impl OsWindow {
     /// Appui gauche : commence un glisser si une barre est sous la souris.
     pub(crate) fn start_divider_drag(&mut self, x: f64, y: f64) -> bool {
-        self.drag = geometry::divider_at(&self.dividers, x, y, GRAB_WIDTH);
-        self.drag.is_some()
+        self.divider_drag = geometry::divider_at(&self.dividers, x, y, GRAB_WIDTH);
+        self.divider_drag.is_some()
     }
 
     /// Mouvement : déplace la barre saisie ; `None` si aucun glisser en cours.
     pub(crate) fn drag_divider_to(&mut self, x: f64, y: f64) -> Option<Vec<Effect>> {
-        let id = self.drag?;
+        let id = self.divider_drag?;
         let gap = geometry::split_gap(&self.config.splits);
         let content = self.content;
         let (px, py) = (x.max(0.0) as u32, y.max(0.0) as u32);
@@ -38,20 +38,22 @@ impl OsWindow {
 
     /// Relâchement : vrai si un glisser vient de se terminer.
     pub(crate) fn end_divider_drag(&mut self) -> bool {
-        self.drag.take().is_some()
+        self.divider_drag.take().is_some()
     }
 
     /// Met à jour la forme du curseur selon ce qu'il survole.
     pub(crate) fn update_cursor_icon(&mut self, x: f64, y: f64) {
         let over = self
-            .drag
+            .divider_drag
             .or_else(|| geometry::divider_at(&self.dividers, x, y, GRAB_WIDTH));
         let axis = over.and_then(|id| {
             (!self.model.workspace.is_empty())
                 .then(|| self.model.workspace.active_tab().layout.split_axis(id))
                 .flatten()
         });
+        let grabbing = self.drag.as_ref().is_some_and(crate::drag::Drag::is_active);
         let icon = match axis {
+            _ if grabbing => CursorIcon::Grabbing,
             Some(Axis::Vertical) => CursorIcon::ColResize,
             Some(Axis::Horizontal) => CursorIcon::RowResize,
             None if geometry::pane_at(&self.pane_rects, x, y).is_some() => CursorIcon::Text,

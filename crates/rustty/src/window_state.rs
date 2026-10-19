@@ -19,6 +19,7 @@ use winit::window::{CursorIcon, Icon, Window, WindowAttributes};
 
 use crate::banner::Banner;
 use crate::context_menu::ContextMenu;
+use crate::drag::Drag;
 use crate::events::Waker;
 use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
@@ -75,7 +76,9 @@ pub struct OsWindow {
     /// Zone des panneaux (sous ou sur la barre d'onglets).
     pub content: Rect,
     /// Barre de split en cours de glisser.
-    pub drag: Option<SplitId>,
+    pub divider_drag: Option<SplitId>,
+    /// Panneau ou onglet en cours de glisser-déposer.
+    pub drag: Option<Drag>,
     pub cursor_icon: CursorIcon,
     /// Menu du clic droit ouvert.
     pub menu: Option<ContextMenu>,
@@ -159,6 +162,7 @@ impl OsWindow {
             header_hover: None,
             dividers: Vec::new(),
             content: Rect::new(0, 0, 0, 0),
+            divider_drag: None,
             drag: None,
             cursor_icon: CursorIcon::Default,
             menu: None,

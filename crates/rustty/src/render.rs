@@ -91,6 +91,7 @@ impl OsWindow {
             chrome.texts.extend(bar_chrome.texts);
         }
         let mut overlay = Chrome::default();
+        overlay.quads.extend(self.drag_preview_quads());
         if let Some(banner) = self.model.banner() {
             let bar_at_bottom =
                 self.tab_bar.is_some() && self.config.tabs.position == TabBarPosition::Bottom;

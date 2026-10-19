@@ -2,6 +2,7 @@
 
 use std::time::Instant;
 
+use crate::drag::DragSource;
 use crate::model::{CloseRequest, Effect};
 use crate::mouse::MouseButton;
 use crate::pane_header::{HeaderHit, header_at};
@@ -59,7 +60,10 @@ impl OsWindow {
                         .request_close(CloseRequest::Term(term), confirm && running),
                 );
             }
-            HeaderAction::Focus(term) => effects.extend(self.focus_pane(term)),
+            HeaderAction::Focus(term) => {
+                effects.extend(self.focus_pane(term));
+                self.arm_drag(DragSource::Pane(term), x, y);
+            }
             HeaderAction::Rename(term) => {
                 effects.extend(self.focus_pane(term));
                 effects.extend(self.model.start_pane_rename(term));

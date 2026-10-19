@@ -57,7 +57,7 @@ pub fn header_for(term: TermId, rect: PixelRect, metrics: CellMetrics) -> PaneHe
     PaneHeader { term, rect, close }
 }
 
-fn contains(r: PixelRect, x: f64, y: f64) -> bool {
+pub(crate) fn contains(r: PixelRect, x: f64, y: f64) -> bool {
     x >= f64::from(r.x)
         && x < f64::from(r.x + r.width)
         && y >= f64::from(r.y)
@@ -110,7 +110,6 @@ impl OsWindow {
     }
 
     /// Bandeau et contenu réunis : la cible d'un dépôt.
-    #[allow(dead_code)] // consommé par le glisser-déposer (tâche 9)
     pub fn full_pane_rect(&self, term: TermId) -> Option<PixelRect> {
         let wid = self.model.workspace.active_tab().window_of(term)?;
         let content = self.pane_rects.iter().find(|(w, _)| *w == wid)?.1;

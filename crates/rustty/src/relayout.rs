@@ -22,6 +22,7 @@ pub fn selection_survives(selected: Option<TermId>, resized: &[TermId]) -> bool 
 impl OsWindow {
     /// Recalcule barre d'onglets, rectangles des panneaux et tailles des terminaux.
     pub fn relayout(&mut self) {
+        self.drop_vanished_drag();
         let (w, h) = self.surface.size();
         let metrics = self.metrics();
         let tabs = &self.config.tabs;
@@ -102,9 +103,9 @@ impl OsWindow {
 
     /// Une barre disparue (onglet changé, panneau fermé) met fin au glisser.
     fn cancel_stale_drag(&mut self) {
-        let still = drag_still_valid(self.drag, &self.dividers);
-        if still != self.drag {
-            self.drag = still;
+        let still = drag_still_valid(self.divider_drag, &self.dividers);
+        if still != self.divider_drag {
+            self.divider_drag = still;
             self.update_cursor_icon(self.cursor.0, self.cursor.1);
         }
     }

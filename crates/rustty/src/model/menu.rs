@@ -2,6 +2,7 @@
 
 use super::{CloseRequest, Effect, Model};
 use crate::context_menu::{MenuItem, MenuTarget};
+use crate::drag::PaneDrop;
 use crate::tab::TermId;
 
 impl Model {
@@ -45,14 +46,7 @@ impl Model {
         running: &dyn Fn(TermId) -> bool,
     ) -> Vec<Effect> {
         match item {
-            MenuItem::MoveToNewTab => {
-                self.renaming = None;
-                if self.workspace.move_term_to_new_tab(term) {
-                    vec![Effect::Relayout]
-                } else {
-                    Vec::new()
-                }
-            }
+            MenuItem::MoveToNewTab => self.move_pane(term, PaneDrop::NewTab),
             MenuItem::RenamePane => {
                 self.workspace.focus_term(term);
                 self.start_pane_rename(term)

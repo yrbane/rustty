@@ -27,6 +27,9 @@ impl OsWindow {
         if event.state != ElementState::Pressed {
             return Vec::new();
         }
+        if let Some(effects) = self.drag_key(&event.logical_key) {
+            return effects;
+        }
         if self.menu.is_some() {
             // Une touche ferme le menu ; Échap s'arrête là, les autres agissent ensuite.
             let closed = self.close_context_menu();
@@ -123,6 +126,9 @@ impl OsWindow {
     pub fn on_cursor_moved(&mut self, x: f64, y: f64) -> Vec<Effect> {
         self.cursor = (x, y);
         self.cursor_inside = true;
+        if let Some(effects) = self.drag_moved(x, y) {
+            return effects;
+        }
         let mut menu_effects = Vec::new();
         if let Some(effects) = self.menu_hover(x, y) {
             menu_effects = effects;
@@ -194,6 +200,9 @@ impl OsWindow {
     }
 
     fn on_press(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if let Some(effects) = self.drag_press() {
+            return effects;
+        }
         if let Some(effects) = self.menu_click(button, x, y) {
             return effects;
         }
@@ -203,6 +212,7 @@ impl OsWindow {
                 return self.bar_right_click(on_bar, x, y);
             }
             self.press_target = on_bar;
+            self.arm_tab_drag(on_bar, button, x, y);
             return Vec::new();
         }
         if let Some(effects) = self.header_press(button, x, y, Instant::now()) {
@@ -250,6 +260,9 @@ impl OsWindow {
     }
 
     fn on_release(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if let Some(effects) = self.drag_released(button) {
+            return effects;
+        }
         if self.end_divider_drag() {
             return Vec::new();
         }

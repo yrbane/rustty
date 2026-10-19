@@ -156,12 +156,11 @@ impl ApplicationHandler<UserEvent> for App {
         for id in &alive {
             effects.extend(w.check_exit(*id));
         }
+        let now = Instant::now();
+        effects.extend(w.drag_tick(now));
         w.run_effects(effects, event_loop);
-        if alive.is_empty() {
-            event_loop.set_control_flow(ControlFlow::Wait);
-        } else {
-            event_loop.set_control_flow(ControlFlow::WaitUntil(Instant::now() + EXIT_POLL));
-        }
+        let deadline = w.drag.as_ref().and_then(crate::drag::Drag::deadline);
+        event_loop.set_control_flow(next_wake(!alive.is_empty(), now, deadline));
     }
 }
 
@@ -190,6 +189,15 @@ pub fn run(
     }
 }
 
+/// Réveil suivant : sondage des shells vivants, échéance de survol d'onglet.
+fn next_wake(alive: bool, now: Instant, deadline: Option<Instant>) -> ControlFlow {
+    let poll = alive.then(|| now + EXIT_POLL);
+    match poll.into_iter().chain(deadline).min() {
+        Some(at) => ControlFlow::WaitUntil(at),
+        None => ControlFlow::Wait,
+    }
+}
+
 /// Le terminal a-t-il le droit d'écrire dans le presse-papiers (OSC 52) ?
 pub(crate) fn clipboard_write_allowed(config: &Config) -> bool {
     config.window.osc52_clipboard
@@ -198,6 +206,30 @@ pub(crate) fn clipboard_write_allowed(config: &Config) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hover_deadline_shortens_the_wait() {
+        let now = Instant::now();
+        let soon = now + Duration::from_millis(100);
+        let late = now + Duration::from_secs(5);
+        assert_eq!(next_wake(false, now, None), ControlFlow::Wait);
+        assert_eq!(
+            next_wake(true, now, None),
+            ControlFlow::WaitUntil(now + EXIT_POLL)
+        );
+        assert_eq!(
+            next_wake(true, now, Some(soon)),
+            ControlFlow::WaitUntil(soon)
+        );
+        assert_eq!(
+            next_wake(true, now, Some(late)),
+            ControlFlow::WaitUntil(now + EXIT_POLL)
+        );
+        assert_eq!(
+            next_wake(false, now, Some(late)),
+            ControlFlow::WaitUntil(late)
+        );
+    }
 
     #[test]
     fn osc52_writes_follow_the_config() {

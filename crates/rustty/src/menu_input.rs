@@ -40,7 +40,10 @@ impl OsWindow {
             zoomed,
             &self.config.keys,
         ));
-        vec![Effect::Redraw]
+        // Un menu qui s'ouvre met fin à tout glisser en cours.
+        let mut effects = self.cancel_drag();
+        effects.push(Effect::Redraw);
+        effects
     }
 
     /// Ouvre le menu de l'onglet `tab` au point `(x, y)`.
@@ -56,7 +59,10 @@ impl OsWindow {
             others,
             &self.config.keys,
         ));
-        vec![Effect::Redraw]
+        // Un menu qui s'ouvre met fin à tout glisser en cours.
+        let mut effects = self.cancel_drag();
+        effects.push(Effect::Redraw);
+        effects
     }
 
     /// Clic droit sur la barre : le menu de l'onglet visé, rien ailleurs.
@@ -78,7 +84,10 @@ impl OsWindow {
             y.max(0.0) as u32,
             &self.config.keys,
         ));
-        vec![Effect::Redraw]
+        // Un menu qui s'ouvre met fin à tout glisser en cours.
+        let mut effects = self.cancel_drag();
+        effects.push(Effect::Redraw);
+        effects
     }
 
     pub(crate) fn close_context_menu(&mut self) -> Vec<Effect> {

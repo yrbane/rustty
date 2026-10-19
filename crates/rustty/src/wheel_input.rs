@@ -25,6 +25,10 @@ pub fn wheel_lines(delta: MouseScrollDelta, cell_height: u32) -> f64 {
 
 impl OsWindow {
     pub fn on_wheel(&mut self, delta: MouseScrollDelta) -> Vec<Effect> {
+        if self.drag.as_ref().is_some_and(crate::drag::Drag::is_active) {
+            // Pendant un glisser, la molette n'atteint ni le terminal ni l'historique.
+            return Vec::new();
+        }
         let (x, y) = self.cursor;
         let target = self
             .pane_under(x, y)
@@ -94,10 +98,13 @@ impl OsWindow {
 
     pub fn on_focus(&mut self, focused: bool) -> Vec<Effect> {
         self.focused = focused;
+        let mut effects = Vec::new();
         if !focused {
             self.menu = None;
+            // Le relâchement ne nous parviendra peut-être pas : pas de dépôt.
+            effects = self.cancel_drag();
             // Plus de souris à suivre : le glisser de barre s'arrête.
-            if self.drag.take().is_some() {
+            if self.divider_drag.take().is_some() {
                 self.update_cursor_icon(self.cursor.0, self.cursor.1);
             }
             // Le relâchement du bouton tenu ne nous parviendra pas : on
@@ -114,7 +121,8 @@ impl OsWindow {
                 b"\x1b[O".to_vec()
             });
         }
-        vec![Effect::Redraw]
+        effects.push(Effect::Redraw);
+        effects
     }
 }
 
