@@ -25,7 +25,11 @@ pub enum ScrollRequest {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Effect {
-    SpawnTerm(TermId),
+    /// Lance `term` dans le dossier courant de `cwd_of`, s'il est connu.
+    SpawnTerm {
+        term: TermId,
+        cwd_of: Option<TermId>,
+    },
     CloseTerm(TermId),
     Scroll(TermId, ScrollRequest),
     Copy,
@@ -121,10 +125,14 @@ impl Model {
             self.renaming = None;
         }
         match action {
-            Action::NewTab => Self::spawn(Some(self.workspace.new_tab())),
+            Action::NewTab => {
+                let from = self.workspace.focused_term();
+                Self::spawn(Some(self.workspace.new_tab()), from)
+            }
             Action::Split(axis) => {
+                let from = self.workspace.focused_term();
                 let term = self.workspace.split_focused(axis);
-                Self::spawn(term)
+                Self::spawn(term, from)
             }
             Action::CloseTab => {
                 let req = CloseRequest::Tab(self.workspace.active());
@@ -183,9 +191,9 @@ impl Model {
         }
     }
 
-    fn spawn(term: Option<TermId>) -> Vec<Effect> {
+    fn spawn(term: Option<TermId>, cwd_of: Option<TermId>) -> Vec<Effect> {
         match term {
-            Some(t) => vec![Effect::SpawnTerm(t), Effect::Relayout],
+            Some(term) => vec![Effect::SpawnTerm { term, cwd_of }, Effect::Relayout],
             None => Vec::new(),
         }
     }
@@ -219,7 +227,8 @@ impl Model {
             (HoverTarget::CloseButton(i), MouseButton::Left)
             | (HoverTarget::Tab(i), MouseButton::Middle) => close_tab(self, i),
             (HoverTarget::NewTabButton, MouseButton::Left) => {
-                Self::spawn(Some(self.workspace.new_tab()))
+                let from = self.workspace.focused_term();
+                Self::spawn(Some(self.workspace.new_tab()), from)
             }
             _ => Vec::new(),
         }

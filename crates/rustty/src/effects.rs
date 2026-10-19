@@ -15,11 +15,11 @@ impl OsWindow {
     pub fn run_effects(&mut self, effects: Vec<Effect>, event_loop: &ActiveEventLoop) {
         for effect in effects {
             match effect {
-                Effect::SpawnTerm(id) => {
-                    if let Err(e) = self.spawn_term(id) {
+                Effect::SpawnTerm { term, cwd_of } => {
+                    if let Err(e) = self.spawn_term(term, cwd_of) {
                         tracing::error!("{e:#}");
                         self.model.set_notice(Some(Banner::error(format!("{e:#}"))));
-                        self.model.workspace.close_term(id);
+                        self.model.workspace.close_term(term);
                     }
                 }
                 Effect::CloseTerm(id) => self.close_term(id),

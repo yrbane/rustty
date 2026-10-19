@@ -2,10 +2,11 @@
 //! flux de lecture clonable, son flux d'écriture, sa taille et son état.
 
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use portable_pty::{Child, CommandBuilder, MasterPty, native_pty_system};
 
+use crate::cwd::process_cwd;
 use crate::error::PtyError;
 use crate::shell::Shell;
 use crate::size::PtySize;
@@ -138,6 +139,25 @@ impl Pty {
         self.master
             .resize(to_native(size))
             .map_err(|e| PtyError::Open(e.to_string()))
+    }
+
+    /// Dossier courant du programme au premier plan, à défaut celui du shell ;
+    /// `None` s'il n'existe plus ou si l'OS ne l'expose pas.
+    pub fn cwd(&self) -> Option<PathBuf> {
+        self.foreground_pid()
+            .and_then(process_cwd)
+            .or_else(|| self.process_id().and_then(process_cwd))
+    }
+
+    #[cfg(unix)]
+    fn foreground_pid(&self) -> Option<u32> {
+        let leader = self.master.process_group_leader()?;
+        u32::try_from(leader).ok()
+    }
+
+    #[cfg(windows)]
+    fn foreground_pid(&self) -> Option<u32> {
+        None
     }
 
     pub fn process_id(&self) -> Option<u32> {

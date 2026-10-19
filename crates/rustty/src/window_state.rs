@@ -26,7 +26,7 @@ use crate::mouse::{DoubleClick, MotionFilter, MouseButton, Selection, WheelAccum
 use crate::pane_fonts::{PaneFonts, SizeKey};
 use crate::renderers::{RendererSpec, Renderers};
 use crate::tab::TermId;
-use crate::term_window::TermWindow;
+use crate::term_window::{Launch, TermWindow};
 use crate::title;
 
 /// Icône de fenêtre (X11, Windows) ; Wayland passe par le `.desktop`.
@@ -158,7 +158,7 @@ impl OsWindow {
             shell: Shell::default_for_platform(),
             waker,
         };
-        this.spawn_term(first)?;
+        this.spawn_term(first, None)?;
         this.relayout();
         Ok(this)
     }
@@ -185,10 +185,18 @@ impl OsWindow {
         }
     }
 
-    pub fn spawn_term(&mut self, id: TermId) -> anyhow::Result<()> {
+    /// Lance `id` dans le dossier courant de `cwd_of` quand il se lit.
+    pub fn spawn_term(&mut self, id: TermId, cwd_of: Option<TermId>) -> anyhow::Result<()> {
+        let cwd = cwd_of
+            .and_then(|t| self.terms.get(&t))
+            .and_then(TermWindow::cwd);
+        let launch = Launch {
+            shell: &self.shell,
+            cwd: cwd.as_deref(),
+        };
         let tw = TermWindow::spawn(
             id,
-            &self.shell,
+            launch,
             80,
             24,
             (0, 0),
