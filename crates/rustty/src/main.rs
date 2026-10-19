@@ -24,6 +24,7 @@ mod model;
 mod mouse;
 mod mouse_input;
 mod pane_fonts;
+mod pane_header;
 mod relayout;
 mod rename;
 mod render;

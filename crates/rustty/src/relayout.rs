@@ -7,6 +7,7 @@ use rustty_render::{layout_tab_bar, tab_bar_height};
 use crate::divider_drag::drag_still_valid;
 use crate::geometry;
 use crate::pane_fonts::SizeKey;
+use crate::pane_header::{header_at, layout_headers};
 use crate::render_frame;
 use crate::renderers::RendererSpec;
 use crate::tab::TermId;
@@ -45,6 +46,8 @@ impl OsWindow {
         });
         if self.model.workspace.is_empty() {
             self.pane_rects.clear();
+            self.headers.clear();
+            self.header_hover = None;
             self.dividers.clear();
             self.cancel_stale_drag();
             return;
@@ -62,7 +65,13 @@ impl OsWindow {
         };
         self.renderers.sync(&spec, &keys);
         let tab = self.model.workspace.active_tab();
-        self.pane_rects = geometry::pane_rects(&tab.layout, g.content, gap);
+        let full = geometry::pane_rects(&tab.layout, g.content, gap);
+        (self.headers, self.pane_rects) = layout_headers(tab, &full, metrics);
+        self.header_hover = if self.cursor_inside {
+            header_at(&self.headers, self.cursor.0, self.cursor.1)
+        } else {
+            None
+        };
         self.dividers = geometry::divider_rects(&tab.layout, g.content, gap);
         self.content = g.content;
         let mut resized = Vec::new();

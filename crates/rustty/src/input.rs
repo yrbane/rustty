@@ -147,6 +147,9 @@ impl OsWindow {
             return effects;
         }
         let mut effects = menu_effects;
+        if self.update_header_hover(x, y) {
+            effects.push(Effect::Redraw);
+        }
         if self.model.hover_changed(self.bar_target(x, y)) {
             effects.push(Effect::Redraw);
         }
@@ -168,7 +171,8 @@ impl OsWindow {
 
     pub fn on_cursor_left(&mut self) -> Vec<Effect> {
         self.cursor_inside = false;
-        if self.model.hover_changed(HoverTarget::None) {
+        let header_changed = self.update_header_hover(self.cursor.0, self.cursor.1);
+        if self.model.hover_changed(HoverTarget::None) || header_changed {
             vec![Effect::Redraw]
         } else {
             Vec::new()

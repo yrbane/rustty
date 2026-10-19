@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.125 — 2026-10-19 · « Bandeau de titre sur chaque panneau d'un onglet divisé »
+
+- Module `pane_header` : géométrie pure (`split_header`, `header_at`, `headers_visible`) ; le bandeau (une rangée de la police de base) apparaît quand l'onglet montre au moins deux panneaux, sans zoom.
+- `pane_rects` devient le rectangle du contenu : grille, sélection, clics et dessin restent justes ; un panneau plus bas que le bandeau garde une grille 1×1.
+- Les bandeaux sont dessinés dans la passe de chrome, à la couleur de la division parente ; le ✕ n'apparaît que sur le bandeau survolé (et pas s'il est trop étroit), un changement de survol redessine la fenêtre.
+- `pane_title` : nom du panneau, sinon titre du shell ; utilisé par les bandeaux et le titre d'onglet.
+
 ## 0.1.0-alpha.124 — 2026-10-19 · « Dessin du bandeau de panneau »
 
 - `PaneHeaderSpec` et `pane_header_chrome` : fond de la couleur du panneau (assombri sans le focus), titre tronqué avec « … » avant le bouton, texte lisible sur le fond.

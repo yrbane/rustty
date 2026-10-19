@@ -74,6 +74,9 @@ impl OsWindow {
                     appearance::divider_color(splits, palette, tab, id)
                 }));
         }
+        let headers = self.header_chrome();
+        chrome.quads.extend(headers.quads);
+        chrome.texts.extend(headers.texts);
         if let Some(bar) = &self.tab_bar {
             let titles = self.tab_titles();
             let accents = appearance::tab_accents(

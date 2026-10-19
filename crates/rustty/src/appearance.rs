@@ -34,8 +34,6 @@ pub fn divider_color(splits: &Splits, palette: &Palette, tab: &Tab, split: Split
 
 /// La couleur du bandeau du panneau `term` : celle de sa division parente, ou
 /// celle des divisions de la configuration quand il n'a pas de parent.
-// Consommée par le bandeau de panneau (tâche 5).
-#[allow(dead_code)]
 pub fn header_color(splits: &Splits, palette: &Palette, tab: &Tab, term: TermId) -> Rgba {
     match tab.parent_split_of(term) {
         Some(split) => divider_color(splits, palette, tab, split),

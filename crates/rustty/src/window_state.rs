@@ -24,6 +24,7 @@ use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
 use crate::mouse::{DoubleClick, MotionFilter, MouseButton, Selection, WheelAccumulator};
 use crate::pane_fonts::{PaneFonts, SizeKey};
+use crate::pane_header::{HeaderHit, PaneHeader};
 use crate::renderers::{RendererSpec, Renderers};
 use crate::tab::TermId;
 use crate::term_window::{Launch, TermWindow};
@@ -64,7 +65,10 @@ pub struct OsWindow {
     pub wheel: WheelAccumulator,
     pub press_target: HoverTarget,
     pub tab_bar: Option<TabBarLayout>,
+    /// Rectangles du contenu des panneaux (bandeau retiré).
     pub pane_rects: Vec<(WindowId, PixelRect)>,
+    pub headers: Vec<PaneHeader>,
+    pub header_hover: Option<HeaderHit>,
     pub dividers: Vec<(SplitId, PixelRect)>,
     /// Zone des panneaux (sous ou sur la barre d'onglets).
     pub content: Rect,
@@ -148,6 +152,8 @@ impl OsWindow {
             press_target: HoverTarget::None,
             tab_bar: None,
             pane_rects: Vec::new(),
+            headers: Vec::new(),
+            header_hover: None,
             dividers: Vec::new(),
             content: Rect::new(0, 0, 0, 0),
             drag: None,
@@ -217,11 +223,7 @@ impl OsWindow {
             .iter()
             .enumerate()
             .map(|(i, tab)| {
-                let raw = tab
-                    .focused_term()
-                    .and_then(|t| self.titles.get(&t))
-                    .map(String::as_str)
-                    .unwrap_or("");
+                let raw = tab.focused_term().map_or("", |t| self.pane_title(t));
                 let editing = self
                     .model
                     .renaming
