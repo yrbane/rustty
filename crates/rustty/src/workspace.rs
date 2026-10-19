@@ -1,11 +1,16 @@
 //! Les onglets d'une fenêtre : lequel est actif, quels terminaux ils
 //! portent, et les opérations de la configuration (onglets, splits, focus).
 
+use std::collections::HashMap;
+
 use rustty_config::{FocusDirection, ResizeDir, SplitAxis};
 use rustty_layout::{Axis, Direction};
 
 use crate::accent::AccentPicker;
 use crate::tab::{Tab, TermId};
+
+#[path = "workspace_arrange.rs"]
+mod arrange;
 
 /// Pas d'un redimensionnement au clavier, en fraction du parent.
 const RESIZE_STEP: f32 = 0.05;
@@ -16,6 +21,8 @@ pub struct Workspace {
     active: usize,
     next_term: u64,
     picker: AccentPicker,
+    /// Noms choisis pour les panneaux ; suivent le terminal d'un onglet à l'autre.
+    pane_names: HashMap<TermId, String>,
 }
 
 impl Workspace {
@@ -37,6 +44,7 @@ impl Workspace {
             active: 0,
             next_term: 2,
             picker,
+            pane_names: HashMap::new(),
         };
         (ws, first)
     }
@@ -101,6 +109,9 @@ impl Workspace {
             return Vec::new();
         }
         let tab = self.tabs.remove(index);
+        for term in tab.terms() {
+            self.pane_names.remove(&term);
+        }
         if self.active >= index {
             self.active = self.active.saturating_sub(1);
         }
@@ -151,6 +162,7 @@ impl Workspace {
             return false;
         };
         let closed = self.tabs[index].close_term(term);
+        self.pane_names.remove(&term);
         if self.tabs[index].is_empty() {
             self.close_tab(index);
         }

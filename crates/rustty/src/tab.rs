@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use rustty_layout::{Axis, SplitId, TabLayout, WindowId};
+use rustty_layout::{Axis, Side, SplitId, TabLayout, WindowId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TermId(pub u64);
@@ -16,6 +16,9 @@ pub struct Tab {
     pub accent: usize,
     /// Nom choisi par l'utilisateur ; remplace le titre du shell.
     pub custom_title: Option<String>,
+    /// Couleur choisie au nuancier (index ANSI) ; `None` = celle de la configuration.
+    #[allow(dead_code)] // consommé par le glisser-déposer et les menus (tâches suivantes)
+    pub color: Option<usize>,
     split_accents: HashMap<SplitId, usize>,
 }
 
@@ -27,6 +30,7 @@ impl Tab {
             panes: HashMap::from([(window, first)]),
             accent,
             custom_title: None,
+            color: None,
             split_accents: HashMap::new(),
         }
     }
@@ -83,6 +87,43 @@ impl Tab {
             }
             None => false,
         }
+    }
+
+    /// Insère `term` (déjà détaché d'ailleurs) du côté `side` de `target` ;
+    /// il reçoit le focus, la nouvelle barre l'accent `accent`.
+    #[allow(dead_code)] // consommé par le glisser-déposer et les menus (tâches suivantes)
+    pub fn insert_term(&mut self, term: TermId, target: TermId, side: Side, accent: usize) -> bool {
+        let Some(target) = self.window_of(target) else {
+            return false;
+        };
+        match self.layout.insert(target, side) {
+            Some(window) => {
+                self.register(window, term, accent);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Comme `insert_term`, mais autour de toute la racine de l'onglet.
+    #[allow(dead_code)] // consommé par le glisser-déposer et les menus (tâches suivantes)
+    pub fn insert_term_at_root(&mut self, term: TermId, side: Side, accent: usize) {
+        let window = self.layout.insert_root(side);
+        self.register(window, term, accent);
+    }
+
+    /// Division qui contient directement le panneau de `term` (`None` à la racine).
+    #[allow(dead_code)] // consommé par le glisser-déposer et les menus (tâches suivantes)
+    pub fn parent_split_of(&self, term: TermId) -> Option<SplitId> {
+        self.window_of(term)
+            .and_then(|w| self.layout.parent_split(w))
+    }
+
+    #[allow(dead_code)] // consommé par le glisser-déposer et les menus (tâches suivantes)
+    fn register(&mut self, window: WindowId, term: TermId, accent: usize) {
+        self.panes.insert(window, term);
+        // Contrat de `TabLayout::insert` : la division porte l'id de la fenêtre créée.
+        self.split_accents.insert(SplitId(window.0), accent);
     }
 
     pub fn close_term(&mut self, term: TermId) -> bool {

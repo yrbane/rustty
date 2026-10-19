@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.122 — 2026-10-19 · « Déplacer panneaux et onglets dans le modèle »
+
+- `Tab` : `insert_term`, `insert_term_at_root` et `parent_split_of` accueillent un terminal existant d'un côté donné ; nouveau champ `color` (couleur d'onglet choisie au nuancier).
+- `Workspace` : `move_term_to_pane`, `move_term_to_tab`, `move_term_to_new_tab`, `move_tab` et `close_other_tabs` ; un déplacement ne touche à aucun shell, retire l'onglet d'origine vidé et focalise le terminal déplacé.
+- `Workspace` : `set_tab_color`, `rename_pane` et `pane_name` ; le nom d'un panneau suit son terminal et disparaît à sa fermeture.
+- Tests dans `workspace_arrange_tests.rs`.
+
 ## 0.1.0-alpha.121 — 2026-10-19 · « Insertion d'un panneau d'un côté donné »
 
 - `rustty-layout` : nouveau type `Side` (haut, bas, gauche, droite) avec l'axe de division et l'ordre du nouveau panneau.
