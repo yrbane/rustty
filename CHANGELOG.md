@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.132 — 2026-10-19 · « Documentation des bandeaux et du glisser-déposer »
+
+- README : le texte sur les bandeaux de panneau, le glisser-déposer, les menus d'onglet et de bandeau et le nuancier est regroupé dans une section « Souris » ; la phrase du clic droit n'est plus dupliquée dans le paragraphe des raccourcis.
+- `docs/e2e.md` : nouvelle section « Bandeaux et glisser-déposer » (visibilité et couleur du bandeau, ✕, clic et double clic, seuil de 4 px, quatre moitiés, survol d'onglet de 0,5 s, lâcher sur un onglet, Échap, réordonnancement, menus, nuancier) et les cinq points de revue.
+
 ## 0.1.0-alpha.131 — 2026-10-19 · « Glisser-déposer des panneaux et des onglets »
 
 - On tire un panneau par son bandeau (au-delà de 4 px) : la moitié visée d'un autre panneau s'éclaire (découpe par les diagonales), et au lâcher le panneau s'y installe ; lâché sur un onglet de la barre, il passe à droite de tout cet onglet.
