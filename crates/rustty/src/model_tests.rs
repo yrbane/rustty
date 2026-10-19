@@ -61,7 +61,10 @@ fn rename_action_edits_the_active_tab() {
         m.apply(Action::RenameTab, false, &never_running),
         vec![Effect::Redraw]
     );
-    assert_eq!(m.renaming.as_ref().map(|r| r.tab), Some(1));
+    assert_eq!(
+        m.renaming.as_ref().map(|r| r.target),
+        Some(crate::rename::RenameTarget::Tab(1))
+    );
 }
 
 #[test]
@@ -377,4 +380,48 @@ fn pending_confirmation_wins_over_a_notice() {
     assert_eq!(m.banner().unwrap().kind, crate::banner::BannerKind::Confirm);
     m.cancel_pending();
     assert_eq!(m.banner().unwrap().text, "config");
+}
+
+#[test]
+fn pane_rename_sets_the_pane_name() {
+    let (mut m, t1) = Model::new(0.9, false);
+    m.workspace.rename_pane(t1, Some("api".into()));
+    m.start_pane_rename(t1);
+    assert_eq!(m.renaming.as_ref().unwrap().buffer, "api", "pré-rempli");
+    m.rename_key(RenameKey::Text("2".into()));
+    assert_eq!(m.rename_key(RenameKey::Commit), vec![Effect::Relayout]);
+    assert_eq!(m.workspace.pane_name(t1), Some("api2"));
+    assert!(m.renaming.is_none());
+}
+
+#[test]
+fn empty_pane_name_restores_the_shell_title() {
+    let (mut m, t1) = Model::new(0.9, false);
+    m.workspace.rename_pane(t1, Some("api".into()));
+    m.start_pane_rename(t1);
+    for _ in 0..3 {
+        m.rename_key(RenameKey::Backspace);
+    }
+    m.rename_key(RenameKey::Commit);
+    assert_eq!(m.workspace.pane_name(t1), None);
+}
+
+#[test]
+fn pane_and_tab_renames_replace_each_other() {
+    let (mut m, t1) = Model::new(0.9, false);
+    m.start_rename(0);
+    m.start_pane_rename(t1);
+    assert_eq!(
+        m.renaming.as_ref().map(|r| r.target),
+        Some(crate::rename::RenameTarget::Pane(t1))
+    );
+    m.start_rename(0);
+    assert_eq!(
+        m.renaming.as_ref().map(|r| r.target),
+        Some(crate::rename::RenameTarget::Tab(0))
+    );
+    assert!(
+        m.start_pane_rename(TermId(999)).is_empty(),
+        "panneau inconnu"
+    );
 }

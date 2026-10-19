@@ -74,6 +74,9 @@ impl OsWindow {
                     appearance::divider_color(splits, palette, tab, id)
                 }));
         }
+        let headers = self.header_chrome();
+        chrome.quads.extend(headers.quads);
+        chrome.texts.extend(headers.texts);
         if let Some(bar) = &self.tab_bar {
             let titles = self.tab_titles();
             let accents = appearance::tab_accents(
@@ -81,14 +84,14 @@ impl OsWindow {
                 &self.palette,
                 self.model.workspace.tabs(),
             );
-            let specs =
-                render_frame::tab_specs(&titles, self.model.workspace.active(), accents.as_deref());
+            let specs = render_frame::tab_specs(&titles, self.model.workspace.active(), &accents);
             let bar_chrome =
                 tab_bar_chrome(bar, &specs, &self.tab_style, metrics, self.model.hover);
             chrome.quads.extend(bar_chrome.quads);
             chrome.texts.extend(bar_chrome.texts);
         }
         let mut overlay = Chrome::default();
+        overlay.quads.extend(self.drag_preview_quads());
         if let Some(banner) = self.model.banner() {
             let bar_at_bottom =
                 self.tab_bar.is_some() && self.config.tabs.position == TabBarPosition::Bottom;

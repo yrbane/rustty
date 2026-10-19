@@ -38,6 +38,7 @@ pub use renderer::Renderer;
 pub mod chrome;
 
 pub use chrome::{
-    HoverTarget, INACTIVE_ACCENT_DIM, TAB_BAR_PADDING, TabBarLayout, TabBarStyle, TabRect, TabSpec,
-    layout_tab_bar, tab_bar_chrome, tab_bar_height,
+    HoverTarget, INACTIVE_ACCENT_DIM, PaneHeaderSpec, TAB_BAR_PADDING, TabBarLayout, TabBarStyle,
+    TabRect, TabSpec, layout_tab_bar, pane_header_chrome, pane_header_close_rect, tab_bar_chrome,
+    tab_bar_height,
 };

@@ -43,7 +43,7 @@ pub fn divider_quads(
 pub fn tab_specs<'a>(
     titles: &'a [String],
     active: usize,
-    accents: Option<&[Rgba]>,
+    accents: &[Option<Rgba>],
 ) -> Vec<TabSpec<'a>> {
     titles
         .iter()
@@ -51,7 +51,7 @@ pub fn tab_specs<'a>(
         .map(|(i, t)| TabSpec {
             title: t.as_str(),
             active: i == active,
-            accent: accents.and_then(|a| a.get(i).copied()),
+            accent: accents.get(i).copied().flatten(),
         })
         .collect()
 }
@@ -167,10 +167,11 @@ mod tests {
     #[test]
     fn tab_specs_carry_accents() {
         let titles = vec!["a".to_string(), "b".to_string()];
-        let accents = [Rgba::new(1.0, 0.0, 0.0, 1.0), Rgba::new(0.0, 1.0, 0.0, 1.0)];
-        let specs = tab_specs(&titles, 0, Some(&accents));
-        assert_eq!(specs[1].accent, Some(accents[1]));
-        assert_eq!(tab_specs(&titles, 0, None)[0].accent, None);
+        let accents = [None, Some(Rgba::new(0.0, 1.0, 0.0, 1.0))];
+        let specs = tab_specs(&titles, 0, &accents);
+        assert_eq!(specs[0].accent, None);
+        assert_eq!(specs[1].accent, accents[1]);
+        assert_eq!(tab_specs(&titles, 0, &[])[0].accent, None);
     }
 
     #[test]
@@ -218,7 +219,7 @@ mod tests {
     #[test]
     fn tab_specs_mark_the_active_tab() {
         let titles = vec!["1: sh".to_string(), "2: vim".to_string()];
-        let specs = tab_specs(&titles, 1, None);
+        let specs = tab_specs(&titles, 1, &[]);
         assert_eq!(specs.len(), 2);
         assert!(!specs[0].active && specs[1].active);
         assert_eq!(specs[1].title, "2: vim");

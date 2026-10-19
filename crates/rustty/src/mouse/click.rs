@@ -19,6 +19,11 @@ impl DoubleClick {
         self.last = if double { None } else { Some((target, now)) };
         double
     }
+
+    /// Oublie le clic en attente : un glisser n'est pas la moitié d'un double clic.
+    pub fn reset(&mut self) {
+        self.last = None;
+    }
 }
 
 #[cfg(test)]
@@ -31,6 +36,15 @@ mod tests {
         let mut d = DoubleClick::default();
         assert!(!d.register(1, t0));
         assert!(d.register(1, t0 + Duration::from_millis(250)));
+    }
+
+    #[test]
+    fn a_reset_forgets_the_pending_click() {
+        let t0 = Instant::now();
+        let mut d = DoubleClick::default();
+        d.register(1, t0);
+        d.reset();
+        assert!(!d.register(1, t0 + Duration::from_millis(100)));
     }
 
     #[test]

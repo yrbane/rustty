@@ -79,6 +79,30 @@ impl Direction {
     }
 }
 
+/// Côté d'un panneau où en insérer un nouveau.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Side {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+impl Side {
+    /// L'axe de la division créée : haut/bas empilent, gauche/droite juxtaposent.
+    pub const fn axis(self) -> Axis {
+        match self {
+            Self::Top | Self::Bottom => Axis::Horizontal,
+            Self::Left | Self::Right => Axis::Vertical,
+        }
+    }
+
+    /// Vrai si le nouveau panneau devient le premier (haut ou gauche).
+    pub const fn new_is_first(self) -> bool {
+        matches!(self, Self::Top | Self::Left)
+    }
+}
+
 /// Identifiant d'une fenêtre de terminal au sein d'un onglet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct WindowId(pub u64);

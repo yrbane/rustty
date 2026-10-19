@@ -141,27 +141,6 @@ impl Node {
         second.dividers(b, gap, out);
     }
 
-    /// Remplace la feuille `target` par une division dont elle est le premier
-    /// panneau et `new_id` le second. Vrai si `target` a été trouvée.
-    pub(crate) fn split_leaf(&mut self, target: WindowId, axis: Axis, new_id: WindowId) -> bool {
-        match self {
-            Self::Leaf(id) if *id == target => {
-                *self = Self::Split {
-                    id: SplitId(new_id.0),
-                    axis,
-                    ratio: 0.5,
-                    first: Box::new(Self::Leaf(target)),
-                    second: Box::new(Self::Leaf(new_id)),
-                };
-                true
-            }
-            Self::Leaf(_) => false,
-            Self::Split { first, second, .. } => {
-                first.split_leaf(target, axis, new_id) || second.split_leaf(target, axis, new_id)
-            }
-        }
-    }
-
     pub(crate) fn first_leaf(&self) -> WindowId {
         match self {
             Self::Leaf(id) => *id,

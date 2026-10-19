@@ -64,7 +64,7 @@ impl OsWindow {
         self.terms.remove(&id);
         self.titles.remove(&id);
         self.pane_fonts.forget(id);
-        if self.menu.as_ref().is_some_and(|m| m.term == id) {
+        if self.menu.as_ref().is_some_and(|m| m.dropped_by_exit_of(id)) {
             self.menu = None;
         }
         if self.selection.as_ref().is_some_and(|(t, _)| *t == id) {
@@ -118,7 +118,7 @@ impl OsWindow {
         match tw.poll_exit() {
             Some(status) => {
                 // Avec --hold le panneau mort reste : le menu ne doit pas le viser.
-                if self.menu.as_ref().is_some_and(|m| m.term == id) {
+                if self.menu.as_ref().is_some_and(|m| m.dropped_by_exit_of(id)) {
                     self.menu = None;
                 }
                 self.model.term_exited(id, status)

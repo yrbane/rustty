@@ -4,6 +4,92 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.133 — 2026-10-19 · « Corrections de la revue finale des bandeaux »
+
+- Nuancier : la pastille de chaque couleur montre désormais la couleur que prend l'onglet au choix (indice ANSI de la palette), et non plus une couleur d'accent décalée (« Rouge » affichait du vert).
+- Glisser : il est annulé, sans dépôt ni retour à un mauvais onglet de départ, dès que les onglets changent pendant l'appui (nouvel onglet, fermeture, réordonnancement), car les indices ne désignent plus les mêmes onglets.
+- Bandeau : un glisser de plus de 4 px suivi d'un clic sur le même bandeau n'ouvre plus le renommage ; le suivi du double clic est remis à zéro au franchissement du seuil.
+- README : le nom d'un panneau remplace le titre de l'onglet sans nom ; le ✕ du bandeau demande confirmation quand un programme tourne.
+
+## 0.1.0-alpha.132 — 2026-10-19 · « Documentation des bandeaux et du glisser-déposer »
+
+- README : le texte sur les bandeaux de panneau, le glisser-déposer, les menus d'onglet et de bandeau et le nuancier est regroupé dans une section « Souris » ; la phrase du clic droit n'est plus dupliquée dans le paragraphe des raccourcis.
+- `docs/e2e.md` : nouvelle section « Bandeaux et glisser-déposer » (visibilité et couleur du bandeau, ✕, clic et double clic, seuil de 4 px, quatre moitiés, survol d'onglet de 0,5 s, lâcher sur un onglet, Échap, réordonnancement, menus, nuancier) et les cinq points de revue.
+
+## 0.1.0-alpha.131 — 2026-10-19 · « Glisser-déposer des panneaux et des onglets »
+
+- On tire un panneau par son bandeau (au-delà de 4 px) : la moitié visée d'un autre panneau s'éclaire (découpe par les diagonales), et au lâcher le panneau s'y installe ; lâché sur un onglet de la barre, il passe à droite de tout cet onglet.
+- Survoler un onglet 0,5 s pendant le glisser l'affiche (réveil de la boucle à l'échéance, une seule bascule par survol) ; on peut alors lâcher sur l'un de ses panneaux.
+- On tire un onglet le long de la barre pour le réordonner : un repère vertical montre la place d'insertion ; un simple clic garde son effet (activation, double clic pour renommer).
+- Échap, un lâcher hors cible, un autre bouton pressé, la perte du focus ou l'ouverture d'un menu annulent le glisser sans toucher à la disposition, et réaffichent l'onglet de départ si un survol en avait affiché un autre ; Échap n'est alors pas transmis au terminal.
+- Pendant un glisser, la souris (mouvements, molette) n'est jamais rapportée à l'application du terminal ; le curseur prend la forme « saisie ».
+- Un glisser ne démarre ni pendant un menu, une confirmation de fermeture, un renommage ou un glisser de barre ; il s'annule sans panique si le shell du panneau tiré se termine ou si l'onglet tiré disparaît.
+- Le champ du glisser de barre de split devient `divider_drag` ; « Déplacer dans un nouvel onglet » passe par `Model::move_pane`.
+
+## 0.1.0-alpha.130 — 2026-10-19 · « Machine de glisser-déposer »
+
+- Nouveau module `drag` : seuil de 4 px, côté de dépôt par les deux diagonales du rectangle, index d'insertion d'onglet d'après le milieu des onglets, survol d'onglet de 500 ms (une seule bascule par survol).
+- `Model::move_pane`, `Model::move_tab` et `Model::accepts_drag` : un dépôt ne lance, ne ferme ni ne vide aucun shell ; terme ou cible disparus, dépôt sur soi-même ou renommage en cours n'ont aucun effet fâcheux.
+
+## 0.1.0-alpha.129 — 2026-10-19 · « Menu d'onglet invalidé par la fin d'un shell »
+
+- Un menu d'onglet ou le nuancier ouvert se ferme dès qu'un terminal se termine ou est fermé : l'index d'onglet visé pouvait se décaler et « Fermer l'onglet », « Fermer les autres onglets » ou la couleur touchaient un autre onglet.
+
+## 0.1.0-alpha.128 — 2026-10-19 · « Menus d'onglet et de bandeau »
+
+- Clic droit sur un onglet : menu de l'onglet cliqué (renommer, changer la couleur, nouvel onglet, fermer, fermer les autres).
+- Clic droit sur un bandeau de panneau : menu du panneau (divisions qui héritent de son dossier, agrandir, déplacer dans un nouvel onglet, renommer, fermer).
+- « Changer la couleur » remplace le menu par le nuancier au même point ; choisir une pastille ou la couleur par défaut recolore l'onglet.
+- « Fermer les autres onglets » demande confirmation si un programme tourne dans l'un des onglets fermés.
+- Les menus restent refusés pendant une confirmation de fermeture ou un renommage.
+
+## 0.1.0-alpha.127 — 2026-10-19 · « Menus contextuels paramétrés et nuancier »
+
+- Le menu contextuel dépend désormais d'une cible (`MenuTarget` : panneau, onglet, bandeau, nuancier) et porte sa propre liste d'entrées, en remplacement de la constante commune.
+- Nouvelles entrées : fermer l'onglet, fermer les autres onglets (grisée avec un seul onglet), changer la couleur, déplacer dans un nouvel onglet, renommer le panneau, couleurs du nuancier et couleur par défaut.
+- Le nuancier dessine une pastille carrée de la couleur devant chaque libellé.
+- Le menu de panneau est inchangé ; l'ouverture des autres menus et l'exécution des nouvelles entrées viendront ensuite.
+
+## 0.1.0-alpha.126 — 2026-10-19 · « Bandeau cliquable : focus, fermeture, renommage du panneau »
+
+- Un clic sur le titre d'un bandeau donne le focus au panneau ; le ✕ le ferme (avec confirmation si un programme tourne).
+- Un double clic sur le titre renomme le panneau : le bandeau montre le texte tapé suivi de « ▌ » ; un nom vide rend le titre du shell.
+- Un clic droit sur un bandeau est absorbé ; aucun clic sur un bandeau n'est jamais transmis au terminal (vim, htop).
+- Un seul renommage à la fois : démarrer celui d'un panneau annule celui d'un onglet, et inversement.
+
+## 0.1.0-alpha.125 — 2026-10-19 · « Bandeau de titre sur chaque panneau d'un onglet divisé »
+
+- Module `pane_header` : géométrie pure (`split_header`, `header_at`, `headers_visible`) ; le bandeau (une rangée de la police de base) apparaît quand l'onglet montre au moins deux panneaux, sans zoom.
+- `pane_rects` devient le rectangle du contenu : grille, sélection, clics et dessin restent justes ; un panneau plus bas que le bandeau garde une grille 1×1.
+- Les bandeaux sont dessinés dans la passe de chrome, à la couleur de la division parente ; le ✕ n'apparaît que sur le bandeau survolé (et pas s'il est trop étroit), un changement de survol redessine la fenêtre.
+- `pane_title` : nom du panneau, sinon titre du shell ; utilisé par les bandeaux et le titre d'onglet.
+
+## 0.1.0-alpha.124 — 2026-10-19 · « Dessin du bandeau de panneau »
+
+- `PaneHeaderSpec` et `pane_header_chrome` : fond de la couleur du panneau (assombri sans le focus), titre tronqué avec « … » avant le bouton, texte lisible sur le fond.
+- `pane_header_close_rect` : bouton ✕ collé au bord droit, dessiné aux couleurs de l'onglet (survol compris) seulement si `show_close`.
+- Image de référence `pane_header.png` et tests unitaires associés.
+
+## 0.1.0-alpha.123 — 2026-10-19 · « Couleur d'onglet choisie et couleur de bandeau »
+
+- `tab_accents` rend une couleur par onglet : celle choisie au nuancier (même sans `random`), sinon l'accent tiré en mode aléatoire, sinon la configuration ; `TabSpec.accent` la reçoit directement.
+- `header_color` : couleur du bandeau d'un panneau = celle de sa division parente (ou des divisions de la configuration sans parent).
+- `ACCENT_NAMES` : noms français des douze couleurs du nuancier.
+
+## 0.1.0-alpha.122 — 2026-10-19 · « Déplacer panneaux et onglets dans le modèle »
+
+- `Tab` : `insert_term`, `insert_term_at_root` et `parent_split_of` accueillent un terminal existant d'un côté donné ; nouveau champ `color` (couleur d'onglet choisie au nuancier).
+- `Workspace` : `move_term_to_pane`, `move_term_to_tab`, `move_term_to_new_tab`, `move_tab` et `close_other_tabs` ; un déplacement ne touche à aucun shell, retire l'onglet d'origine vidé et focalise le terminal déplacé.
+- `Workspace` : `set_tab_color`, `rename_pane` et `pane_name` ; le nom d'un panneau suit son terminal et disparaît à sa fermeture.
+- Tests dans `workspace_arrange_tests.rs`.
+
+## 0.1.0-alpha.121 — 2026-10-19 · « Insertion d'un panneau d'un côté donné »
+
+- `rustty-layout` : nouveau type `Side` (haut, bas, gauche, droite) avec l'axe de division et l'ordre du nouveau panneau.
+- `TabLayout::insert` place un nouveau panneau d'un côté d'un panneau cible, `insert_root` enveloppe tout l'arbre (ou crée la racine d'un onglet vide), `parent_split` donne la division qui contient directement un panneau.
+- `split` s'appuie désormais sur `insert` (droite ou bas) : le doublon dans `node.rs` disparaît, l'insertion vit dans `insert.rs`.
+- Tests unitaires et propriétés (`insert`, `close`, `insert_root` mêlés aux opérations existantes).
+
 ## 0.1.0-alpha.120 — 2026-10-19 · « Le nouveau panneau part du dossier courant »
 
 - Diviser un panneau ou ouvrir un onglet (raccourci, menu contextuel ou bouton « + ») lance le nouveau shell dans le dossier courant du panneau actif, comme `--cwd=current` de kitty.

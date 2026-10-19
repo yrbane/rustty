@@ -98,6 +98,49 @@ Configuration et fichiers
 Barre d'onglets
 - [ ] Ouvrir beaucoup d'onglets puis réduire la fenêtre : le dernier onglet visible est tronqué avec `…` (au moins 3 cellules de titre), sinon il est omis.
 
+## Bandeaux et glisser-déposer (plan 9)
+Prérequis : un onglet à deux panneaux (`ctrl+shift+e`), `[splits] random_colors = true` pour distinguer les couleurs.
+
+Bandeau
+- [ ] Onglet à un seul panneau : aucun bandeau. Deux panneaux : chacun a un bandeau d'une rangée en haut, et le terminal perd une rangée (`tput lines`). Fermer l'un des deux : le bandeau disparaît et la rangée est rendue.
+- [ ] `ctrl+shift+z` (zoom) : le bandeau disparaît ; second appui : il revient.
+- [ ] Le bandeau a la couleur de la division qui contient le panneau (aléatoire avec `random_colors`, sinon `splits.color`, sinon `ansi[8]`) ; texte lisible.
+- [ ] Le titre du bandeau est le titre du shell (`printf '\e]0;essai\a'`), tronqué avec `…` quand le bandeau est étroit.
+- [ ] Survol du bandeau : un ✕ apparaît à droite et passe en couleur de survol ; clic : le panneau se ferme (confirmation avec `sleep 100` en cours). Sur un bandeau de moins de 6 cellules, le ✕ n'apparaît pas.
+- [ ] Clic sur le bandeau : le panneau est focalisé. Double clic : édition du nom (curseur ▌), Entrée valide (le bandeau, et l'onglet si ce panneau est focalisé sans nom d'onglet, affichent le nom), Échap annule, nom vide = titre du shell.
+- [ ] Le nom suit le panneau quand il change d'onglet et survit à la disparition du bandeau.
+- [ ] Une couleur de division reste stable : ouvrir et fermer des panneaux ne repeint pas les autres bandeaux.
+
+Glisser un panneau
+- [ ] Presser sur le bandeau et bouger de moins de 4 px, relâcher : simple clic (focus), rien ne bouge.
+- [ ] Bouger de plus de 4 px : le glisser commence ; au-dessus d'un autre panneau, la moitié la plus proche (haut, bas, gauche, droite, séparées par les diagonales) est éclairée ; au lâcher, le panneau s'y installe à 50 % et prend le focus. Le shell garde son historique et ses processus (`sleep 100` continue).
+- [ ] Un panneau seul dans son onglet n'a pas de bandeau : rien à tirer.
+- [ ] Pendant le glisser, survoler un autre onglet moins de 0,5 s ne l'affiche pas ; au bout de 0,5 s il s'affiche (une seule fois par survol) et on peut lâcher sur l'un de ses panneaux.
+- [ ] Lâcher sur un onglet de la barre : le panneau passe à droite de tout cet onglet (division verticale à la racine, 50 %), qui s'affiche.
+- [ ] Lâcher sur son propre onglet : le panneau passe à droite de tout l'onglet.
+- [ ] Échap pendant le glisser : rien ne change, Échap n'est pas transmis au terminal, et l'onglet de départ est réaffiché si un survol en avait affiché un autre.
+- [ ] Lâcher sur le panneau tiré lui-même, ou hors de tout panneau et onglet (y compris hors de la fenêtre) : rien ne change, onglet de départ réaffiché.
+- [ ] Pendant le glisser, ouvrir un menu ou perdre le focus (alt-tab) annule le glisser.
+
+Réordonner les onglets
+- [ ] Presser un onglet, bouger de moins de 4 px, relâcher : simple clic (activation) ; double clic : renommage.
+- [ ] Tirer un onglet au-delà de 4 px : un repère vertical montre la place d'insertion ; au lâcher il prend cette place et l'onglet actif reste le même.
+- [ ] Échap, ou lâcher hors de la barre : l'ordre ne change pas.
+
+Menus
+- [ ] Clic droit sur un onglet (pas forcément l'actif) : menu « Renommer », « Changer la couleur », « Nouvel onglet », « Fermer l'onglet », « Fermer les autres onglets » ; les actions visent l'onglet cliqué.
+- [ ] « Fermer les autres onglets » avec `sleep 100` dans l'un d'eux : confirmation.
+- [ ] « Changer la couleur » : le nuancier de 12 pastilles plus « Couleur par défaut » remplace le menu, se pilote au survol, au clic et à Échap ; la couleur choisie s'affiche sur l'onglet même avec `[tabs.colors] random = false` ; « Couleur par défaut » rend la couleur de la configuration.
+- [ ] Clic droit sur un bandeau : le panneau est focalisé, puis menu « Diviser horizontalement », « Diviser verticalement », « Agrandir le panneau », « Déplacer dans un nouvel onglet », « Renommer le panneau », « Fermer le panneau ». Les divisions héritent du dossier courant du panneau.
+- [ ] « Déplacer dans un nouvel onglet » : un onglet juste après l'onglet courant contient ce seul panneau (sans bandeau), et s'affiche.
+
+Points de revue
+- [ ] Panneau zoomé (`ctrl+molette` au-dessus de l'un des deux panneaux) : le bandeau garde sa hauteur de base ; cliquer juste sous le bandeau place le curseur et la sélection en rangée 0 du terminal.
+- [ ] Application qui capte la souris (`htop`, ou vim avec `:set mouse=a`) : un clic sur le bandeau ne lui est jamais transmis ; un clic sur la première rangée du contenu est rapporté en rangée 1.
+- [ ] Tirer un panneau puis tuer son shell (`kill -9` depuis un autre panneau), ou fermer la cible, pendant le glisser : le glisser s'annule, sans panique.
+- [ ] Pendant une confirmation de fermeture ou un renommage en cours, tenter de tirer un panneau ou un onglet : refusé, rien ne bouge.
+- [ ] Réduire un panneau à moins de deux rangées de haut : contenu de hauteur 0 sans panique, terminal à 1×1 au minimum.
+
 ## Robustesse
 - [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique.
 - [ ] `cargo run -p rustty` : rien sur la sortie d'erreur pendant le parcours ; `RUSTTY_LOG=rustty=debug` pour le détail.

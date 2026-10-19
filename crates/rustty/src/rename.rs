@@ -1,4 +1,6 @@
-//! Édition du nom d'un onglet : tampon, touches, validation. Pur.
+//! Édition du nom d'un onglet ou d'un panneau : tampon, touches, validation. Pur.
+
+use crate::tab::TermId;
 
 /// Longueur maximale d'un nom d'onglet, en caractères.
 pub const MAX_TITLE_CHARS: usize = 64;
@@ -19,16 +21,23 @@ pub enum RenameOutcome {
     Cancel,
 }
 
+/// Ce que l'édition renomme : un onglet (par index) ou un panneau.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RenameTarget {
+    Tab(usize),
+    Pane(TermId),
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Rename {
-    pub tab: usize,
+    pub target: RenameTarget,
     pub buffer: String,
 }
 
 impl Rename {
-    pub fn new(tab: usize, initial: &str) -> Self {
+    pub fn new(target: RenameTarget, initial: &str) -> Self {
         Self {
-            tab,
+            target,
             buffer: initial.to_string(),
         }
     }
@@ -67,7 +76,7 @@ mod tests {
 
     #[test]
     fn typing_and_backspace() {
-        let mut r = Rename::new(0, "");
+        let mut r = Rename::new(RenameTarget::Tab(0), "");
         assert_eq!(r.apply(text("lo")), RenameOutcome::Editing);
         r.apply(text("gs"));
         r.apply(RenameKey::Backspace);
@@ -82,31 +91,43 @@ mod tests {
 
     #[test]
     fn control_characters_are_ignored() {
-        let mut r = Rename::new(0, "a");
+        let mut r = Rename::new(RenameTarget::Tab(0), "a");
         r.apply(text("\u{1b}[31mb\r\n\tc\u{7}"));
         assert_eq!(r.buffer, "a[31mbc");
     }
 
     #[test]
     fn commit_trims_and_empty_means_none() {
-        let mut r = Rename::new(2, "  build  ");
+        let mut r = Rename::new(RenameTarget::Tab(2), "  build  ");
         assert_eq!(
             r.apply(RenameKey::Commit),
             RenameOutcome::Commit(Some("build".into()))
         );
-        let mut empty = Rename::new(2, "   ");
+        let mut empty = Rename::new(RenameTarget::Tab(2), "   ");
         assert_eq!(empty.apply(RenameKey::Commit), RenameOutcome::Commit(None));
     }
 
     #[test]
+    fn pane_rename_commits_to_its_target() {
+        let mut r = Rename::new(RenameTarget::Pane(TermId(7)), "logs");
+        assert_eq!(r.target, RenameTarget::Pane(TermId(7)));
+        r.apply(text("2"));
+        assert_eq!(
+            r.apply(RenameKey::Commit),
+            RenameOutcome::Commit(Some("logs2".into()))
+        );
+        assert_eq!(r.target, RenameTarget::Pane(TermId(7)));
+    }
+
+    #[test]
     fn cancel_keeps_nothing() {
-        let mut r = Rename::new(0, "x");
+        let mut r = Rename::new(RenameTarget::Tab(0), "x");
         assert_eq!(r.apply(RenameKey::Cancel), RenameOutcome::Cancel);
     }
 
     #[test]
     fn length_is_capped() {
-        let mut r = Rename::new(0, "");
+        let mut r = Rename::new(RenameTarget::Tab(0), "");
         r.apply(text(&"x".repeat(200)));
         assert_eq!(r.buffer.chars().count(), MAX_TITLE_CHARS);
         r.apply(text("y"));

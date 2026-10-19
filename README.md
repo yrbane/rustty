@@ -11,7 +11,8 @@
 > le shell, gère onglets (bouton ✕ au survol), splits, sélection, presse-papiers,
 > scrollback, opacité, barres de split et couleurs d'onglets configurables,
 > renommage des onglets, zoom de police et rechargement de la configuration à
-> chaud. Les tests
+> chaud. Les panneaux d'un onglet divisé portent un bandeau et se déplacent à
+> la souris ; les onglets se réordonnent en les glissant. Les tests
 > couvrent toute la logique ; le parcours manuel est dans `docs/e2e.md`.
 
 ## Développement
@@ -57,10 +58,48 @@ Sous Linux, `--install-desktop` écrit `rustty.desktop` et les icônes sous
 l'exécutable. Les icônes se régénèrent depuis `assets/icon.svg` avec
 `scripts/icons.sh`.
 
+### Raccourcis
+
 Raccourcis par défaut (modifiables dans `[keys]`) : `ctrl+shift+t` nouvel onglet,
 `ctrl+shift+q` fermer l'onglet, `ctrl+shift+e` / `ctrl+shift+o` split vertical /
 horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+c` /
-`ctrl+shift+v` copier / coller, `shift+page_up` / `shift+page_down` historique, `ctrl+shift+left` / `ctrl+shift+right` ou `ctrl+shift+tab` / `ctrl+tab` onglet précédent / suivant, `alt+1`…`alt+5` onglet n, `ctrl+shift+z` zoom, `ctrl+shift+r` rotation, `ctrl+shift+f5` recharger la config, `ctrl+shift+alt+t` (ou double clic sur l'onglet) renommer l'onglet, `ctrl+plus` / `ctrl+minus` / `ctrl+0` et `ctrl+molette` taille de police du panneau survolé (les autres panneaux et la barre d'onglets ne changent pas). Un clic droit dans un panneau ouvre un menu (copier, coller, diviser, agrandir, renommer l'onglet, nouvel onglet, fermer le panneau ; `shift`+clic droit dans une application qui capte la souris). Les barres de split se glissent à la souris ; au redimensionnement, les lignes se réorganisent (reflow).
+`ctrl+shift+v` copier / coller, `shift+page_up` / `shift+page_down` historique, `ctrl+shift+left` / `ctrl+shift+right` ou `ctrl+shift+tab` / `ctrl+tab` onglet précédent / suivant, `alt+1`…`alt+5` onglet n, `ctrl+shift+z` zoom, `ctrl+shift+r` rotation, `ctrl+shift+f5` recharger la config, `ctrl+shift+alt+t` (ou double clic sur l'onglet) renommer l'onglet, `ctrl+plus` / `ctrl+minus` / `ctrl+0` et `ctrl+molette` taille de police du panneau survolé (les autres panneaux et la barre d'onglets ne changent pas). Les barres de split se glissent à la souris ; au redimensionnement, les lignes se réorganisent (reflow).
+
+### Souris : bandeaux, glisser-déposer et menus
+
+- **Bandeau de panneau.** Dès qu'un onglet affiche au moins deux panneaux (sans
+  zoom), chaque panneau porte en haut un bandeau d'une rangée : son titre (le
+  nom donné au panneau, sinon le titre annoncé par le shell, tronqué avec `…`)
+  à gauche, et à droite un bouton ✕ qui apparaît au survol (masqué sur un
+  bandeau de moins de 6 cellules) et ferme le panneau. Il prend la couleur de
+  la division qui contient le panneau (réglages `[splits]`). Le nom d'un panneau
+  remplace aussi le titre de l'onglet quand ce panneau a le focus et que
+  l'onglet n'a pas de nom à lui. Un onglet à un
+  seul panneau, ou un panneau agrandi, n'a pas de bandeau. Un clic sur le
+  bandeau focalise le panneau, un double clic le renomme ; le bandeau n'est
+  jamais transmis aux applications qui captent la souris. Le ✕ du bandeau
+  demande confirmation quand un programme tourne dans le panneau, comme la
+  fermeture d'un panneau.
+- **Déplacer un panneau.** On le tire par son bandeau (au-delà de 4 px ; en
+  dessous, c'est un clic) : la moitié visée d'un autre panneau (haut, bas,
+  gauche ou droite, délimitées par les diagonales) s'éclaire et le panneau s'y
+  installe au lâcher. Survoler un onglet 0,5 s l'affiche, on peut alors lâcher
+  sur l'un de ses panneaux ; lâcher directement sur un onglet (même le sien)
+  place le panneau à droite de tout l'onglet. Le shell n'est jamais tué ni
+  relancé. `Échap`, un lâcher hors cible ou sur le panneau lui-même annulent
+  et réaffichent l'onglet de départ. Un panneau seul dans son onglet n'a pas
+  de bandeau et ne se tire donc pas.
+- **Réordonner les onglets.** On tire un onglet le long de la barre ; un repère
+  vertical montre où il s'insérera, et l'onglet actif reste le même. Un simple
+  clic garde son effet (activation, double clic pour renommer).
+- **Menus au clic droit.** Dans un panneau : copier, coller, diviser, agrandir,
+  renommer l'onglet, nouvel onglet, fermer le panneau (`shift`+clic droit dans
+  une application qui capte la souris). Sur un onglet : renommer, changer la
+  couleur, nouvel onglet, fermer, fermer les autres. Sur un bandeau : diviser
+  horizontalement ou verticalement, agrandir, déplacer dans un nouvel onglet,
+  renommer, fermer le panneau. « Changer la couleur » ouvre un nuancier de
+  12 couleurs vives plus « Couleur par défaut » ; le choix s'affiche même avec
+  `[tabs.colors] random = false`.
 
 ## Afficher une image
 
@@ -84,8 +123,10 @@ par terminal : au-delà, les plus anciennes de l'historique disparaissent d'abor
 
 - Fenêtre rendue par le GPU via `wgpu`, sur Linux (Wayland et X11), macOS et Windows.
 - Émulation VT solide avec scrollback, couleurs vraies, polices et emojis.
-- Onglets avec bouton de fermeture cliquable et réactif au survol.
-- Divisions horizontales et verticales de l'écran, redimensionnables au clavier.
+- Onglets avec bouton de fermeture cliquable et réactif au survol, réordonnables
+  à la souris, avec menu au clic droit et couleur au choix.
+- Divisions horizontales et verticales de l'écran, redimensionnables au clavier
+  et à la souris ; bandeaux de panneau et glisser-déposer des panneaux.
 - Un nouvel onglet ou un nouveau panneau démarre dans le dossier du panneau actif
   (celui du programme au premier plan, sinon du shell ; Linux et macOS — sous
   Windows, le dossier personnel).

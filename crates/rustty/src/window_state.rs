@@ -19,11 +19,14 @@ use winit::window::{CursorIcon, Icon, Window, WindowAttributes};
 
 use crate::banner::Banner;
 use crate::context_menu::ContextMenu;
+use crate::drag::Drag;
 use crate::events::Waker;
 use crate::gpu_surface::{self, Surface};
 use crate::model::Model;
 use crate::mouse::{DoubleClick, MotionFilter, MouseButton, Selection, WheelAccumulator};
 use crate::pane_fonts::{PaneFonts, SizeKey};
+use crate::pane_header::{HeaderHit, PaneHeader};
+use crate::rename::RenameTarget;
 use crate::renderers::{RendererSpec, Renderers};
 use crate::tab::TermId;
 use crate::term_window::{Launch, TermWindow};
@@ -61,15 +64,21 @@ pub struct OsWindow {
     /// Dernière cellule rapportée en mouvement (une fois par cellule).
     pub motion: MotionFilter,
     pub tab_clicks: DoubleClick,
+    pub header_clicks: DoubleClick,
     pub wheel: WheelAccumulator,
     pub press_target: HoverTarget,
     pub tab_bar: Option<TabBarLayout>,
+    /// Rectangles du contenu des panneaux (bandeau retiré).
     pub pane_rects: Vec<(WindowId, PixelRect)>,
+    pub headers: Vec<PaneHeader>,
+    pub header_hover: Option<HeaderHit>,
     pub dividers: Vec<(SplitId, PixelRect)>,
     /// Zone des panneaux (sous ou sur la barre d'onglets).
     pub content: Rect,
     /// Barre de split en cours de glisser.
-    pub drag: Option<SplitId>,
+    pub divider_drag: Option<SplitId>,
+    /// Panneau ou onglet en cours de glisser-déposer.
+    pub drag: Option<Drag>,
     pub cursor_icon: CursorIcon,
     /// Menu du clic droit ouvert.
     pub menu: Option<ContextMenu>,
@@ -144,12 +153,16 @@ impl OsWindow {
             held: None,
             motion: MotionFilter::default(),
             tab_clicks: DoubleClick::default(),
+            header_clicks: DoubleClick::default(),
             wheel: WheelAccumulator::default(),
             press_target: HoverTarget::None,
             tab_bar: None,
             pane_rects: Vec::new(),
+            headers: Vec::new(),
+            header_hover: None,
             dividers: Vec::new(),
             content: Rect::new(0, 0, 0, 0),
+            divider_drag: None,
             drag: None,
             cursor_icon: CursorIcon::Default,
             menu: None,
@@ -217,16 +230,12 @@ impl OsWindow {
             .iter()
             .enumerate()
             .map(|(i, tab)| {
-                let raw = tab
-                    .focused_term()
-                    .and_then(|t| self.titles.get(&t))
-                    .map(String::as_str)
-                    .unwrap_or("");
+                let raw = tab.focused_term().map_or("", |t| self.pane_title(t));
                 let editing = self
                     .model
                     .renaming
                     .as_ref()
-                    .filter(|r| r.tab == i)
+                    .filter(|r| r.target == RenameTarget::Tab(i))
                     .map(|r| r.buffer.as_str());
                 title::display_title(template, i, raw, tab.custom_title.as_deref(), editing)
             })

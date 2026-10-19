@@ -1,7 +1,7 @@
 //! Fermeture (avec confirmation) et renommage des onglets du modèle.
 
 use super::{CloseRequest, Effect, Model};
-use crate::rename::{Rename, RenameKey, RenameOutcome};
+use crate::rename::{Rename, RenameKey, RenameOutcome, RenameTarget};
 use crate::tab::{Tab, TermId};
 
 impl Model {
@@ -13,6 +13,14 @@ impl Model {
                 .get(i)
                 .map(|t| t.terms())
                 .unwrap_or_default(),
+            CloseRequest::OtherTabs(keep) => self
+                .workspace
+                .tabs()
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| *i != keep)
+                .flat_map(|(_, t)| t.terms())
+                .collect(),
             CloseRequest::Term(t) => vec![t],
             CloseRequest::Window => self.workspace.tabs().iter().flat_map(Tab::terms).collect(),
         }
@@ -45,7 +53,22 @@ impl Model {
             return Vec::new();
         };
         let current = t.custom_title.clone().unwrap_or_default();
-        self.renaming = Some(Rename::new(tab, &current));
+        self.renaming = Some(Rename::new(RenameTarget::Tab(tab), &current));
+        vec![Effect::Redraw]
+    }
+
+    /// Ouvre l'édition du nom du panneau `term`, pré-remplie avec son nom actuel.
+    pub fn start_pane_rename(&mut self, term: TermId) -> Vec<Effect> {
+        if !self
+            .workspace
+            .tabs()
+            .iter()
+            .any(|t| t.window_of(term).is_some())
+        {
+            return Vec::new();
+        }
+        let current = self.workspace.pane_name(term).unwrap_or_default();
+        self.renaming = Some(Rename::new(RenameTarget::Pane(term), current));
         vec![Effect::Redraw]
     }
 
@@ -57,9 +80,12 @@ impl Model {
             // La largeur de l'onglet suit le nom tapé : mise en page complète.
             RenameOutcome::Editing => vec![Effect::Relayout],
             RenameOutcome::Commit(title) => {
-                let tab = rename.tab;
+                let target = rename.target;
                 self.renaming = None;
-                self.workspace.rename(tab, title);
+                match target {
+                    RenameTarget::Tab(tab) => self.workspace.rename(tab, title),
+                    RenameTarget::Pane(term) => self.workspace.rename_pane(term, title),
+                }
                 vec![Effect::Relayout]
             }
             RenameOutcome::Cancel => {
@@ -74,6 +100,7 @@ impl Model {
         self.renaming = None;
         let killed = match req {
             CloseRequest::Tab(i) => self.workspace.close_tab(i),
+            CloseRequest::OtherTabs(keep) => self.workspace.close_other_tabs(keep),
             CloseRequest::Term(t) => self
                 .workspace
                 .close_term(t)

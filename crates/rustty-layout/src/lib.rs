@@ -2,9 +2,10 @@
 //! qui ne sait rien du rendu et produit des rectangles en pixels.
 
 pub mod geometry;
+mod insert;
 mod node;
 pub mod tab_layout;
 
-pub use geometry::{Axis, Direction, Rect, SplitId, WindowId};
+pub use geometry::{Axis, Direction, Rect, Side, SplitId, WindowId};
 pub use node::{MAX_RATIO, MIN_RATIO};
 pub use tab_layout::TabLayout;

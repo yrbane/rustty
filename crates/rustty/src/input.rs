@@ -27,6 +27,9 @@ impl OsWindow {
         if event.state != ElementState::Pressed {
             return Vec::new();
         }
+        if let Some(effects) = self.drag_key(&event.logical_key) {
+            return effects;
+        }
         if self.menu.is_some() {
             // Une touche ferme le menu ; Échap s'arrête là, les autres agissent ensuite.
             let closed = self.close_context_menu();
@@ -123,6 +126,9 @@ impl OsWindow {
     pub fn on_cursor_moved(&mut self, x: f64, y: f64) -> Vec<Effect> {
         self.cursor = (x, y);
         self.cursor_inside = true;
+        if let Some(effects) = self.drag_moved(x, y) {
+            return effects;
+        }
         let mut menu_effects = Vec::new();
         if let Some(effects) = self.menu_hover(x, y) {
             menu_effects = effects;
@@ -147,6 +153,9 @@ impl OsWindow {
             return effects;
         }
         let mut effects = menu_effects;
+        if self.update_header_hover(x, y) {
+            effects.push(Effect::Redraw);
+        }
         if self.model.hover_changed(self.bar_target(x, y)) {
             effects.push(Effect::Redraw);
         }
@@ -168,7 +177,8 @@ impl OsWindow {
 
     pub fn on_cursor_left(&mut self) -> Vec<Effect> {
         self.cursor_inside = false;
-        if self.model.hover_changed(HoverTarget::None) {
+        let header_changed = self.update_header_hover(self.cursor.0, self.cursor.1);
+        if self.model.hover_changed(HoverTarget::None) || header_changed {
             vec![Effect::Redraw]
         } else {
             Vec::new()
@@ -190,13 +200,23 @@ impl OsWindow {
     }
 
     fn on_press(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if let Some(effects) = self.drag_press() {
+            return effects;
+        }
         if let Some(effects) = self.menu_click(button, x, y) {
             return effects;
         }
         let on_bar = self.bar_target(x, y);
         if on_bar != HoverTarget::None {
+            if button == MouseButton::Right {
+                return self.bar_right_click(on_bar, x, y);
+            }
             self.press_target = on_bar;
+            self.arm_tab_drag(on_bar, button, x, y);
             return Vec::new();
+        }
+        if let Some(effects) = self.header_press(button, x, y, Instant::now()) {
+            return effects;
         }
         if button == MouseButton::Left && self.start_divider_drag(x, y) {
             return Vec::new();
@@ -240,6 +260,9 @@ impl OsWindow {
     }
 
     fn on_release(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if let Some(effects) = self.drag_released(button) {
+            return effects;
+        }
         if self.end_divider_drag() {
             return Vec::new();
         }
