@@ -9,7 +9,6 @@ use crate::tab::{Tab, TermId};
 
 impl Workspace {
     /// Déplace `term` du côté `side` du panneau `target` (même onglet ou autre).
-    #[allow(dead_code)] // consommé par le glisser-déposer (tâche 9)
     pub fn move_term_to_pane(&mut self, term: TermId, target: TermId, side: Side) -> bool {
         if term == target {
             return false;
@@ -25,7 +24,6 @@ impl Workspace {
     }
 
     /// Déplace `term` à droite de tout l'onglet `tab` (permis vers son propre onglet).
-    #[allow(dead_code)] // consommé par le glisser-déposer (tâche 9)
     pub fn move_term_to_tab(&mut self, term: TermId, tab: usize) -> bool {
         let Some(from) = self.tab_of(term) else {
             return false;
@@ -57,7 +55,6 @@ impl Workspace {
 
     /// Déplace l'onglet `from` à l'index d'insertion `to` (`0..=len`, compté
     /// avant retrait). L'onglet actif reste le même onglet.
-    #[allow(dead_code)] // consommé par le glisser-déposer (tâche 9)
     pub fn move_tab(&mut self, from: usize, to: usize) -> bool {
         let len = self.tabs.len();
         if from >= len || to > len || to == from || to == from + 1 {

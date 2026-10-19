@@ -90,7 +90,6 @@ impl Tab {
 
     /// Insère `term` (déjà détaché d'ailleurs) du côté `side` de `target` ;
     /// il reçoit le focus, la nouvelle barre l'accent `accent`.
-    #[allow(dead_code)] // consommé par le glisser-déposer (tâche 9)
     pub fn insert_term(&mut self, term: TermId, target: TermId, side: Side, accent: usize) -> bool {
         let Some(target) = self.window_of(target) else {
             return false;
@@ -105,7 +104,6 @@ impl Tab {
     }
 
     /// Comme `insert_term`, mais autour de toute la racine de l'onglet.
-    #[allow(dead_code)] // consommé par le glisser-déposer (tâche 9)
     pub fn insert_term_at_root(&mut self, term: TermId, side: Side, accent: usize) {
         let window = self.layout.insert_root(side);
         self.register(window, term, accent);
@@ -117,7 +115,6 @@ impl Tab {
             .and_then(|w| self.layout.parent_split(w))
     }
 
-    #[allow(dead_code)] // consommé par le glisser-déposer (tâche 9)
     fn register(&mut self, window: WindowId, term: TermId, accent: usize) {
         self.panes.insert(window, term);
         // Contrat de `TabLayout::insert` : la division porte l'id de la fenêtre créée.

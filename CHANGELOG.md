@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.130 — 2026-10-19 · « Machine de glisser-déposer »
+
+- Nouveau module `drag` : seuil de 4 px, côté de dépôt par les deux diagonales du rectangle, index d'insertion d'onglet d'après le milieu des onglets, survol d'onglet de 500 ms (une seule bascule par survol).
+- `Model::move_pane`, `Model::move_tab` et `Model::accepts_drag` : un dépôt ne lance, ne ferme ni ne vide aucun shell ; terme ou cible disparus, dépôt sur soi-même ou renommage en cours n'ont aucun effet fâcheux.
+
 ## 0.1.0-alpha.129 — 2026-10-19 · « Menu d'onglet invalidé par la fin d'un shell »
 
 - Un menu d'onglet ou le nuancier ouvert se ferme dès qu'un terminal se termine ou est fermé : l'index d'onglet visé pouvait se décaler et « Fermer l'onglet », « Fermer les autres onglets » ou la couleur touchaient un autre onglet.

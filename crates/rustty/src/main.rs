@@ -10,6 +10,7 @@ mod config_watch;
 mod context_menu;
 mod desktop;
 mod divider_drag;
+mod drag;
 mod effects;
 mod events;
 mod font_zoom;

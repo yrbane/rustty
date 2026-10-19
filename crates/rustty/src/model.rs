@@ -7,6 +7,7 @@ use rustty_config::Action;
 use rustty_pty::ExitStatus;
 use rustty_render::HoverTarget;
 
+mod arrange;
 mod close;
 mod menu;
 
