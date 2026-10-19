@@ -62,8 +62,6 @@ impl ContextMenu {
         }
     }
 
-    // Les trois constructeurs suivants servent à la tâche 8 (clic droit).
-    #[allow(dead_code)]
     pub fn tab(index: usize, x: u32, y: u32, can_close_others: bool, keys: &KeyMap) -> Self {
         Self {
             can_close_others,
@@ -71,12 +69,10 @@ impl ContextMenu {
         }
     }
 
-    #[allow(dead_code)]
     pub fn header(term: TermId, x: u32, y: u32, keys: &KeyMap) -> Self {
         Self::build(MenuTarget::Header(term), x, y, Some(keys))
     }
 
-    #[allow(dead_code)]
     pub fn palette(tab: usize, x: u32, y: u32) -> Self {
         Self::build(MenuTarget::Palette(tab), x, y, None)
     }

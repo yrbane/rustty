@@ -14,7 +14,7 @@ pub enum HeaderAction {
     Close(TermId),
     Focus(TermId),
     Rename(TermId),
-    /// Clic droit : absorbé, le menu du bandeau viendra s'y brancher.
+    /// Clic droit : ouvre le menu du bandeau.
     Menu(TermId),
     Ignore,
 }
@@ -64,7 +64,8 @@ impl OsWindow {
                 effects.extend(self.focus_pane(term));
                 effects.extend(self.model.start_pane_rename(term));
             }
-            HeaderAction::Menu(_) | HeaderAction::Ignore => {}
+            HeaderAction::Menu(term) => effects.extend(self.open_header_menu(term, x, y)),
+            HeaderAction::Ignore => {}
         }
         Some(effects)
     }

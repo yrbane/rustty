@@ -8,6 +8,7 @@ use rustty_pty::ExitStatus;
 use rustty_render::HoverTarget;
 
 mod close;
+mod menu;
 
 use crate::banner::Banner;
 use crate::font_zoom::FontChange;
@@ -45,6 +46,8 @@ pub enum Effect {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CloseRequest {
     Tab(usize),
+    /// Tous les onglets sauf celui d'index donné.
+    OtherTabs(usize),
     Term(TermId),
     Window,
 }

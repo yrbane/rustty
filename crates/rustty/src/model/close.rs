@@ -13,6 +13,14 @@ impl Model {
                 .get(i)
                 .map(|t| t.terms())
                 .unwrap_or_default(),
+            CloseRequest::OtherTabs(keep) => self
+                .workspace
+                .tabs()
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| *i != keep)
+                .flat_map(|(_, t)| t.terms())
+                .collect(),
             CloseRequest::Term(t) => vec![t],
             CloseRequest::Window => self.workspace.tabs().iter().flat_map(Tab::terms).collect(),
         }
@@ -92,6 +100,7 @@ impl Model {
         self.renaming = None;
         let killed = match req {
             CloseRequest::Tab(i) => self.workspace.close_tab(i),
+            CloseRequest::OtherTabs(keep) => self.workspace.close_other_tabs(keep),
             CloseRequest::Term(t) => self
                 .workspace
                 .close_term(t)

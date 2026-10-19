@@ -70,6 +70,13 @@ impl Workspace {
         self.active
     }
 
+    /// Active l'onglet `tab` s'il existe.
+    pub fn activate(&mut self, tab: usize) {
+        if tab < self.tabs.len() {
+            self.active = tab;
+        }
+    }
+
     pub fn active_tab(&self) -> &Tab {
         &self.tabs[self.active]
     }

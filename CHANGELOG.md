@@ -4,6 +4,14 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.128 — 2026-10-19 · « Menus d'onglet et de bandeau »
+
+- Clic droit sur un onglet : menu de l'onglet cliqué (renommer, changer la couleur, nouvel onglet, fermer, fermer les autres).
+- Clic droit sur un bandeau de panneau : menu du panneau (divisions qui héritent de son dossier, agrandir, déplacer dans un nouvel onglet, renommer, fermer).
+- « Changer la couleur » remplace le menu par le nuancier au même point ; choisir une pastille ou la couleur par défaut recolore l'onglet.
+- « Fermer les autres onglets » demande confirmation si un programme tourne dans l'un des onglets fermés.
+- Les menus restent refusés pendant une confirmation de fermeture ou un renommage.
+
 ## 0.1.0-alpha.127 — 2026-10-19 · « Menus contextuels paramétrés et nuancier »
 
 - Le menu contextuel dépend désormais d'une cible (`MenuTarget` : panneau, onglet, bandeau, nuancier) et porte sa propre liste d'entrées, en remplacement de la constante commune.

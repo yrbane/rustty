@@ -199,6 +199,9 @@ impl OsWindow {
         }
         let on_bar = self.bar_target(x, y);
         if on_bar != HoverTarget::None {
+            if button == MouseButton::Right {
+                return self.bar_right_click(on_bar, x, y);
+            }
             self.press_target = on_bar;
             return Vec::new();
         }

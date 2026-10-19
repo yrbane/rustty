@@ -2,10 +2,10 @@
 //! l'entrée choisie, fermeture. La logique (entrées, placement, dessin) est
 //! dans le module `context_menu`.
 
-use rustty_render::Chrome;
+use rustty_render::{Chrome, HoverTarget};
 
 use crate::context_menu::{
-    ContextMenu, MenuClick, MenuEntry, MenuLayout, MenuTarget, layout, menu_chrome,
+    ContextMenu, MenuClick, MenuEntry, MenuItem, MenuLayout, MenuTarget, layout, menu_chrome,
 };
 use crate::model::Effect;
 use crate::mouse::MouseButton;
@@ -38,6 +38,44 @@ impl OsWindow {
             y.max(0.0) as u32,
             can_copy,
             zoomed,
+            &self.config.keys,
+        ));
+        vec![Effect::Redraw]
+    }
+
+    /// Ouvre le menu de l'onglet `tab` au point `(x, y)`.
+    pub(crate) fn open_tab_menu(&mut self, tab: usize, x: f64, y: f64) -> Vec<Effect> {
+        if !self.model.accepts_context_menu() {
+            return Vec::new();
+        }
+        let others = self.model.workspace.tabs().len() > 1;
+        self.menu = Some(ContextMenu::tab(
+            tab,
+            x.max(0.0) as u32,
+            y.max(0.0) as u32,
+            others,
+            &self.config.keys,
+        ));
+        vec![Effect::Redraw]
+    }
+
+    /// Clic droit sur la barre : le menu de l'onglet visé, rien ailleurs.
+    pub(crate) fn bar_right_click(&mut self, target: HoverTarget, x: f64, y: f64) -> Vec<Effect> {
+        match target {
+            HoverTarget::Tab(tab) => self.open_tab_menu(tab, x, y),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Ouvre le menu du bandeau du panneau `term` au point `(x, y)`.
+    pub(crate) fn open_header_menu(&mut self, term: TermId, x: f64, y: f64) -> Vec<Effect> {
+        if !self.model.accepts_context_menu() {
+            return Vec::new();
+        }
+        self.menu = Some(ContextMenu::header(
+            term,
+            x.max(0.0) as u32,
+            y.max(0.0) as u32,
             &self.config.keys,
         ));
         vec![Effect::Redraw]
@@ -96,18 +134,24 @@ impl OsWindow {
         };
         let menu = self.menu.take()?;
         let mut effects = vec![Effect::Redraw];
-        // Les autres cibles s'exécutent à la tâche 8.
-        if let (MenuTarget::Pane(term), MenuEntry::Item(item)) = (menu.target, menu.entries[index])
-            && let Some(action) = item.action()
+        let MenuEntry::Item(item) = menu.entries[index] else {
+            return Some(effects);
+        };
+        if item == MenuItem::ChangeColor
+            && let MenuTarget::Tab(tab) = menu.target
         {
-            // L'action vise le panneau du menu : il prend le focus d'abord.
-            self.model.workspace.focus_term(term);
-            self.update_title();
-            let confirm = self.config.window.confirm_close_with_running_children;
-            let terms = &self.terms;
-            let running = |t: TermId| terms.get(&t).is_some_and(TermWindow::has_running_children);
-            effects.extend(self.model.apply(action, confirm, &running));
+            // Le nuancier remplace le menu d'onglet au même point.
+            self.menu = Some(ContextMenu::palette(tab, menu.x, menu.y));
+            return Some(effects);
         }
+        let confirm = self.config.window.confirm_close_with_running_children;
+        let terms = &self.terms;
+        let running = |t: TermId| terms.get(&t).is_some_and(TermWindow::has_running_children);
+        effects.extend(
+            self.model
+                .menu_command(menu.target, item, confirm, &running),
+        );
+        self.update_title();
         Some(effects)
     }
 
