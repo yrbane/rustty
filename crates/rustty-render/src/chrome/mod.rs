@@ -1,7 +1,10 @@
 //! La barre d'onglets : disposition en pixels, rectangles cliquables, et sa
 //! traduction en quads et textes pour le renderer. Pur, sans GPU.
 
+mod pane_header;
 mod title_fit;
+
+pub use pane_header::{PaneHeaderSpec, pane_header_chrome, pane_header_close_rect};
 
 use rustty_config::{Rgb, Tabs};
 

@@ -199,3 +199,52 @@ fn render_onto_keeps_what_is_already_there() {
         "fond par défaut du terminal : rien n'est peint, pas de vert"
     );
 }
+
+#[test]
+fn pane_header_matches_golden() {
+    use rustty_render::{PaneHeaderSpec, TabBarStyle, pane_header_chrome};
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let m = r.metrics();
+    let palette = Palette::from_config(&Colors::default(), false);
+    let style = TabBarStyle::from_config(&palette, &rustty_config::Tabs::default());
+    let (width, half) = (40 * m.width, 20 * m.width);
+    let height = m.height * 3;
+    let headers = [
+        PaneHeaderSpec {
+            rect: PixelRect::new(0, 0, half, m.height),
+            title: "1: sh",
+            color: Rgba::new(0.20, 0.45, 0.80, 1.0),
+            focused: true,
+            show_close: true,
+            close_hovered: true,
+        },
+        PaneHeaderSpec {
+            rect: PixelRect::new(half, 0, half, m.height),
+            title: "un titre vraiment beaucoup trop long",
+            color: Rgba::new(0.85, 0.75, 0.30, 1.0),
+            focused: false,
+            show_close: false,
+            close_hovered: false,
+        },
+    ];
+    let chrome = pane_header_chrome(&headers, &style, m);
+    let target = Offscreen::new(&ctx, width, height);
+    let frame = Frame {
+        viewport: (width, height),
+        background: palette.background,
+        panes: vec![],
+        chrome,
+    };
+    r.render(&ctx, target.view(), &frame);
+    let px = target.read_rgba(&ctx).unwrap();
+    assert_matches_golden("pane_header", &px, width, height);
+    let close = rustty_render::pane_header_close_rect(headers[0].rect, m);
+    assert_eq!(
+        pixel(&px, width, close.x + close.width / 2, 2),
+        style.close_hover_background.to_u8(),
+        "le ✕ survolé est dans sa couleur de survol"
+    );
+}

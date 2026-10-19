@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.124 — 2026-10-19 · « Dessin du bandeau de panneau »
+
+- `PaneHeaderSpec` et `pane_header_chrome` : fond de la couleur du panneau (assombri sans le focus), titre tronqué avec « … » avant le bouton, texte lisible sur le fond.
+- `pane_header_close_rect` : bouton ✕ collé au bord droit, dessiné aux couleurs de l'onglet (survol compris) seulement si `show_close`.
+- Image de référence `pane_header.png` et tests unitaires associés.
+
 ## 0.1.0-alpha.123 — 2026-10-19 · « Couleur d'onglet choisie et couleur de bandeau »
 
 - `tab_accents` rend une couleur par onglet : celle choisie au nuancier (même sans `random`), sinon l'accent tiré en mode aléatoire, sinon la configuration ; `TabSpec.accent` la reçoit directement.
