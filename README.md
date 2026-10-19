@@ -86,6 +86,9 @@ par terminal : au-delà, les plus anciennes de l'historique disparaissent d'abor
 - Émulation VT solide avec scrollback, couleurs vraies, polices et emojis.
 - Onglets avec bouton de fermeture cliquable et réactif au survol.
 - Divisions horizontales et verticales de l'écran, redimensionnables au clavier.
+- Un nouvel onglet ou un nouveau panneau démarre dans le dossier du panneau actif
+  (celui du programme au premier plan, sinon du shell ; Linux et macOS — sous
+  Windows, le dossier personnel).
 - Opacité du fond, configuration en TOML rechargée à chaud, raccourcis configurables.
 
 ## Configuration

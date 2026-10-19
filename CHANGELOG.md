@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.120 — 2026-10-19 · « Le nouveau panneau part du dossier courant »
+
+- Diviser un panneau ou ouvrir un onglet (raccourci, menu contextuel ou bouton « + ») lance le nouveau shell dans le dossier courant du panneau actif, comme `--cwd=current` de kitty.
+- `rustty-pty` : `Pty::cwd()` rend le dossier du programme au premier plan, à défaut celui du shell, via `/proc/<pid>/cwd` sous Linux et `proc_pidinfo` sous macOS ; `None` sous Windows ou quand le dossier n'existe plus (repli silencieux sur le dossier hérité).
+- L'effet `SpawnTerm` nomme le panneau d'origine (`cwd_of`) ; `TermWindow::spawn` reçoit un `Launch { shell, cwd }`.
+- Tests de `TermWindow` déplacés dans `term_window_tests.rs`.
+
 ## 0.1.0-alpha.119 — 2026-10-09 · « Compatibilité avec clippy récent »
 
 - Tests et décodage RGB : `chunks_exact` à taille constante remplacé par `as_chunks::<N>()` (`graphics/image.rs`, `graphics/downscale.rs`, `term/image_budget_tests.rs`), exigé par le clippy de la CI.

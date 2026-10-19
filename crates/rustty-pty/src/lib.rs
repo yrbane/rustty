@@ -2,6 +2,7 @@
 //! frappes, le redimensionne. Le thread lecteur est fourni ; le `Term` qui
 //! interprète les octets vit ailleurs (`rustty-vt`).
 
+pub mod cwd;
 pub mod error;
 pub mod shell;
 pub mod size;

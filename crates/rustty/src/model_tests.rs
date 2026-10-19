@@ -115,11 +115,25 @@ fn new_tab_and_split_spawn_then_relayout() {
     assert_eq!(first, TermId(1));
     assert_eq!(
         m.apply(Action::NewTab, true, &never_running),
-        vec![Effect::SpawnTerm(TermId(2)), Effect::Relayout]
+        vec![
+            Effect::SpawnTerm {
+                term: TermId(2),
+                cwd_of: Some(TermId(1))
+            },
+            Effect::Relayout
+        ],
+        "le nouvel onglet part du dossier du panneau actif"
     );
     assert_eq!(
         m.apply(Action::Split(SplitAxis::Vertical), true, &never_running),
-        vec![Effect::SpawnTerm(TermId(3)), Effect::Relayout]
+        vec![
+            Effect::SpawnTerm {
+                term: TermId(3),
+                cwd_of: Some(TermId(2))
+            },
+            Effect::Relayout
+        ],
+        "le panneau créé part du dossier du panneau divisé"
     );
     assert_eq!(m.workspace.focused_term(), Some(TermId(3)));
 }
@@ -254,7 +268,13 @@ fn tab_bar_clicks() {
             false,
             &never_running
         ),
-        vec![Effect::SpawnTerm(TermId(2)), Effect::Relayout]
+        vec![
+            Effect::SpawnTerm {
+                term: TermId(2),
+                cwd_of: Some(first)
+            },
+            Effect::Relayout
+        ]
     );
     assert_eq!(
         m.tab_bar_click(
