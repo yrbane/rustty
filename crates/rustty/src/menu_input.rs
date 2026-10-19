@@ -5,7 +5,7 @@
 use rustty_render::Chrome;
 
 use crate::context_menu::{
-    ContextMenu, ENTRIES, MenuClick, MenuEntry, MenuLayout, layout, menu_chrome,
+    ContextMenu, MenuClick, MenuEntry, MenuLayout, MenuTarget, layout, menu_chrome,
 };
 use crate::model::Effect;
 use crate::mouse::MouseButton;
@@ -32,7 +32,7 @@ impl OsWindow {
             .is_some_and(|(t, s)| *t == term && !s.is_empty());
         let zoomed = !self.model.workspace.is_empty()
             && self.model.workspace.active_tab().layout.zoomed().is_some();
-        self.menu = Some(ContextMenu::new(
+        self.menu = Some(ContextMenu::pane(
             term,
             x.max(0.0) as u32,
             y.max(0.0) as u32,
@@ -96,14 +96,17 @@ impl OsWindow {
         };
         let menu = self.menu.take()?;
         let mut effects = vec![Effect::Redraw];
-        if let MenuEntry::Item(item) = ENTRIES[index] {
+        // Les autres cibles s'exécutent à la tâche 8.
+        if let (MenuTarget::Pane(term), MenuEntry::Item(item)) = (menu.target, menu.entries[index])
+            && let Some(action) = item.action()
+        {
             // L'action vise le panneau du menu : il prend le focus d'abord.
-            self.model.workspace.focus_term(menu.term);
+            self.model.workspace.focus_term(term);
             self.update_title();
             let confirm = self.config.window.confirm_close_with_running_children;
             let terms = &self.terms;
             let running = |t: TermId| terms.get(&t).is_some_and(TermWindow::has_running_children);
-            effects.extend(self.model.apply(item.action(), confirm, &running));
+            effects.extend(self.model.apply(action, confirm, &running));
         }
         Some(effects)
     }

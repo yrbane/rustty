@@ -5,7 +5,7 @@ use super::super::menu_chrome;
 use super::*;
 use crate::context_menu::MenuItem;
 use crate::tab::TermId;
-use rustty_config::Colors;
+use rustty_config::{Colors, KeyMap};
 use rustty_render::Palette;
 
 fn metrics() -> CellMetrics {
@@ -20,19 +20,14 @@ fn metrics() -> CellMetrics {
 }
 
 fn menu(x: u32, y: u32) -> ContextMenu {
-    ContextMenu {
-        term: TermId(1),
-        x,
-        y,
-        can_copy: true,
-        zoomed: false,
-        hovered: None,
-        shortcuts: vec![None; ENTRIES.len()],
-    }
+    let mut m = ContextMenu::pane(TermId(1), x, y, true, false, &KeyMap::empty());
+    m.shortcuts = vec![None; m.entries.len()];
+    m
 }
 
 fn item_index(item: MenuItem) -> usize {
-    ENTRIES
+    menu(0, 0)
+        .entries
         .iter()
         .position(|e| *e == MenuEntry::Item(item))
         .unwrap()
@@ -43,7 +38,8 @@ fn clicks_inside_the_menu_never_close_it_by_accident() {
     let mut m = menu(100, 50);
     m.can_copy = false;
     let l = layout(&m, (800, 600), metrics());
-    let sep = ENTRIES
+    let sep = m
+        .entries
         .iter()
         .position(|e| *e == MenuEntry::Separator)
         .unwrap();
@@ -77,7 +73,7 @@ fn clicks_inside_the_menu_never_close_it_by_accident() {
 fn menu_opens_at_the_click() {
     let l = layout(&menu(100, 50), (800, 600), metrics());
     assert_eq!((l.rect.x, l.rect.y), (100, 50));
-    assert_eq!(l.rows.len(), ENTRIES.len());
+    assert_eq!(l.rows.len(), menu(0, 0).entries.len());
     assert!(
         l.rows
             .windows(2)
@@ -124,7 +120,8 @@ fn separators_and_disabled_items_are_not_clickable() {
     let mut m = menu(100, 50);
     m.can_copy = false;
     let l = layout(&m, (800, 600), metrics());
-    let sep = ENTRIES
+    let sep = m
+        .entries
         .iter()
         .position(|e| *e == MenuEntry::Separator)
         .unwrap();
@@ -207,4 +204,57 @@ fn labels_are_truncated_with_an_ellipsis() {
     assert_eq!(truncate_to_cells("Copier", 1), "…");
     assert_eq!(truncate_to_cells("Copier", 0), "");
     assert_eq!(truncate_to_cells("日本語", 4), "日…");
+}
+
+#[test]
+fn palette_menu_places_fourteen_rows_and_hits_a_color() {
+    let m = ContextMenu::palette(0, 100, 20);
+    let l = layout(&m, (800, 600), metrics());
+    assert_eq!(l.rows.len(), 14);
+    let r = l.rows[3].1;
+    assert_eq!(
+        l.hit(&m, f64::from(r.x + 5), f64::from(r.y + 2)),
+        Some(3),
+        "une couleur est cliquable"
+    );
+    let sep = l.rows[12].1;
+    assert_eq!(l.hit(&m, f64::from(sep.x + 5), f64::from(sep.y + 2)), None);
+    let last = l.rows[13].1;
+    assert_eq!(
+        l.click(&m, true, f64::from(last.x + 5), f64::from(last.y + 2)),
+        MenuClick::Run(13)
+    );
+}
+
+#[test]
+fn chrome_draws_a_swatch_before_color_labels_only() {
+    let palette = Palette::from_config(&Colors::default(), false);
+    let m = ContextMenu::palette(0, 100, 20);
+    let l = layout(&m, (800, 600), metrics());
+    let c = menu_chrome(&m, &l, &palette, metrics());
+    let row = l.rows[0].1;
+    let swatch = c
+        .quads
+        .iter()
+        .find(|q| q.color == crate::accent::accent_color(&palette, 1) && q.rect.y > row.y - 1)
+        .expect("pastille");
+    assert_eq!(swatch.rect.width, swatch.rect.height, "carrée");
+    let label = c.texts.iter().find(|t| t.text == "Rouge").unwrap();
+    assert!(
+        label.x >= swatch.rect.x + swatch.rect.width,
+        "libellé après la pastille"
+    );
+    let default = c
+        .texts
+        .iter()
+        .find(|t| t.text == "Couleur par défaut")
+        .unwrap();
+    assert_eq!(
+        default.x,
+        l.rows[13].1.x + 10,
+        "pas de pastille sur le défaut"
+    );
+    for t in &c.texts {
+        assert!(t.x + t.text.width() as u32 * 10 <= l.rect.x + l.rect.width);
+    }
 }

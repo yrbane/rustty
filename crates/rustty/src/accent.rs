@@ -7,8 +7,6 @@ use rustty_render::{Palette, Rgba};
 pub const ACCENT_SLOTS: [usize; 12] = [1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14];
 
 /// Les noms français des couleurs de `ACCENT_SLOTS`, dans le même ordre.
-// Consommés par le menu de couleur d'onglet (tâches suivantes).
-#[allow(dead_code)]
 pub const ACCENT_NAMES: [&str; 12] = [
     "Rouge",
     "Vert",

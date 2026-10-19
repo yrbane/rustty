@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.127 — 2026-10-19 · « Menus contextuels paramétrés et nuancier »
+
+- Le menu contextuel dépend désormais d'une cible (`MenuTarget` : panneau, onglet, bandeau, nuancier) et porte sa propre liste d'entrées, en remplacement de la constante commune.
+- Nouvelles entrées : fermer l'onglet, fermer les autres onglets (grisée avec un seul onglet), changer la couleur, déplacer dans un nouvel onglet, renommer le panneau, couleurs du nuancier et couleur par défaut.
+- Le nuancier dessine une pastille carrée de la couleur devant chaque libellé.
+- Le menu de panneau est inchangé ; l'ouverture des autres menus et l'exécution des nouvelles entrées viendront ensuite.
+
 ## 0.1.0-alpha.126 — 2026-10-19 · « Bandeau cliquable : focus, fermeture, renommage du panneau »
 
 - Un clic sur le titre d'un bandeau donne le focus au panneau ; le ✕ le ferme (avec confirmation si un programme tourne).

@@ -3,7 +3,7 @@
 use rustty_render::{CellMetrics, PixelRect};
 use unicode_width::UnicodeWidthStr;
 
-use super::{ContextMenu, ENTRIES, MenuEntry};
+use super::{ContextMenu, MenuEntry};
 
 /// Pixels entre le bord du menu et sa première ou dernière entrée.
 pub const MENU_PADDING: u32 = 4;
@@ -12,18 +12,20 @@ pub(super) const ITEM_PADDING: u32 = 3;
 const SEPARATOR_HEIGHT: u32 = 9;
 /// Cellules entre le libellé le plus long et les raccourcis.
 pub(super) const SHORTCUT_GAP: u32 = 3;
+/// Cellules prises devant un libellé par la pastille de couleur et son espace.
+pub(super) const SWATCH_CELLS: u32 = 2;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MenuLayout {
     pub rect: PixelRect,
-    /// Index dans `ENTRIES` et rectangle de chaque rangée.
+    /// Index dans `entries` et rectangle de chaque rangée.
     pub rows: Vec<(usize, PixelRect)>,
 }
 
 /// Ce que fait un clic quand le menu est ouvert.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MenuClick {
-    /// Exécuter l'entrée d'index donné dans `ENTRIES`.
+    /// Exécuter l'entrée d'index donné dans `entries`.
     Run(usize),
     /// Clic dans le menu sans entrée active : le menu reste ouvert.
     Keep,
@@ -61,7 +63,7 @@ impl MenuLayout {
                     && y >= f64::from(r.y)
                     && y < f64::from(r.y + r.height)
             })
-            .and_then(|(i, _)| match ENTRIES[*i] {
+            .and_then(|(i, _)| match menu.entries[*i] {
                 MenuEntry::Item(item) if menu.enabled(item) => Some(*i),
                 _ => None,
             })
@@ -71,10 +73,18 @@ impl MenuLayout {
 /// Place le menu au point du clic, décalé pour rester dans la fenêtre.
 pub fn layout(menu: &ContextMenu, viewport: (u32, u32), metrics: CellMetrics) -> MenuLayout {
     let cw = metrics.width.max(1);
-    let label_cells = ENTRIES
+    let label_cells = menu
+        .entries
         .iter()
         .filter_map(|e| match e {
-            MenuEntry::Item(item) => Some(item.label(menu.zoomed).width() as u32),
+            MenuEntry::Item(item) => Some(
+                menu.label(*item).width() as u32
+                    + if item.swatch().is_some() {
+                        SWATCH_CELLS
+                    } else {
+                        0
+                    },
+            ),
             MenuEntry::Separator => None,
         })
         .max()
@@ -89,7 +99,8 @@ pub fn layout(menu: &ContextMenu, viewport: (u32, u32), metrics: CellMetrics) ->
     // Jamais plus large que la fenêtre ; `menu_chrome` coupe les textes.
     let width = (cells * cw).min(viewport.0);
     let item_height = metrics.height + 2 * ITEM_PADDING;
-    let heights: Vec<u32> = ENTRIES
+    let heights: Vec<u32> = menu
+        .entries
         .iter()
         .map(|e| match e {
             MenuEntry::Item(_) => item_height,
@@ -104,7 +115,7 @@ pub fn layout(menu: &ContextMenu, viewport: (u32, u32), metrics: CellMetrics) ->
     } else {
         menu.y
     };
-    let mut rows = Vec::with_capacity(ENTRIES.len());
+    let mut rows = Vec::with_capacity(menu.entries.len());
     let mut row_y = y + MENU_PADDING;
     for (i, h) in heights.into_iter().enumerate() {
         rows.push((i, PixelRect::new(x, row_y, width, h)));
