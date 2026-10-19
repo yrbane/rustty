@@ -17,7 +17,6 @@ pub struct Tab {
     /// Nom choisi par l'utilisateur ; remplace le titre du shell.
     pub custom_title: Option<String>,
     /// Couleur choisie au nuancier (index ANSI) ; `None` = celle de la configuration.
-    #[allow(dead_code)] // consommé par le glisser-déposer et les menus (tâches suivantes)
     pub color: Option<usize>,
     split_accents: HashMap<SplitId, usize>,
 }
@@ -113,7 +112,6 @@ impl Tab {
     }
 
     /// Division qui contient directement le panneau de `term` (`None` à la racine).
-    #[allow(dead_code)] // consommé par le glisser-déposer et les menus (tâches suivantes)
     pub fn parent_split_of(&self, term: TermId) -> Option<SplitId> {
         self.window_of(term)
             .and_then(|w| self.layout.parent_split(w))

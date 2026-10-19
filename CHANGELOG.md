@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.123 — 2026-10-19 · « Couleur d'onglet choisie et couleur de bandeau »
+
+- `tab_accents` rend une couleur par onglet : celle choisie au nuancier (même sans `random`), sinon l'accent tiré en mode aléatoire, sinon la configuration ; `TabSpec.accent` la reçoit directement.
+- `header_color` : couleur du bandeau d'un panneau = celle de sa division parente (ou des divisions de la configuration sans parent).
+- `ACCENT_NAMES` : noms français des douze couleurs du nuancier.
+
 ## 0.1.0-alpha.122 — 2026-10-19 · « Déplacer panneaux et onglets dans le modèle »
 
 - `Tab` : `insert_term`, `insert_term_at_root` et `parent_split_of` accueillent un terminal existant d'un côté donné ; nouveau champ `color` (couleur d'onglet choisie au nuancier).

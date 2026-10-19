@@ -6,6 +6,24 @@ use rustty_render::{Palette, Rgba};
 /// Les couleurs vives de la palette ANSI : 1–6 et 9–14 (ni noir, ni gris, ni blanc).
 pub const ACCENT_SLOTS: [usize; 12] = [1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14];
 
+/// Les noms français des couleurs de `ACCENT_SLOTS`, dans le même ordre.
+// Consommés par le menu de couleur d'onglet (tâches suivantes).
+#[allow(dead_code)]
+pub const ACCENT_NAMES: [&str; 12] = [
+    "Rouge",
+    "Vert",
+    "Jaune",
+    "Bleu",
+    "Magenta",
+    "Cyan",
+    "Rouge vif",
+    "Vert vif",
+    "Jaune vif",
+    "Bleu vif",
+    "Magenta vif",
+    "Cyan vif",
+];
+
 /// Tirage xorshift64 : déterministe pour une graine, sans dépendance.
 #[derive(Clone, Debug)]
 pub struct AccentPicker {
@@ -57,6 +75,11 @@ pub fn accent_color(palette: &Palette, accent: usize) -> Rgba {
 mod tests {
     use super::*;
     use rustty_config::Colors;
+
+    #[test]
+    fn accent_names_match_slots() {
+        assert_eq!(ACCENT_NAMES.len(), ACCENT_SLOTS.len());
+    }
 
     #[test]
     fn never_twice_in_a_row() {

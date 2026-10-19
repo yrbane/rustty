@@ -38,7 +38,7 @@ impl OsWindow {
             layout_tab_bar(
                 w,
                 y,
-                &render_frame::tab_specs(&titles, active, None),
+                &render_frame::tab_specs(&titles, active, &[]),
                 &self.tab_style,
                 metrics,
             )

@@ -81,8 +81,7 @@ impl OsWindow {
                 &self.palette,
                 self.model.workspace.tabs(),
             );
-            let specs =
-                render_frame::tab_specs(&titles, self.model.workspace.active(), accents.as_deref());
+            let specs = render_frame::tab_specs(&titles, self.model.workspace.active(), &accents);
             let bar_chrome =
                 tab_bar_chrome(bar, &specs, &self.tab_style, metrics, self.model.hover);
             chrome.quads.extend(bar_chrome.quads);
