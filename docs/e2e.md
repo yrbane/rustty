@@ -141,6 +141,26 @@ Points de revue
 - [ ] Pendant une confirmation de fermeture ou un renommage en cours, tenter de tirer un panneau ou un onglet : refusé, rien ne bouge.
 - [ ] Réduire un panneau à moins de deux rangées de haut : contenu de hauteur 0 sans panique, terminal à 1×1 au minimum.
 
+## Infobulle de correction (plan 10)
+Prérequis : `languagetool --http --port 8099` (ou Claude Code avec le mod [ortho](https://github.com/yrbane/claude-ortho) 0.2+, qui le lance), `[spellcheck] enabled = true`.
+
+Survol
+- [ ] `printf 'ma \e[4;31mpoulle\e[0m est là\n'` puis souris immobile sur « poulle » : une boîte à bordure apparaît au-dessus du mot, alignée sur sa première colonne, avec le message de LanguageTool puis les suggestions (« poule », « poulie »…, 6 au plus). Rien ne s'affiche sur un mot souligné correct (`\e[4mbonjour\e[0m`) ni sur un mot non souligné.
+- [ ] Mot souligné sur la première rangée : la boîte s'ouvre en dessous. Mot près du bord droit : la boîte est décalée pour rester dans la fenêtre.
+- [ ] Bouger la souris à l'intérieur du mot : la boîte reste, sans clignoter ni refaire de requête (journal `RUSTTY_LOG=rustty=debug`). Entrer dans la boîte : la suggestion sous la souris passe sur fond de sélection.
+- [ ] Quitter le mot et la boîte, appuyer sur une touche, redimensionner la fenêtre, changer la taille de police : la boîte disparaît. `clear` dans le panneau : elle disparaît aussi ; un simple redessin qui garde le mot (`tput cup` ailleurs) la laisse ouverte.
+- [ ] Deux mots soulignés : passer de l'un à l'autre ferme la première boîte et ouvre la seconde.
+
+Clic
+- [ ] Dans Claude Code avec le mod ortho : taper « ma poulle » dans la saisie, survoler le souligné rouge, cliquer « poule » : le brouillon devient « ma poule », le curseur reste en place, le souligné disparaît après la nouvelle vérification, et rien du jeton n'apparaît.
+- [ ] Même mot fautif deux fois dans le brouillon : cliquer la suggestion de la seconde occurrence ne corrige que celle-là.
+- [ ] Clic sur le message (pas sur une suggestion) : la boîte reste ouverte, rien n'est envoyé. Clic hors de la boîte : elle se ferme et le clic agit normalement (sélection, menu).
+- [ ] Dans un shell sans le mod (`printf` ci-dessus) : le clic colle le jeton tel quel (caractères à usage privé) ; c'est attendu et documenté.
+
+Serveur
+- [ ] LanguageTool arrêté : aucune boîte, et au plus une requête par 30 s (journal `debug`) ; relancé : la boîte revient au survol suivant.
+- [ ] `[spellcheck] enabled = false` (rechargement à chaud) : plus aucune requête ni boîte. `url = "ftp://x"` : erreur de configuration nommant `spellcheck.url`.
+
 ## Robustesse
 - [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique.
 - [ ] `cargo run -p rustty` : rien sur la sortie d'erreur pendant le parcours ; `RUSTTY_LOG=rustty=debug` pour le détail.

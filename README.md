@@ -109,6 +109,8 @@ horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+
   d'un jeton que le mod ortho remplace dans le brouillon ; la boîte disparaît
   dès que la souris quitte le mot, à la première touche ou si le mot n'est plus
   là. Rien ne part si LanguageTool ne tourne pas (nouvel essai après 30 s).
+  Le mod s'installe à l'invite de Claude Code :
+  `/plugin install ortho --marketplace yrbane/claude-ortho`.
   Réglages `[spellcheck]` ; contrat avec le mod dans
   [`docs/superpowers/specs/2026-10-30-spell-popup-design.md`](docs/superpowers/specs/2026-10-30-spell-popup-design.md).
 

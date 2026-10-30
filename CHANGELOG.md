@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.136 — 2026-10-30 · « Parcours E2E de l'infobulle de correction »
+
+- `docs/e2e.md` : nouvelle section « Infobulle de correction (plan 10) » : survol (ouverture au-dessus ou en dessous, stabilité, fermetures), clic (correction dans Claude Code avec le mod ortho, occurrences multiples, clic hors suggestion), serveur (arrêt, 30 s, `enabled = false`, `url` invalide).
+- README : ligne d'installation du mod ortho depuis GitHub.
+
 ## 0.1.0-alpha.135 — 2026-10-30 · « Survol : une lecture de grille par cellule »
 
 - Infobulle de correction : la souris qui bouge à l'intérieur d'une même cellule ne relit plus la grille du panneau (une copie par cellule traversée, pas par mouvement) ; la cellule est relue dès que le panneau se redessine.
