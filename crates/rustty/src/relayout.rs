@@ -23,6 +23,8 @@ impl OsWindow {
     /// Recalcule barre d'onglets, rectangles des panneaux et tailles des terminaux.
     pub fn relayout(&mut self) {
         self.drop_vanished_drag();
+        // Les panneaux bougent : l'infobulle de correction n'a plus d'ancre.
+        self.leave_spell_word();
         let (w, h) = self.surface.size();
         let metrics = self.metrics();
         let tabs = &self.config.tabs;

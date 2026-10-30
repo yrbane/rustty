@@ -22,6 +22,8 @@ arboard.workspace = true
 image = { workspace = true, features = ["png", "jpeg", "gif", "webp", "bmp"] }
 base64.workspace = true
 ureq.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 wgpu.workspace = true
 pollster.workspace = true
 notify.workspace = true

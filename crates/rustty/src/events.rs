@@ -3,6 +3,7 @@
 
 use std::sync::Arc;
 
+use crate::spell::{LookupKey, Suggestion};
 use crate::tab::TermId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -16,6 +17,9 @@ pub enum UserEvent {
     /// Le thread lecteur a paniqué : le panneau est perdu, l'application continue.
     TermFailed(TermId, String),
     ConfigChanged,
+    /// Réponse de LanguageTool pour un mot survolé : `Ok(None)` sans
+    /// correspondance, `Err` si le serveur ne répond pas.
+    SpellResult(LookupKey, Result<Option<Suggestion>, String>),
 }
 
 /// Ce qu'un thread tient pour réveiller l'interface.

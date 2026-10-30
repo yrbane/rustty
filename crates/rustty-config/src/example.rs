@@ -68,6 +68,13 @@ width = 2
 # Une couleur vive de la palette tirée au sort pour chaque division.
 random_colors = false
 
+[spellcheck]
+# Infobulle de correction au survol d'un mot souligné (LanguageTool local,
+# celui que lance le mod ortho de Claude Code) ; un clic applique la suggestion.
+enabled = true
+# Racine du serveur LanguageTool interrogé.
+url = "http://127.0.0.1:8099"
+
 [colors]
 # Thème Catppuccin Mocha.
 foreground = "#cdd6f4"
@@ -184,6 +191,9 @@ mod tests {
             "padding_vertical",
             "spacing",
             "[tabs.colors]",
+            "[spellcheck]",
+            "enabled",
+            "url",
             "rename_tab",
             "increase_font_size",
         ] {

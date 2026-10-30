@@ -155,6 +155,25 @@ impl Default for Tabs {
     }
 }
 
+/// Infobulle de correction au survol d'un mot souligné, servie par un
+/// serveur LanguageTool local (celui du mod ortho de Claude Code).
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Spellcheck {
+    pub enabled: bool,
+    /// Racine du serveur LanguageTool (`/v2/check` y est ajouté).
+    pub url: String,
+}
+
+impl Default for Spellcheck {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            url: "http://127.0.0.1:8099".into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Colors {

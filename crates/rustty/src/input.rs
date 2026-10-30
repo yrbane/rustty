@@ -30,6 +30,10 @@ impl OsWindow {
         if let Some(effects) = self.drag_key(&event.logical_key) {
             return effects;
         }
+        if self.leave_spell_word() {
+            // Une touche ferme l'infobulle de correction, puis agit.
+            self.window.request_redraw();
+        }
         if self.menu.is_some() {
             // Une touche ferme le menu ; Échap s'arrête là, les autres agissent ensuite.
             let closed = self.close_context_menu();
@@ -148,6 +152,13 @@ impl OsWindow {
                 return menu_effects;
             }
         }
+        if let Some(changed) = self.spell_popup_hover(x, y) {
+            // L'infobulle capte la souris : rien d'autre ne réagit au survol.
+            if changed {
+                menu_effects.push(Effect::Redraw);
+            }
+            return menu_effects;
+        }
         self.update_cursor_icon(x, y);
         if let Some(effects) = self.drag_divider_to(x, y) {
             return effects;
@@ -160,9 +171,15 @@ impl OsWindow {
             effects.push(Effect::Redraw);
         }
         let Some((term, rect)) = self.pane_under(x, y) else {
+            if self.leave_spell_word() {
+                effects.push(Effect::Redraw);
+            }
             return effects;
         };
         let cell = self.cell_under(term, rect, x, y);
+        if self.spell_hover(term, cell) {
+            effects.push(Effect::Redraw);
+        }
         if self.dragging
             && let Some((sel_term, sel)) = &mut self.selection
             && *sel_term == term
@@ -178,7 +195,8 @@ impl OsWindow {
     pub fn on_cursor_left(&mut self) -> Vec<Effect> {
         self.cursor_inside = false;
         let header_changed = self.update_header_hover(self.cursor.0, self.cursor.1);
-        if self.model.hover_changed(HoverTarget::None) || header_changed {
+        let spell_closed = self.leave_spell_word();
+        if self.model.hover_changed(HoverTarget::None) || header_changed || spell_closed {
             vec![Effect::Redraw]
         } else {
             Vec::new()
@@ -204,6 +222,9 @@ impl OsWindow {
             return effects;
         }
         if let Some(effects) = self.menu_click(button, x, y) {
+            return effects;
+        }
+        if let Some(effects) = self.spell_click(button, x, y) {
             return effects;
         }
         let on_bar = self.bar_target(x, y);

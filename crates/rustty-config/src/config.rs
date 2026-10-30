@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::error::ConfigError;
 use crate::keymap::KeyMap;
-use crate::sections::{Colors, Font, Splits, Tabs, Window};
+use crate::sections::{Colors, Font, Spellcheck, Splits, Tabs, Window};
 
 /// Plafond de lignes d'historique par fenêtre : au-delà, la mémoire explose
 /// avant que l'utilisateur ne s'en serve.
@@ -19,6 +19,7 @@ pub struct Config {
     pub window: Window,
     pub tabs: Tabs,
     pub splits: Splits,
+    pub spellcheck: Spellcheck,
     pub colors: Colors,
     pub keys: KeyMap,
 }
@@ -77,6 +78,13 @@ impl Config {
         )?;
         bounded("tabs.padding_vertical", self.tabs.padding_vertical, 0..=32)?;
         bounded("tabs.spacing", self.tabs.spacing, 0..=64)?;
+        let url = self.spellcheck.url.trim_end_matches('/');
+        if !(url.starts_with("http://") || url.starts_with("https://")) {
+            return invalid(
+                "spellcheck.url",
+                format!("« {url} » doit commencer par http:// ou https://"),
+            );
+        }
         if self.window.scrollback_lines > MAX_SCROLLBACK_LINES {
             return invalid(
                 "window.scrollback_lines",
@@ -209,6 +217,24 @@ mod tests {
         assert_eq!(c.colors.background, Rgb::new(0x1e, 0x1e, 0x2e));
         assert_eq!(c.colors.palette[1], Rgb::new(0xf3, 0x8b, 0xa8));
         assert_eq!(c.colors.palette[15], Rgb::new(0xa6, 0xad, 0xc8));
+    }
+
+    #[test]
+    fn spellcheck_defaults_to_the_local_languagetool_and_can_be_disabled() {
+        let c = Config::default();
+        assert!(c.spellcheck.enabled);
+        assert_eq!(c.spellcheck.url, "http://127.0.0.1:8099");
+        let c =
+            Config::from_str("[spellcheck]\nenabled = false\nurl = \"http://lt.local:8010/\"\n")
+                .unwrap();
+        assert!(!c.spellcheck.enabled);
+        assert_eq!(c.spellcheck.url, "http://lt.local:8010/");
+    }
+
+    #[test]
+    fn spellcheck_url_must_be_http() {
+        let e = Config::from_str("[spellcheck]\nurl = \"ftp://x\"\n").unwrap_err();
+        assert!(e.to_string().contains("spellcheck.url"), "{e}");
     }
 
     #[test]

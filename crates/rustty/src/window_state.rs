@@ -28,6 +28,7 @@ use crate::pane_fonts::{PaneFonts, SizeKey};
 use crate::pane_header::{HeaderHit, PaneHeader};
 use crate::rename::RenameTarget;
 use crate::renderers::{RendererSpec, Renderers};
+use crate::spell::SpellState;
 use crate::tab::TermId;
 use crate::term_window::{Launch, TermWindow};
 use crate::title;
@@ -82,6 +83,8 @@ pub struct OsWindow {
     pub cursor_icon: CursorIcon,
     /// Menu du clic droit ouvert.
     pub menu: Option<ContextMenu>,
+    /// Survol d'un mot souligné et infobulle de correction.
+    pub spell: SpellState,
     pub focused: bool,
     pub clipboard: Option<arboard::Clipboard>,
     pub shell: Shell,
@@ -166,6 +169,7 @@ impl OsWindow {
             drag: None,
             cursor_icon: CursorIcon::Default,
             menu: None,
+            spell: SpellState::default(),
             focused: true,
             clipboard,
             shell: Shell::default_for_platform(),

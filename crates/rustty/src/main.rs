@@ -34,6 +34,8 @@ mod rename;
 mod render;
 mod render_frame;
 mod renderers;
+mod spell;
+mod spell_input;
 mod tab;
 mod term_window;
 mod title;

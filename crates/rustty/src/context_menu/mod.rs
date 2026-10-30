@@ -5,7 +5,7 @@ mod chrome;
 mod entries;
 mod layout;
 
-pub use chrome::menu_chrome;
+pub use chrome::{menu_chrome, truncate_to_cells};
 pub use entries::{MenuEntry, MenuItem, MenuTarget, entries};
 pub use layout::{MenuClick, MenuLayout, layout};
 

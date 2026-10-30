@@ -4,6 +4,16 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.134 — 2026-10-30 · « Infobulle de correction au survol d'un mot souligné »
+
+- Survol : quand la souris s'arrête sur une plage de cellules soulignées d'un panneau, rustty envoie la ligne à un serveur LanguageTool local (`POST /v2/check`, sur un thread) et, si une correspondance recouvre le mot, affiche au-dessus de lui une boîte à bordure dans le style du menu contextuel : message puis jusqu'à six suggestions survolables.
+- Clic sur une suggestion : un jeton (`U+E000 ortho U+E001 mot U+E001 remplacement U+E001 rang U+E002`, entre marques de collage si le programme les demande) est écrit dans le pty ; le mod ortho de Claude Code le consomme et remplace le mot dans le brouillon. Le rang distingue les occurrences d'un même mot fautif.
+- Fermeture : la boîte disparaît quand la souris quitte le mot et la boîte, à la première touche, au redimensionnement, et quand le panneau se redessine sans le mot au même endroit ; elle survit aux redessins qui le conservent.
+- Serveur injoignable : pas de nouvelle requête pendant 30 s ; aucune requête tant que rien n'est souligné.
+- Configuration : section `[spellcheck]` (`enabled = true`, `url = "http://127.0.0.1:8099"`), `url` validée (`http://` ou `https://`), exemple et README à jour.
+- Spécification du contrat rustty ↔ mod ortho : `docs/superpowers/specs/2026-10-30-spell-popup-design.md`.
+- Dépendance : `serde_json` pour lire la réponse de LanguageTool.
+
 ## 0.1.0-alpha.133 — 2026-10-19 · « Corrections de la revue finale des bandeaux »
 
 - Nuancier : la pastille de chaque couleur montre désormais la couleur que prend l'onglet au choix (indice ANSI de la palette), et non plus une couleur d'accent décalée (« Rouge » affichait du vert).

@@ -74,6 +74,7 @@ impl ApplicationHandler<UserEvent> for App {
             }
             WindowEvent::Resized(size) => {
                 w.menu = None;
+                w.leave_spell_word();
                 w.surface.resize(&w.ctx, size.width, size.height);
                 vec![Effect::Relayout]
             }
@@ -105,7 +106,12 @@ impl ApplicationHandler<UserEvent> for App {
             return;
         };
         let effects = match event {
-            UserEvent::TermUpdated(_) | UserEvent::TermModes(_) => vec![Effect::Redraw],
+            UserEvent::TermUpdated(id) => {
+                w.spell_term_updated(id);
+                vec![Effect::Redraw]
+            }
+            UserEvent::TermModes(_) => vec![Effect::Redraw],
+            UserEvent::SpellResult(key, result) => w.spell_result(key, result),
             UserEvent::TermTitle(id, title) => {
                 w.titles.insert(id, title);
                 vec![Effect::Relayout]

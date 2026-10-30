@@ -111,7 +111,11 @@ impl OsWindow {
             overlay.quads.extend(b.quads);
             overlay.texts.extend(b.texts);
         }
-        let menu_chrome = self.context_menu_chrome().unwrap_or_default();
+        let mut menu_chrome = self.context_menu_chrome().unwrap_or_default();
+        if let Some(popup) = self.spell_chrome() {
+            menu_chrome.quads.extend(popup.quads);
+            menu_chrome.texts.extend(popup.texts);
+        }
         let background = render_frame::background_color(
             self.palette.background,
             self.model.opacity,

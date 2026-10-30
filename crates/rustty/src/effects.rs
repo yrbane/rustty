@@ -67,6 +67,9 @@ impl OsWindow {
         if self.menu.as_ref().is_some_and(|m| m.dropped_by_exit_of(id)) {
             self.menu = None;
         }
+        if self.spell.popup.as_ref().is_some_and(|p| p.term == id) {
+            self.leave_spell_word();
+        }
         if self.selection.as_ref().is_some_and(|(t, _)| *t == id) {
             self.selection = None;
         }

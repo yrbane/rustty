@@ -100,6 +100,17 @@ horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+
   renommer, fermer le panneau. « Changer la couleur » ouvre un nuancier de
   12 couleurs vives plus « Couleur par défaut » ; le choix s'affiche même avec
   `[tabs.colors] random = false`.
+- **Infobulle de correction.** Quand la souris s'arrête sur un mot **souligné**
+  par un programme (le mod [ortho](https://github.com/yrbane/claude-ortho) de
+  Claude Code souligne les fautes de la zone de saisie), rustty demande à un
+  serveur [LanguageTool](https://languagetool.org) local ce qu'il en pense et
+  affiche au-dessus du mot une petite boîte : le message et jusqu'à six
+  suggestions. Un **clic sur une suggestion** l'envoie au programme sous forme
+  d'un jeton que le mod ortho remplace dans le brouillon ; la boîte disparaît
+  dès que la souris quitte le mot, à la première touche ou si le mot n'est plus
+  là. Rien ne part si LanguageTool ne tourne pas (nouvel essai après 30 s).
+  Réglages `[spellcheck]` ; contrat avec le mod dans
+  [`docs/superpowers/specs/2026-10-30-spell-popup-design.md`](docs/superpowers/specs/2026-10-30-spell-popup-design.md).
 
 ## Afficher une image
 
@@ -140,7 +151,9 @@ sans, épaisseur, couleur fixe ou tirée au sort pour chaque division),
 (couleurs des onglets, ou `random = true` pour une couleur vive tirée au sort
 par onglet, texte automatiquement lisible), et `[window] osc52_clipboard`
 (`true` par défaut ; `false` empêche les programmes d'écrire dans le
-presse-papiers par la séquence OSC 52).
+presse-papiers par la séquence OSC 52), et `[spellcheck]` (`enabled`, `url` du
+serveur LanguageTool, `http://127.0.0.1:8099` par défaut) pour l'infobulle de
+correction au survol d'un mot souligné.
 
 Fichier TOML, `~/.config/rustty/rustty.toml` sur Linux (équivalents macOS et
 Windows). Toutes les clés sont optionnelles ; le fichier d'exemple
