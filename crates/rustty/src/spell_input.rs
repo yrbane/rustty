@@ -58,6 +58,10 @@ impl OsWindow {
             // Toujours sur le même mot : requête partie ou infobulle ouverte.
             return false;
         }
+        if self.spell.last_cell == Some((term, col, row)) {
+            return false;
+        }
+        self.spell.last_cell = Some((term, col, row));
         let Some(tw) = self.terms.get(&term) else {
             return self.leave_spell_word();
         };
@@ -167,6 +171,11 @@ impl OsWindow {
     /// Le panneau `term` s'est redessiné : l'infobulle reste si son mot est
     /// toujours souligné au même endroit, se ferme sinon.
     pub(crate) fn spell_term_updated(&mut self, term: TermId) -> bool {
+        // Le contenu sous une souris immobile a pu changer : la prochaine
+        // position, même cellule, sera relue.
+        if self.spell.last_cell.is_some_and(|(t, _, _)| t == term) {
+            self.spell.last_cell = None;
+        }
         let Some(popup) = self.spell.popup.as_ref() else {
             return false;
         };

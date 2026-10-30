@@ -11,6 +11,8 @@ mod run;
 
 use std::time::{Duration, Instant};
 
+use crate::tab::TermId;
+
 pub use client::{LookupKey, Suggestion, spawn_lookup};
 pub use popup::{PopupLayout, SpellPopup, chrome as popup_chrome, layout as popup_layout};
 pub use run::{UnderlinedRun, apply_token, occurrence_index, underlined_run};
@@ -25,6 +27,9 @@ pub struct SpellState {
     /// Le mot sous la souris, requête partie ou infobulle ouverte.
     pub hover: Option<LookupKey>,
     pub popup: Option<SpellPopup>,
+    /// Dernière cellule examinée : la souris qui bouge dans une même cellule
+    /// ne relit pas la grille.
+    pub last_cell: Option<(TermId, usize, usize)>,
     unreachable_since: Option<Instant>,
 }
 
