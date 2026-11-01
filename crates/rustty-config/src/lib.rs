@@ -4,7 +4,7 @@
 pub mod action;
 pub mod color;
 
-pub use color::{ColorParseError, Rgb};
+pub use color::{ColorAlphaParseError, ColorParseError, Rgb, Rgba8};
 
 pub mod config;
 pub mod error;

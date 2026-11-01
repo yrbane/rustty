@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.138 — 2026-11-01 · « Couleurs avec alpha et design de la barre de titre »
+
+- `rustty-config` : type `Rgba8` (`#rrggbb` ou `#rrggbbaa`) pour les couleurs avec opacité de la future section `[titlebar]` ; `rustty-render` : `Rgba::from_rgba8` et `Rgba::lighten`.
+- Design `docs/superpowers/specs/2026-11-01-titlebar-design.md` et plan du jalon 1 `docs/superpowers/plans/2026-11-01-titlebar-1-barre-et-fenetre.md` : barre de titre maison (décorations système retirées, boutons paramétrables, icônes Material, nuancier, renommage).
+
 ## 0.1.0-alpha.137 — 2026-11-01 · « Décorations sombres de la fenêtre »
 
 - `[window] decorations_theme` (`"dark"` par défaut, `"light"`, `"system"`) : thème de la barre de titre et des bordures que winit dessine côté client quand le compositeur ne fournit pas de décorations (GNOME Wayland). Fini le bandeau blanc au-dessus d'un terminal sombre. Le réglage ne concerne que la fenêtre de rustty, jamais la préférence du bureau, et se recharge à chaud.

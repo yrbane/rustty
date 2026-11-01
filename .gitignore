@@ -5,3 +5,6 @@
 
 # Zone de dépôt des visuels bruts, non versionnée (les retenus vont dans assets/)
 /res/
+
+# Maquettes du compagnon visuel de brainstorming
+.superpowers/
