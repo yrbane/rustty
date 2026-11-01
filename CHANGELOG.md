@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.137 — 2026-11-01 · « Décorations sombres de la fenêtre »
+
+- `[window] decorations_theme` (`"dark"` par défaut, `"light"`, `"system"`) : thème de la barre de titre et des bordures que winit dessine côté client quand le compositeur ne fournit pas de décorations (GNOME Wayland). Fini le bandeau blanc au-dessus d'un terminal sombre. Le réglage ne concerne que la fenêtre de rustty, jamais la préférence du bureau, et se recharge à chaud.
+- Modèle `--init-config`, `docs/rustty.example.toml` et README documentent la clé.
+
 ## 0.1.0-alpha.136 — 2026-10-30 · « Parcours E2E de l'infobulle de correction »
 
 - `docs/e2e.md` : nouvelle section « Infobulle de correction (plan 10) » : survol (ouverture au-dessus ou en dessous, stabilité, fermetures), clic (correction dans Claude Code avec le mod ortho, occurrences multiples, clic hors suggestion), serveur (arrêt, 30 s, `enabled = false`, `url` invalide).

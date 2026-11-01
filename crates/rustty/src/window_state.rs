@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context as _;
-use rustty_config::{Config, Mods};
+use rustty_config::{Config, DecorationsTheme, Mods};
 use rustty_layout::{Rect, SplitId, WindowId};
 use rustty_pty::Shell;
 use rustty_render::{
@@ -15,7 +15,7 @@ use rustty_render::{
 };
 use winit::dpi::LogicalSize;
 use winit::event_loop::ActiveEventLoop;
-use winit::window::{CursorIcon, Icon, Window, WindowAttributes};
+use winit::window::{CursorIcon, Icon, Theme, Window, WindowAttributes};
 
 use crate::banner::Banner;
 use crate::context_menu::ContextMenu;
@@ -104,6 +104,7 @@ impl OsWindow {
             .with_title(title::window_title("", crate::VERSION))
             .with_inner_size(DEFAULT_SIZE)
             .with_transparent(true)
+            .with_theme(winit_theme(config.window.decorations_theme))
             .with_window_icon(load_icon());
         let attrs = with_app_id(attrs);
         let window = Arc::new(
@@ -270,6 +271,10 @@ impl OsWindow {
         self.palette = Palette::from_config(&new.colors, new.font.bold_is_bright);
         self.tab_style = TabBarStyle::from_config(&self.palette, &new.tabs);
         self.model.opacity = new.window.opacity;
+        if new.window.decorations_theme != self.config.window.decorations_theme {
+            self.window
+                .set_theme(winit_theme(new.window.decorations_theme));
+        }
         self.config = new;
         if font_changed {
             self.rebuild_fonts();
@@ -287,6 +292,17 @@ impl OsWindow {
         let spec = self.renderer_spec();
         let fresh = Renderers::new(&spec, base);
         self.renderers = fresh;
+    }
+}
+
+/// Thème winit des décorations côté client. `None` laisse winit suivre la
+/// préférence du bureau ; une valeur explicite n'interroge jamais le bureau et
+/// ne concerne que cette fenêtre.
+fn winit_theme(theme: DecorationsTheme) -> Option<Theme> {
+    match theme {
+        DecorationsTheme::System => None,
+        DecorationsTheme::Light => Some(Theme::Light),
+        DecorationsTheme::Dark => Some(Theme::Dark),
     }
 }
 
@@ -315,4 +331,16 @@ fn with_app_id(attrs: WindowAttributes) -> WindowAttributes {
 fn with_app_id(attrs: WindowAttributes) -> WindowAttributes {
     let _ = APP_ID;
     attrs
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decorations_theme_maps_to_winit_theme() {
+        assert_eq!(winit_theme(DecorationsTheme::Dark), Some(Theme::Dark));
+        assert_eq!(winit_theme(DecorationsTheme::Light), Some(Theme::Light));
+        assert_eq!(winit_theme(DecorationsTheme::System), None);
+    }
 }

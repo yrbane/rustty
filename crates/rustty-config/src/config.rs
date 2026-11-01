@@ -238,6 +238,22 @@ mod tests {
     }
 
     #[test]
+    fn decorations_theme_defaults_to_dark_and_accepts_light_or_system() {
+        use crate::sections::DecorationsTheme;
+        assert_eq!(
+            Config::default().window.decorations_theme,
+            DecorationsTheme::Dark
+        );
+        let c = Config::from_str("[window]\ndecorations_theme = \"light\"\n").unwrap();
+        assert_eq!(c.window.decorations_theme, DecorationsTheme::Light);
+        let c = Config::from_str("[window]\ndecorations_theme = \"system\"\n").unwrap();
+        assert_eq!(c.window.decorations_theme, DecorationsTheme::System);
+        let err = Config::from_str("[window]\ndecorations_theme = \"bleu\"\n").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("`dark`") && msg.contains("ligne 2"), "{msg}");
+    }
+
+    #[test]
     fn osc52_clipboard_defaults_to_true_and_can_be_disabled() {
         assert!(Config::default().window.osc52_clipboard);
         let c = Config::from_str("[window]\nosc52_clipboard = false\n").unwrap();

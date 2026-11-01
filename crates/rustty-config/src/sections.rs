@@ -39,6 +39,9 @@ pub struct Window {
     pub confirm_close_with_running_children: bool,
     /// Laisser les programmes écrire dans le presse-papiers (séquence OSC 52).
     pub osc52_clipboard: bool,
+    /// Thème des décorations dessinées par rustty (barre de titre, bordures)
+    /// quand le compositeur n'en fournit pas : "dark", "light" ou "system".
+    pub decorations_theme: DecorationsTheme,
 }
 
 impl Default for Window {
@@ -49,8 +52,20 @@ impl Default for Window {
             scrollback_lines: 10_000,
             confirm_close_with_running_children: true,
             osc52_clipboard: true,
+            decorations_theme: DecorationsTheme::Dark,
         }
     }
+}
+
+/// Thème des décorations de fenêtre côté client. Ne touche jamais au réglage
+/// global du bureau : seule la fenêtre de rustty est concernée.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DecorationsTheme {
+    /// Suivre la préférence clair/sombre du bureau.
+    System,
+    Light,
+    Dark,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]

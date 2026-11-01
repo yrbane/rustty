@@ -23,6 +23,10 @@ scrollback_lines = 10000
 confirm_close_with_running_children = true
 # Laisser les programmes écrire dans le presse-papiers (séquence OSC 52).
 osc52_clipboard = true
+# Thème des décorations de la fenêtre (barre de titre, bordures) quand rustty
+# les dessine lui-même, par exemple sous GNOME Wayland : "dark", "light" ou
+# "system" (préférence du bureau). Ne change que cette fenêtre.
+decorations_theme = "dark"
 
 [tabs]
 # Position de la barre d'onglets : "top", "bottom" ou "hidden".
@@ -175,6 +179,7 @@ mod tests {
             "scrollback_lines",
             "confirm_close_with_running_children",
             "osc52_clipboard",
+            "decorations_theme",
             "[tabs]",
             "position",
             "min_tabs",

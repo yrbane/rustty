@@ -151,9 +151,13 @@ Nouveautés de personnalisation : `[splits]` (barre entre panneaux avec ou
 sans, épaisseur, couleur fixe ou tirée au sort pour chaque division),
 `[tabs]` `padding_horizontal`, `padding_vertical`, `spacing`, et `[tabs.colors]`
 (couleurs des onglets, ou `random = true` pour une couleur vive tirée au sort
-par onglet, texte automatiquement lisible), et `[window] osc52_clipboard`
+par onglet, texte automatiquement lisible), `[window] osc52_clipboard`
 (`true` par défaut ; `false` empêche les programmes d'écrire dans le
-presse-papiers par la séquence OSC 52), et `[spellcheck]` (`enabled`, `url` du
+presse-papiers par la séquence OSC 52), `[window] decorations_theme` (`"dark"`
+par défaut, `"light"` ou `"system"` : couleur de la barre de titre et des
+bordures que rustty dessine lui-même quand le compositeur n'en fournit pas,
+comme sous GNOME Wayland ; ne touche qu'à cette fenêtre, jamais au réglage du
+bureau), et `[spellcheck]` (`enabled`, `url` du
 serveur LanguageTool, `http://127.0.0.1:8099` par défaut) pour l'infobulle de
 correction au survol d'un mot souligné.
 
