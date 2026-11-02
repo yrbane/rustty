@@ -35,6 +35,7 @@ impl OsWindow {
             self.model.workspace.tabs().len(),
             tabs.min_tabs,
             tab_bar_height(metrics, &self.tab_style),
+            0,
         );
         let titles = self.tab_titles();
         let active = self.model.workspace.active();
