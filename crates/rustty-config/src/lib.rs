@@ -23,3 +23,5 @@ pub use sections::{
     CloseButtonStyle, Colors, DecorationsTheme, Font, Spellcheck, Splits, TabBarPosition,
     TabColors, Tabs, Window,
 };
+pub mod titlebar;
+pub use titlebar::{ButtonOverride, ButtonStyle, TitleBar, TitleButton, TitleButtons};

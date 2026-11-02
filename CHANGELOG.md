@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.139 — 2026-11-02 · « Section [titlebar] de la configuration »
+
+- Nouvelle section `[titlebar]` (sans effet visible encore) : `enabled`, `height`, `background`, `gloss`, `separator_color`, `title_color`, `padding`, `spacing`, `resize_border`, style commun `[titlebar.button]` et surcharges `[titlebar.buttons.<nom>]` pour `settings`, `color`, `folder`, `minimize`, `maximize`, `close` (`visible`, fond, bordure, rayon, couleur d'icône, et les mêmes au survol). Tailles en pixels logiques, bornes validées avec le nom de la clé.
+- Les trois boutons de fenêtre ont un préréglage de pastille ronde que la table de l'utilisateur ne remplace que clé par clé.
+- Modèle `--init-config` et `docs/rustty.example.toml` documentent la section.
+
 ## 0.1.0-alpha.138 — 2026-11-01 · « Couleurs avec alpha et design de la barre de titre »
 
 - `rustty-config` : type `Rgba8` (`#rrggbb` ou `#rrggbbaa`) pour les couleurs avec opacité de la future section `[titlebar]` ; `rustty-render` : `Rgba::from_rgba8` et `Rgba::lighten`.
