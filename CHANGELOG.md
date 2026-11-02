@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.140 — 2026-11-02 · « Quads à coins arrondis, bordure et dégradé »
+
+- `rustty-render` : le pipeline de rectangles sait dessiner des coins arrondis (distance signée, antialiasés), une bordure intérieure et un dégradé vertical (`QuadStyle`, `QuadInstance::styled`, `Chrome.shapes`). Aux valeurs neutres, le rendu est identique au pixel près : les images de référence existantes sont inchangées ; nouvelle image `styled_quad.png`.
+
 ## 0.1.0-alpha.139 — 2026-11-02 · « Section [titlebar] de la configuration »
 
 - Nouvelle section `[titlebar]` (sans effet visible encore) : `enabled`, `height`, `background`, `gloss`, `separator_color`, `title_color`, `padding`, `spacing`, `resize_border`, style commun `[titlebar.button]` et surcharges `[titlebar.buttons.<nom>]` pour `settings`, `color`, `folder`, `minimize`, `maximize`, `close` (`visible`, fond, bordure, rayon, couleur d'icône, et les mêmes au survol). Tailles en pixels logiques, bornes validées avec le nom de la clé.

@@ -241,7 +241,7 @@ pub fn tab_bar_chrome(
             rect: layout.bar,
             color: style.background,
         }],
-        texts: Vec::new(),
+        ..Chrome::default()
     };
     let text_y = layout.bar.y + style.padding_vertical;
     let pad = style.padding_horizontal;
