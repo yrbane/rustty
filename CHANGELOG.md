@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.141 — 2026-11-02 · « Disposition et dessin de la barre de titre »
+
+- `rustty-render` : module `chrome/title_bar` (pur) : `TitleBarStyle::from_config` convertit la section `[titlebar]` en pixels physiques selon le facteur d'échelle, `layout_title_bar` place les boutons de fenêtre à droite et la zone de titre entre les deux groupes, `hit_test` distingue bouton, titre et fond, `title_bar_chrome` produit le fond à reflet, le liseré, le séparateur, les pastilles (style de survol, rayon, bordure), leurs glyphes et le titre centré, tronqué, assombri sur un fond clair. Image de référence `title_bar.png`. Rien n'est encore branché dans la fenêtre.
+
 ## 0.1.0-alpha.140 — 2026-11-02 · « Quads à coins arrondis, bordure et dégradé »
 
 - `rustty-render` : le pipeline de rectangles sait dessiner des coins arrondis (distance signée, antialiasés), une bordure intérieure et un dégradé vertical (`QuadStyle`, `QuadInstance::styled`, `Chrome.shapes`). Aux valeurs neutres, le rendu est identique au pixel près : les images de référence existantes sont inchangées ; nouvelle image `styled_quad.png`.

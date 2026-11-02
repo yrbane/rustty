@@ -156,7 +156,6 @@ mod tests {
         assert_eq!(l, Rgba::new(0.5, 0.75, 1.0, 0.3));
     }
 
-
     #[test]
     fn luminance_of_black_white_and_green() {
         assert_eq!(Rgba::new(0.0, 0.0, 0.0, 1.0).luminance(), 0.0);

@@ -310,3 +310,49 @@ fn styled_quad_matches_golden() {
         "dégradé rouge → bleu : {top:?} / {bottom:?}"
     );
 }
+
+#[test]
+fn title_bar_matches_golden() {
+    use rustty_config::TitleButton;
+    use rustty_render::{TitleBarState, TitleBarStyle, layout_title_bar, title_bar_chrome};
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let m = r.metrics();
+    let style = TitleBarStyle::from_config(&rustty_config::TitleBar::default(), 1.0);
+    let (w, h) = (320, 30);
+    let layout = layout_title_bar(w, &style);
+    let chrome = title_bar_chrome(
+        &layout,
+        &style,
+        TitleBarState {
+            title: "1: zsh — rustty 0.1",
+            hover: Some(TitleButton::Maximize),
+            maximized: false,
+        },
+        m,
+    );
+    let target = Offscreen::new(&ctx, w, h);
+    let frame = Frame {
+        viewport: (w, h),
+        background: Rgba::new(0.12, 0.12, 0.18, 1.0),
+        panes: vec![],
+        chrome,
+    };
+    r.render(&ctx, target.view(), &frame);
+    let px = target.read_rgba(&ctx).unwrap();
+    assert_matches_golden("title_bar", &px, w, h);
+    let close = layout.buttons[2].1;
+    assert_eq!(
+        pixel(&px, w, close.x + 2, close.y + 7),
+        [255, 95, 87, 255],
+        "pastille fermer"
+    );
+    let maximize = layout.buttons[1].1;
+    assert_eq!(
+        pixel(&px, w, maximize.x + 1, maximize.y + 7),
+        [61, 200, 79, 255],
+        "pastille agrandir, même fond au survol (entre bordure et icône)"
+    );
+}
