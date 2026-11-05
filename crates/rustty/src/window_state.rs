@@ -33,6 +33,7 @@ use crate::spell::SpellState;
 use crate::tab::TermId;
 use crate::term_window::{Launch, TermWindow};
 use crate::title;
+use crate::title_input::TitleDrag;
 
 /// Icône de fenêtre (X11, Windows) ; Wayland passe par le `.desktop`.
 const ICON_PNG: &[u8] = include_bytes!("../../../assets/icons/rustty-256.png");
@@ -76,6 +77,10 @@ pub struct OsWindow {
     pub title_bar: Option<TitleBarLayout>,
     /// Bouton de la barre de titre sous la souris.
     pub title_hover: Option<TitleButton>,
+    /// Bouton de la barre de titre enfoncé, déclenché au relâchement dessus.
+    pub title_press: Option<TitleButton>,
+    /// Clic ou déplacement de fenêtre depuis la zone de titre.
+    pub title_drag: TitleDrag,
     /// Fenêtre agrandie (icône restaurer).
     pub maximized: bool,
     /// Rectangles du contenu des panneaux (bandeau retiré).
@@ -176,6 +181,8 @@ impl OsWindow {
             tab_bar: None,
             title_bar: None,
             title_hover: None,
+            title_press: None,
+            title_drag: TitleDrag::Idle,
             maximized,
             pane_rects: Vec::new(),
             headers: Vec::new(),

@@ -54,6 +54,13 @@ impl OsWindow {
                     self.relayout();
                     self.window.request_redraw();
                 }
+                Effect::Minimize => self.window.set_minimized(true),
+                Effect::ToggleMaximize => {
+                    let maximized = !self.window.is_maximized();
+                    self.window.set_maximized(maximized);
+                    self.maximized = maximized;
+                    self.window.request_redraw();
+                }
                 Effect::Exit => event_loop.exit(),
             }
         }

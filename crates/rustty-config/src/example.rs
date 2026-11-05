@@ -157,7 +157,7 @@ palette = [
 # Actions sans paramètre : "new_tab", "close_tab", "next_tab", "prev_tab",
 # "close_window", "toggle_zoom", "rotate", "copy", "paste", "scroll_to_bottom",
 # "reload_config", "rename_tab", "increase_font_size", "decrease_font_size",
-# "reset_font_size", "none".
+# "reset_font_size", "minimize_window", "toggle_maximize", "none".
 # Touches de ponctuation : "plus", "minus", "equal".
 # Actions à paramètre : { split = "horizontal" | "vertical" },
 # { focus = "left" | "right" | "up" | "down" },
@@ -270,6 +270,8 @@ mod tests {
             "url",
             "rename_tab",
             "increase_font_size",
+            "minimize_window",
+            "toggle_maximize",
         ] {
             assert!(DEFAULT_TOML.contains(key), "{key} absent de l'exemple");
         }

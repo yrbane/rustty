@@ -7,6 +7,7 @@ use winit::window::CursorIcon;
 
 use crate::geometry::{self, GRAB_WIDTH};
 use crate::model::Effect;
+use crate::window_edges::resize_cursor;
 use crate::window_state::OsWindow;
 
 impl OsWindow {
@@ -43,6 +44,10 @@ impl OsWindow {
 
     /// Met à jour la forme du curseur selon ce qu'il survole.
     pub(crate) fn update_cursor_icon(&mut self, x: f64, y: f64) {
+        if let Some(icon) = self.edge_cursor(x, y) {
+            self.set_cursor_icon(icon);
+            return;
+        }
         let over = self
             .divider_drag
             .or_else(|| geometry::divider_at(&self.dividers, x, y, GRAB_WIDTH));
@@ -59,10 +64,20 @@ impl OsWindow {
             None if geometry::pane_at(&self.pane_rects, x, y).is_some() => CursorIcon::Text,
             None => CursorIcon::Default,
         };
+        self.set_cursor_icon(icon);
+    }
+
+    fn set_cursor_icon(&mut self, icon: CursorIcon) {
         if icon != self.cursor_icon {
             self.cursor_icon = icon;
             self.window.set_cursor(icon);
         }
+    }
+
+    /// Le curseur de redimensionnement si la souris est dans la marge d'une
+    /// fenêtre sans décorations système.
+    fn edge_cursor(&self, x: f64, y: f64) -> Option<CursorIcon> {
+        self.edge_direction(x, y).map(resize_cursor)
     }
 }
 

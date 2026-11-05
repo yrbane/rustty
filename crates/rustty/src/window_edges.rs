@@ -1,9 +1,6 @@
 //! Bords de redimensionnement de la fenêtre sans décorations : quelle
 //! direction correspond à une position de souris, et quel curseur l'annonce.
 
-// Câblé dans la fenêtre à la tâche 8 : retirer cette autorisation alors.
-#![allow(dead_code)]
-
 use winit::window::{CursorIcon, ResizeDirection};
 
 /// La direction de redimensionnement sous `(x, y)` (pixels physiques), si la

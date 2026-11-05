@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.145 — 2026-11-05 · « Boutons de fenêtre, déplacement et redimensionnement »
+
+- La barre de titre maison réagit à la souris : survol des pastilles, réduire, agrandir ou restaurer, fermer (avec la même confirmation que la croix du système quand un programme tourne encore), glisser la barre déplace la fenêtre, un clic simple ne la déplace pas, un menu d'onglet ou un renommage en cours se ferme en cliquant la barre.
+- Les huit bords et coins de la fenêtre sans décorations redimensionnent (marge `titlebar.resize_border`) avec le curseur correspondant ; rien ne redimensionne quand la fenêtre est agrandie.
+- Nouvelles actions clavier `minimize_window` et `toggle_maximize` (sans raccourci par défaut), citées dans `--init-config` et `docs/rustty.example.toml`.
+- La demande de fermeture de la fenêtre est factorisée dans `OsWindow::request_close_window`, partagée par la croix du système et le bouton de la barre.
+
 ## 0.1.0-alpha.144 — 2026-11-05 · « Bords de redimensionnement et seuil de déplacement »
 
 - Nouveaux modules purs dans `rustty`, pas encore branchés sur la souris : `window_edges::resize_direction` dit quel bord ou coin de la fenêtre sans décorations se trouve sous la souris (marge `resize_border`, rien quand la fenêtre est maximisée) et `resize_cursor` donne le curseur correspondant ; `title_input::TitleDrag` distingue un clic sur la zone de titre d'un déplacement de fenêtre (seuil de 4 px, bouton gauche seul).

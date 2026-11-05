@@ -133,6 +133,9 @@ impl OsWindow {
         if let Some(effects) = self.drag_moved(x, y) {
             return effects;
         }
+        if let Some(effects) = self.title_moved(x, y) {
+            return effects;
+        }
         let mut menu_effects = Vec::new();
         if let Some(effects) = self.menu_hover(x, y) {
             menu_effects = effects;
@@ -218,6 +221,9 @@ impl OsWindow {
     }
 
     fn on_press(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if self.edge_press(button, x, y) {
+            return Vec::new();
+        }
         if let Some(effects) = self.drag_press() {
             return effects;
         }
@@ -225,6 +231,9 @@ impl OsWindow {
             return effects;
         }
         if let Some(effects) = self.spell_click(button, x, y) {
+            return effects;
+        }
+        if let Some(effects) = self.title_press(button, x, y) {
             return effects;
         }
         let on_bar = self.bar_target(x, y);
@@ -281,6 +290,9 @@ impl OsWindow {
     }
 
     fn on_release(&mut self, button: MouseButton, x: f64, y: f64) -> Vec<Effect> {
+        if let Some(effects) = self.title_release(button, x, y) {
+            return effects;
+        }
         if let Some(effects) = self.drag_released(button) {
             return effects;
         }

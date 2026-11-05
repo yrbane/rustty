@@ -41,6 +41,10 @@ pub enum Effect {
     ReloadConfig,
     Relayout,
     Redraw,
+    /// Réduire la fenêtre dans la barre des tâches.
+    Minimize,
+    /// Agrandir la fenêtre, ou la restaurer si elle l'est déjà.
+    ToggleMaximize,
     Exit,
 }
 
@@ -191,6 +195,8 @@ impl Model {
             Action::IncreaseFontSize => vec![Effect::FontSize(FontChange::Increase)],
             Action::DecreaseFontSize => vec![Effect::FontSize(FontChange::Decrease)],
             Action::ResetFontSize => vec![Effect::FontSize(FontChange::Reset)],
+            Action::MinimizeWindow => vec![Effect::Minimize],
+            Action::ToggleMaximize => vec![Effect::ToggleMaximize],
             Action::Unbind => Vec::new(),
         }
     }

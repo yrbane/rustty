@@ -56,6 +56,10 @@ pub enum Action {
     DecreaseFontSize,
     /// Revenir à la taille de police de la configuration.
     ResetFontSize,
+    /// Réduire la fenêtre dans la barre des tâches.
+    MinimizeWindow,
+    /// Agrandir la fenêtre, ou la restaurer si elle l'est déjà.
+    ToggleMaximize,
     /// `"none"` : retire un raccourci par défaut.
     Unbind,
 }
@@ -79,6 +83,8 @@ enum Simple {
     IncreaseFontSize,
     DecreaseFontSize,
     ResetFontSize,
+    MinimizeWindow,
+    ToggleMaximize,
     None,
 }
 
@@ -139,6 +145,8 @@ impl From<Simple> for Action {
             Simple::IncreaseFontSize => Self::IncreaseFontSize,
             Simple::DecreaseFontSize => Self::DecreaseFontSize,
             Simple::ResetFontSize => Self::ResetFontSize,
+            Simple::MinimizeWindow => Self::MinimizeWindow,
+            Simple::ToggleMaximize => Self::ToggleMaximize,
             Simple::None => Self::Unbind,
         }
     }
@@ -199,6 +207,18 @@ mod tests {
             Action::DecreaseFontSize
         );
         assert_eq!(parse("\"reset_font_size\"").unwrap(), Action::ResetFontSize);
+    }
+
+    #[test]
+    fn window_actions() {
+        assert_eq!(
+            parse("\"minimize_window\"").unwrap(),
+            Action::MinimizeWindow
+        );
+        assert_eq!(
+            parse("\"toggle_maximize\"").unwrap(),
+            Action::ToggleMaximize
+        );
     }
 
     fn parse(toml_value: &str) -> Result<Action, toml::de::Error> {

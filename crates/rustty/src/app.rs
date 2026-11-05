@@ -62,16 +62,7 @@ impl ApplicationHandler<UserEvent> for App {
             return;
         };
         let effects = match event {
-            WindowEvent::CloseRequested => {
-                let confirm = w.config.window.confirm_close_with_running_children;
-                let terms = &w.terms;
-                let running = |t| {
-                    terms
-                        .get(&t)
-                        .is_some_and(crate::term_window::TermWindow::has_running_children)
-                };
-                w.model.request_close_window(confirm, &running)
-            }
+            WindowEvent::CloseRequested => w.request_close_window(),
             WindowEvent::Resized(size) => {
                 w.menu = None;
                 w.leave_spell_word();
