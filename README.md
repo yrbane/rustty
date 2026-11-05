@@ -163,9 +163,9 @@ basculé à chaud au rechargement), `height` (28 px logiques), `background`,
 `spacing`, `resize_border` (marge de redimensionnement, 6 px, 0 pour aucune),
 style commun des boutons `[titlebar.button]` (`size`, fond, bordure, rayon,
 couleur d'icône et leurs variantes au survol) et surcharges par bouton
-`[titlebar.buttons.<nom>]` avec `visible` : `settings`, `color`, `folder`
-(affichés mais encore sans effet), `minimize`, `maximize`, `close`
-(pastilles rondes par défaut). Les couleurs acceptent un alpha
+`[titlebar.buttons.<nom>]` avec `visible` : `minimize`, `maximize`, `close`
+(pastilles rondes par défaut) ; `settings`, `color`, `folder` sont acceptés
+dans la configuration mais ne sont pas encore dessinés (jalon suivant). Les couleurs acceptent un alpha
 (`"#rrggbbaa"`). Actions clavier `minimize_window` et `toggle_maximize`
 (sans raccourci par défaut).
 

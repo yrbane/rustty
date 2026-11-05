@@ -199,7 +199,12 @@ impl OsWindow {
         self.cursor_inside = false;
         let header_changed = self.update_header_hover(self.cursor.0, self.cursor.1);
         let spell_closed = self.leave_spell_word();
-        if self.model.hover_changed(HoverTarget::None) || header_changed || spell_closed {
+        let title_changed = self.leave_title_bar();
+        if self.model.hover_changed(HoverTarget::None)
+            || header_changed
+            || spell_closed
+            || title_changed
+        {
             vec![Effect::Redraw]
         } else {
             Vec::new()

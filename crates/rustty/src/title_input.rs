@@ -16,6 +16,8 @@ use crate::window_state::OsWindow;
 /// déplacement de fenêtre plutôt qu'un clic.
 pub const MOVE_THRESHOLD: f64 = 4.0;
 
+/// Une fois le déplacement confié au système, celui-ci prend le pointeur et
+/// le relâchement ne nous parvient pas : la machine revient aussitôt au repos.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TitleDrag {
     Idle,
@@ -24,8 +26,6 @@ pub enum TitleDrag {
         x: f64,
         y: f64,
     },
-    /// Le déplacement de la fenêtre a été demandé au système.
-    Moving,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,24 +43,23 @@ impl TitleDrag {
         }
     }
 
-    /// Armé et déplacé d'au moins `MOVE_THRESHOLD` : passe en mouvement et
-    /// demande le déplacement, une seule fois.
+    /// Armé et déplacé d'au moins `MOVE_THRESHOLD` : demande le déplacement,
+    /// une seule fois, et revient au repos.
     pub fn moved(&mut self, x: f64, y: f64) -> TitleDragEvent {
         match *self {
             TitleDrag::Armed { x: x0, y: y0 } if (x - x0).hypot(y - y0) >= MOVE_THRESHOLD => {
-                *self = TitleDrag::Moving;
+                *self = TitleDrag::Idle;
                 TitleDragEvent::StartMove
             }
             _ => TitleDragEvent::None,
         }
     }
 
-    /// Relâché sans avoir bougé : un clic ; après un déplacement : rien.
-    /// Toujours au repos ensuite.
+    /// Relâché sans avoir bougé : un clic. Toujours au repos ensuite.
     pub fn release(&mut self) -> TitleDragEvent {
         let event = match *self {
             TitleDrag::Armed { .. } => TitleDragEvent::Click,
-            TitleDrag::Idle | TitleDrag::Moving => TitleDragEvent::None,
+            TitleDrag::Idle => TitleDragEvent::None,
         };
         *self = TitleDrag::Idle;
         event
@@ -172,6 +171,14 @@ impl OsWindow {
             }
             _ => Some(Vec::new()),
         }
+    }
+
+    /// La souris est partie ou la fenêtre a perdu le focus : plus de survol,
+    /// plus d'appui ni de déplacement en cours. Vrai si l'affichage change.
+    pub fn leave_title_bar(&mut self) -> bool {
+        self.title_press = None;
+        self.title_drag = TitleDrag::Idle;
+        self.title_hover.take().is_some()
     }
 
     /// Les effets d'un bouton de fenêtre, fermer compris.

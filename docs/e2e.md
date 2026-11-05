@@ -174,7 +174,9 @@ Boutons
 - [ ] Réduire : la fenêtre va dans la barre des tâches. Agrandir : la fenêtre remplit l'écran et l'icône devient « restaurer » ; cliquer de nouveau restaure. Agrandir par le bureau (double clic du système, raccourci du WM) met aussi l'icône à jour.
 - [ ] Fermer sans programme en cours : la fenêtre se ferme. Avec `sleep 1000` lancé : la bannière de confirmation apparaît ; `Entrée` ferme, `Échap` annule.
 - [ ] Appuyer sur une pastille, glisser hors d'elle, relâcher : rien ne se passe. Clic droit ou du milieu sur une pastille : rien.
-- [ ] `settings`, `color`, `folder` : visibles, sans effet (jalon 2).
+- [ ] `settings`, `color`, `folder` : acceptés dans `[titlebar.buttons.*]` mais pas dessinés (jalon 2) ; seules les trois pastilles de fenêtre apparaissent.
+- [ ] Déplacer la fenêtre par la barre, relâcher, puis cliquer un onglet : il s'active ; cliquer dans un panneau et relâcher : la sélection ne colle pas à la souris.
+- [ ] Depuis une pastille survolée, sortir la souris d'un coup par le bord de la fenêtre : l'icône de survol s'efface. Idem en changeant de fenêtre (`alt+tab`) la souris sur une pastille.
 
 Déplacement et redimensionnement
 - [ ] Glisser la barre (titre ou fond) de plus de 4 px déplace la fenêtre ; un clic simple ne la déplace pas et ne fait rien. Clic droit sur la barre : rien.

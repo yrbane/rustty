@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.147 — 2026-11-05 · « Correctifs de la revue du jalon 1 »
+
+- Après un déplacement de la fenêtre par la barre de titre, le premier clic suivant n'est plus avalé (sélection qui collait à la souris, onglet qui ne s'activait pas) : le système prend le pointeur dès le début du déplacement et la machine `TitleDrag` revient aussitôt au repos.
+- Le survol d'une pastille s'efface quand la souris quitte la fenêtre d'un coup ou quand la fenêtre perd le focus ; l'appui et le glisser en cours sur la barre sont oubliés dans les mêmes cas.
+- README et parcours E2E : `settings`, `color`, `folder` sont acceptés dans `[titlebar.buttons.*]` mais ne sont pas encore dessinés (la version précédente les disait visibles) ; trois vérifications ajoutées au parcours.
+
 ## 0.1.0-alpha.146 — 2026-11-05 · « Barre de titre maison : documentation du jalon 1 »
 
 - Jalon 1 de la barre de titre maison (alpha.138 à alpha.145) : activée par défaut (`[titlebar] enabled = true`), rustty retire les décorations du système et dessine sa barre en haut de la fenêtre, au-dessus des onglets, avec le titre du shell actif et les pastilles réduire, agrandir/restaurer, fermer ; déplacement par la barre, redimensionnement par les bords et coins, bascule à chaud vers la barre du système, actions clavier `minimize_window` et `toggle_maximize`. Les boutons `settings`, `color`, `folder` sont visibles mais sans effet jusqu'au jalon 2.

@@ -45,11 +45,26 @@ fn small_motion_is_a_click_large_motion_is_a_move() {
         "4 px exactement"
     );
     assert_eq!(
+        d,
+        TitleDrag::Idle,
+        "le système tient le déplacement, le relâchement ne reviendra pas"
+    );
+    assert_eq!(
         d.moved(30.0, 10.0),
         TitleDragEvent::None,
         "déjà en mouvement"
     );
     assert_eq!(d.release(), TitleDragEvent::None);
+    assert_eq!(d, TitleDrag::Idle);
+}
+
+#[test]
+fn a_click_after_a_move_is_not_swallowed() {
+    let mut d = TitleDrag::Idle;
+    d.press(MouseButton::Left, 10.0, 10.0);
+    assert_eq!(d.moved(40.0, 10.0), TitleDragEvent::StartMove);
+    // Le relâchement du déplacement n'arrive jamais ; l'appui suivant
+    // (hors de la barre) ne doit trouver aucun état en cours.
     assert_eq!(d, TitleDrag::Idle);
 }
 
