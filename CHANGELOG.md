@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.143 — 2026-11-05 · « La barre de titre dans la fenêtre »
+
+- La barre de titre maison s'affiche en haut de la fenêtre quand `[titlebar] enabled = true` : les décorations système sont retirées à l'ouverture (et remises ou retirées au rechargement de la configuration si la clé change), la barre d'onglets et les panneaux descendent de sa hauteur, le titre du shell actif y est dessiné avec les boutons de fenêtre, l'état maximisé suit la fenêtre et le style se recalcule au changement d'échelle d'écran.
+- Nouveau module `title_bar` dans `rustty` (décorations voulues, changement de décorations, hauteur réservée, disposition et chrome de la barre).
+- Les boutons ne réagissent pas encore à la souris : prochaine étape.
+
 ## 0.1.0-alpha.142 — 2026-11-02 · « La géométrie réserve la barre de titre »
 
 - `geometry::window_geometry` accepte la hauteur de la barre de titre, toujours en haut : la barre d'onglets et les panneaux descendent d'autant, même quand la barre d'onglets est en bas ; une fenêtre minuscule ne déborde jamais. Encore appelée avec 0 : rien ne change à l'écran.

@@ -75,11 +75,13 @@ impl ApplicationHandler<UserEvent> for App {
             WindowEvent::Resized(size) => {
                 w.menu = None;
                 w.leave_spell_word();
+                w.maximized = w.window.is_maximized();
                 w.surface.resize(&w.ctx, size.width, size.height);
                 vec![Effect::Relayout]
             }
             WindowEvent::ScaleFactorChanged { .. } => {
                 w.rebuild_fonts();
+                w.rebuild_title_style();
                 vec![Effect::Relayout]
             }
             WindowEvent::RedrawRequested => {

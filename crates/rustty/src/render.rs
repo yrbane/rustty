@@ -90,6 +90,10 @@ impl OsWindow {
             chrome.quads.extend(bar_chrome.quads);
             chrome.texts.extend(bar_chrome.texts);
         }
+        if let Some(title_bar) = self.title_bar_chrome() {
+            chrome.shapes.extend(title_bar.shapes);
+            chrome.texts.extend(title_bar.texts);
+        }
         let mut overlay = Chrome::default();
         overlay.quads.extend(self.drag_preview_quads());
         if let Some(banner) = self.model.banner() {

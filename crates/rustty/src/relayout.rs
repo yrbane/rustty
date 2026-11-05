@@ -27,6 +27,7 @@ impl OsWindow {
         self.leave_spell_word();
         let (w, h) = self.surface.size();
         let metrics = self.metrics();
+        let title_height = self.title_bar_height();
         let tabs = &self.config.tabs;
         let g = geometry::window_geometry(
             w,
@@ -35,8 +36,9 @@ impl OsWindow {
             self.model.workspace.tabs().len(),
             tabs.min_tabs,
             tab_bar_height(metrics, &self.tab_style),
-            0,
+            title_height,
         );
+        self.relayout_title_bar(w, g.title_bar_y.is_some());
         let titles = self.tab_titles();
         let active = self.model.workspace.active();
         self.tab_bar = g.tab_bar_y.map(|y| {
