@@ -95,7 +95,7 @@ droite dont l'icône n'apparaît qu'au survol.
 | titre (double clic) | renomme la fenêtre | `rename_window` | `ctrl+shift+alt+w` |
 | réduire | `set_minimized(true)` | `minimize_window` | aucun |
 | agrandir | bascule `set_maximized` | `toggle_maximize` | aucun |
-| fermer | même chemin que `CloseRequested` (confirmation si enfants) | `close_window` (existe déjà) | aucun |
+| fermer | même chemin que `CloseRequested` (confirmation si enfants) | aucune action : `close_window` existant ferme le panneau ; le bouton passe par `request_close_window` | aucun |
 
 - **Réglages.** Commande `[titlebar] editor` (défaut `"code"`). Si la clé est
   vide : `$VISUAL`, puis `$EDITOR`, puis l'ouvreur du bureau (`xdg-open`,

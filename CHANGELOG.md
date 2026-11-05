@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.146 — 2026-11-05 · « Barre de titre maison : documentation du jalon 1 »
+
+- Jalon 1 de la barre de titre maison (alpha.138 à alpha.145) : activée par défaut (`[titlebar] enabled = true`), rustty retire les décorations du système et dessine sa barre en haut de la fenêtre, au-dessus des onglets, avec le titre du shell actif et les pastilles réduire, agrandir/restaurer, fermer ; déplacement par la barre, redimensionnement par les bords et coins, bascule à chaud vers la barre du système, actions clavier `minimize_window` et `toggle_maximize`. Les boutons `settings`, `color`, `folder` sont visibles mais sans effet jusqu'au jalon 2.
+- README : section `[titlebar]`, gestes de la barre dans « Souris », `decorations_theme` ne sert que si `enabled = false`.
+- `docs/e2e.md` : parcours « Barre de titre (plan 11) » (affichage, boutons, déplacement et redimensionnement, configuration à chaud).
+- Spec de la barre : le bouton fermer passe par `request_close_window`, pas par l'action `close_window` (qui ferme le panneau).
+
 ## 0.1.0-alpha.145 — 2026-11-05 · « Boutons de fenêtre, déplacement et redimensionnement »
 
 - La barre de titre maison réagit à la souris : survol des pastilles, réduire, agrandir ou restaurer, fermer (avec la même confirmation que la croix du système quand un programme tourne encore), glisser la barre déplace la fenêtre, un clic simple ne la déplace pas, un menu d'onglet ou un renommage en cours se ferme en cliquant la barre.

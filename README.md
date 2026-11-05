@@ -67,6 +67,14 @@ horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+
 
 ### Souris : bandeaux, glisser-déposer et menus
 
+- **Barre de titre.** Avec la barre maison (`[titlebar] enabled = true`, le
+  défaut), on tire la fenêtre par la barre (au-delà de 4 px ; en dessous,
+  c'est un clic sans effet) ; les pastilles de droite réduisent, agrandissent
+  ou restaurent, et ferment la fenêtre avec la même confirmation que la croix
+  du système quand un programme tourne encore. Les huit bords et coins
+  redimensionnent la fenêtre (marge `resize_border`, curseur adapté), sauf
+  quand elle est agrandie. Cliquer la barre ferme un menu ouvert et termine un
+  renommage. Le clic droit n'y fait rien.
 - **Bandeau de panneau.** Dès qu'un onglet affiche au moins deux panneaux (sans
   zoom), chaque panneau porte en haut un bandeau d'une rangée : son titre (le
   nom donné au panneau, sinon le titre annoncé par le shell, tronqué avec `…`)
@@ -147,6 +155,20 @@ par terminal : au-delà, les plus anciennes de l'historique disparaissent d'abor
 
 ## Configuration
 
+Barre de titre maison, section `[titlebar]` : `enabled` (`true` par défaut ;
+rustty retire les décorations du système et dessine sa propre barre en haut
+de la fenêtre, au-dessus des onglets ; `false` rend la barre du système,
+basculé à chaud au rechargement), `height` (28 px logiques), `background`,
+`gloss` (reflet, 0 à 1), `separator_color`, `title_color`, `padding`,
+`spacing`, `resize_border` (marge de redimensionnement, 6 px, 0 pour aucune),
+style commun des boutons `[titlebar.button]` (`size`, fond, bordure, rayon,
+couleur d'icône et leurs variantes au survol) et surcharges par bouton
+`[titlebar.buttons.<nom>]` avec `visible` : `settings`, `color`, `folder`
+(affichés mais encore sans effet), `minimize`, `maximize`, `close`
+(pastilles rondes par défaut). Les couleurs acceptent un alpha
+(`"#rrggbbaa"`). Actions clavier `minimize_window` et `toggle_maximize`
+(sans raccourci par défaut).
+
 Nouveautés de personnalisation : `[splits]` (barre entre panneaux avec ou
 sans, épaisseur, couleur fixe ou tirée au sort pour chaque division),
 `[tabs]` `padding_horizontal`, `padding_vertical`, `spacing`, et `[tabs.colors]`
@@ -157,7 +179,7 @@ presse-papiers par la séquence OSC 52), `[window] decorations_theme` (`"dark"`
 par défaut, `"light"` ou `"system"` : couleur de la barre de titre et des
 bordures que rustty dessine lui-même quand le compositeur n'en fournit pas,
 comme sous GNOME Wayland ; ne touche qu'à cette fenêtre, jamais au réglage du
-bureau), et `[spellcheck]` (`enabled`, `url` du
+bureau ; ne sert que si `[titlebar] enabled = false`), et `[spellcheck]` (`enabled`, `url` du
 serveur LanguageTool, `http://127.0.0.1:8099` par défaut) pour l'infobulle de
 correction au survol d'un mot souligné.
 
