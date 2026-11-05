@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.144 — 2026-11-05 · « Bords de redimensionnement et seuil de déplacement »
+
+- Nouveaux modules purs dans `rustty`, pas encore branchés sur la souris : `window_edges::resize_direction` dit quel bord ou coin de la fenêtre sans décorations se trouve sous la souris (marge `resize_border`, rien quand la fenêtre est maximisée) et `resize_cursor` donne le curseur correspondant ; `title_input::TitleDrag` distingue un clic sur la zone de titre d'un déplacement de fenêtre (seuil de 4 px, bouton gauche seul).
+
 ## 0.1.0-alpha.143 — 2026-11-05 · « La barre de titre dans la fenêtre »
 
 - La barre de titre maison s'affiche en haut de la fenêtre quand `[titlebar] enabled = true` : les décorations système sont retirées à l'ouverture (et remises ou retirées au rechargement de la configuration si la clé change), la barre d'onglets et les panneaux descendent de sa hauteur, le titre du shell actif y est dessiné avec les boutons de fenêtre, l'état maximisé suit la fenêtre et le style se recalcule au changement d'échelle d'écran.
