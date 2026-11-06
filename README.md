@@ -7,6 +7,11 @@
 Émulateur de terminal accéléré par GPU, écrit en Rust, inspiré de
 [kitty](https://sw.kovidgoyal.net/kitty/).
 
+<p align="center">
+  <img src="crates/rustty-render/tests/golden/window.png" width="640" alt="Fenêtre rustty composée hors écran par le renderer : barre de titre maison avec icônes Material et pastilles, deux onglets dont un bleu, deux panneaux sous leurs bandeaux colorés">
+  <br><sub>Fenêtre composée hors écran par le renderer, comparée pixel à pixel en CI sur Linux, macOS et Windows.</sub>
+</p>
+
 > Statut : alpha utilisable. Le binaire `rustty` ouvre une fenêtre GPU, lance
 > le shell, gère onglets (bouton ✕ au survol), splits, sélection, presse-papiers,
 > scrollback, opacité, barres de split et couleurs d'onglets configurables,

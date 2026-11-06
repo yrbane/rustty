@@ -357,3 +357,136 @@ fn title_bar_matches_golden() {
         "pastille agrandir, même fond au survol (entre bordure et icône)"
     );
 }
+
+/// La fenêtre entière telle que la compose `render.rs` : barre de titre,
+/// barre d'onglets, deux panneaux sous leurs bandeaux. Sert de capture.
+#[test]
+fn window_mockup_matches_golden() {
+    use rustty_config::TitleButton;
+    use rustty_render::{
+        HoverTarget, PaneHeaderSpec, TabBarStyle, TabSpec, TitleBarState, TitleBarStyle,
+        layout_tab_bar, layout_title_bar, pane_header_chrome, tab_bar_chrome, tab_bar_height,
+        title_bar_chrome, title_bar_height,
+    };
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let m = r.metrics();
+    let palette = Palette::from_config(&Colors::default(), false);
+    let blue = Rgba::new(0.20, 0.45, 0.80, 1.0);
+    let title_style = TitleBarStyle::from_config(&rustty_config::TitleBar::default(), 1.0);
+    let tab_style = TabBarStyle::from_config(&palette, &rustty_config::Tabs::default());
+    let w = 64 * m.width;
+    let title_h = title_bar_height(&title_style);
+    let bar_h = tab_bar_height(m, &tab_style);
+    let h = title_h + bar_h + 8 * m.height + 2 * PADDING;
+
+    let title_layout = layout_title_bar(w, &title_style);
+    let mut chrome = title_bar_chrome(
+        &title_layout,
+        &title_style,
+        TitleBarState {
+            title: "déploiement — rustty 0.1",
+            hover: Some(TitleButton::Color),
+            maximized: false,
+            background: None,
+        },
+        m,
+    );
+    let tabs = [
+        TabSpec {
+            title: "1: déploiement",
+            active: true,
+            accent: Some(blue),
+        },
+        TabSpec {
+            title: "2: logs",
+            active: false,
+            accent: None,
+        },
+    ];
+    let tab_layout = layout_tab_bar(w, title_h, &tabs, &tab_style, m);
+    let tabs_chrome = tab_bar_chrome(&tab_layout, &tabs, &tab_style, m, HoverTarget::None);
+    let half = w / 2;
+    let top = title_h + bar_h;
+    let headers = [
+        PaneHeaderSpec {
+            rect: PixelRect::new(0, top, half, m.height),
+            title: "1: zsh",
+            color: blue,
+            focused: true,
+            show_close: true,
+            close_hovered: false,
+        },
+        PaneHeaderSpec {
+            rect: PixelRect::new(half, top, w - half, m.height),
+            title: "2: tail -f",
+            color: Rgba::new(0.85, 0.75, 0.30, 1.0),
+            focused: false,
+            show_close: false,
+            close_hovered: false,
+        },
+    ];
+    let headers_chrome = pane_header_chrome(&headers, &tab_style, m);
+    for part in [tabs_chrome, headers_chrome] {
+        chrome.quads.extend(part.quads);
+        chrome.shapes.extend(part.shapes);
+        chrome.texts.extend(part.texts);
+        chrome.icons.extend(part.icons);
+    }
+
+    let cols = (half / m.width).saturating_sub(1) as usize;
+    let mut left = Term::new(cols, 7, 0);
+    left.input(
+        b"$ cargo test --workspace\r\n\
+          running 837 tests\r\n\
+          test result: \x1b[32mok\x1b[0m. 837 passed\r\n\
+          $ git status --short\r\n\
+          \x1b[36mM\x1b[0m README.md\r\n\
+          $ ",
+    );
+    let mut right = Term::new(cols, 7, 0);
+    right.input(
+        b"$ tail -f /var/log/deploy.log\r\n\
+          \x1b[2m14:02:11\x1b[0m build \x1b[32mok\x1b[0m\r\n\
+          \x1b[2m14:02:40\x1b[0m tests \x1b[32mok\x1b[0m\r\n\
+          \x1b[2m14:03:05\x1b[0m \x1b[33mwarn\x1b[0m cache froid\r\n\
+          \x1b[2m14:03:19\x1b[0m deploy \x1b[1;32m\xe2\x9c\x93\x1b[0m\r\n\
+          \x1b[?25l",
+    );
+    let (left_snap, right_snap) = (left.snapshot(), right.snapshot());
+    let pane_top = top + m.height;
+    let target = Offscreen::new(&ctx, w, h);
+    let frame = Frame {
+        viewport: (w, h),
+        background: palette.background,
+        panes: vec![
+            PaneFrame {
+                rect: PixelRect::new(0, pane_top, half, h - pane_top),
+                snapshot: &left_snap,
+                focused: true,
+            },
+            PaneFrame {
+                rect: PixelRect::new(half, pane_top, w - half, h - pane_top),
+                snapshot: &right_snap,
+                focused: false,
+            },
+        ],
+        chrome,
+    };
+    r.render(&ctx, target.view(), &frame);
+    let px = target.read_rgba(&ctx).unwrap();
+    assert_matches_golden("window", &px, w, h);
+    let color_button = title_layout.buttons[1].1;
+    let sum = |p: [u8; 4]| u32::from(p[0]) + u32::from(p[1]) + u32::from(p[2]);
+    assert!(
+        sum(pixel(&px, w, color_button.x + 2, color_button.y + 2)) > sum(pixel(&px, w, w / 2, 2)),
+        "le bouton couleur survolé est plus clair que la barre"
+    );
+    assert_eq!(
+        pixel(&px, w, 0, title_style.height),
+        [0, 0, 0, 255],
+        "séparateur noir sous la barre"
+    );
+}

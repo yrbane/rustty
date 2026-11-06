@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.166 — 2026-11-06 · « Capture de fenêtre complète produite par le renderer »
+
+- Nouvelle image de référence `window.png` : la fenêtre entière (barre de titre maison avec icônes Material et survol du bouton couleur, barre d'onglets avec un onglet coloré, deux panneaux sous leurs bandeaux, texte en couleurs) composée hors écran par les fonctions de chrome du renderer et comparée pixel à pixel en CI.
+- README : cette capture sous le logo, à la place d'une capture d'écran.
+
 ## 0.1.0-alpha.165 — 2026-11-06 · « Barre de titre : plan du jalon 4 »
 
 - Plan d'implémentation du jalon 4 « Finitions » : capture de fenêtre complète produite par le renderer, script de carte vitrine, finitions différées par les revues, documentation finale, vitrines publiques.
