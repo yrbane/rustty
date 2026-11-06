@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.156 — 2026-11-06 · « Barre de titre : documentation du jalon 2 »
+
+- README : icônes Material, clés `icon_size`, `editor`, `file_manager`, boutons réglages et dossier et leurs actions `open_config`, `open_cwd`, titre de la fenêtre et nom d'onglet.
+- `docs/e2e.md` : la section « Barre de titre » couvre les trois boutons d'outils, la création du fichier de configuration, les replis `$VISUAL`/`$EDITOR`/ouvreur, le bandeau d'erreur, `icon_size` à chaud, le fond clair et le nom d'onglet.
+- Spec : chemin et licence de la police embarquée.
+
 ## 0.1.0-alpha.155 — 2026-11-06 · « Le titre de la fenêtre suit le nom d'onglet personnalisé »
 
 - Le titre de la fenêtre (barre de titre maison et titre système) reprend le nom donné à l'onglet actif par « Renommer l'onglet » ; sans nom personnalisé, le titre du terminal comme avant.
