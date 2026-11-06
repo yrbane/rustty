@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.159 — 2026-11-06 · « Nom de fenêtre : cible de renommage et action rename_window »
+
+- Le modèle sait renommer la fenêtre : nouvelle cible d'édition `Window`, nom fixe prioritaire sur le titre de l'onglet actif, un nom vide rend la main au titre du shell.
+- Actions `[keys]` `rename_window` (raccourci par défaut `ctrl+shift+alt+w`) et `pick_titlebar_color` (sans raccourci ; l'ouverture du nuancier arrive avec le bouton couleur).
+
 ## 0.1.0-alpha.158 — 2026-11-06 · « Barre de titre : plan du jalon 3 »
 
 - Plan d'implémentation du jalon 3 « Titre et couleur » : renommage de la fenêtre, nuancier de la barre, couleur de session et écriture de `[titlebar] background` dans la configuration.

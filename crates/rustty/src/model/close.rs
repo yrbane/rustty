@@ -72,6 +72,13 @@ impl Model {
         vec![Effect::Redraw]
     }
 
+    /// Ouvre l'édition du nom de la fenêtre, pré-remplie avec le nom actuel.
+    pub fn start_window_rename(&mut self) -> Vec<Effect> {
+        let current = self.window_name.clone().unwrap_or_default();
+        self.renaming = Some(Rename::new(RenameTarget::Window, &current));
+        vec![Effect::Redraw]
+    }
+
     pub fn rename_key(&mut self, key: RenameKey) -> Vec<Effect> {
         let Some(rename) = self.renaming.as_mut() else {
             return Vec::new();
@@ -85,6 +92,7 @@ impl Model {
                 match target {
                     RenameTarget::Tab(tab) => self.workspace.rename(tab, title),
                     RenameTarget::Pane(term) => self.workspace.rename_pane(term, title),
+                    RenameTarget::Window => self.window_name = title,
                 }
                 vec![Effect::Relayout]
             }

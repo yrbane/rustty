@@ -64,6 +64,10 @@ pub enum Action {
     OpenConfig,
     /// Ouvrir le dossier courant du panneau actif dans l'explorateur.
     OpenCwd,
+    /// Saisir un nom fixe pour la fenêtre (vide : le titre du shell).
+    RenameWindow,
+    /// Ouvrir le nuancier de la barre de titre.
+    PickTitleBarColor,
     /// `"none"` : retire un raccourci par défaut.
     Unbind,
 }
@@ -91,6 +95,9 @@ enum Simple {
     ToggleMaximize,
     OpenConfig,
     OpenCwd,
+    RenameWindow,
+    #[serde(rename = "pick_titlebar_color")]
+    PickTitleBarColor,
     None,
 }
 
@@ -155,6 +162,8 @@ impl From<Simple> for Action {
             Simple::ToggleMaximize => Self::ToggleMaximize,
             Simple::OpenConfig => Self::OpenConfig,
             Simple::OpenCwd => Self::OpenCwd,
+            Simple::RenameWindow => Self::RenameWindow,
+            Simple::PickTitleBarColor => Self::PickTitleBarColor,
             Simple::None => Self::Unbind,
         }
     }
@@ -229,6 +238,15 @@ mod tests {
         );
         assert_eq!(parse("\"open_config\"").unwrap(), Action::OpenConfig);
         assert_eq!(parse("\"open_cwd\"").unwrap(), Action::OpenCwd);
+    }
+
+    #[test]
+    fn title_bar_actions() {
+        assert_eq!(parse("\"rename_window\"").unwrap(), Action::RenameWindow);
+        assert_eq!(
+            parse("\"pick_titlebar_color\"").unwrap(),
+            Action::PickTitleBarColor
+        );
     }
 
     fn parse(toml_value: &str) -> Result<Action, toml::de::Error> {

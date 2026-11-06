@@ -68,6 +68,8 @@ impl OsWindow {
                 }
                 Effect::OpenConfig => self.open_config(),
                 Effect::OpenCwd => self.open_cwd(),
+                // Le nuancier de la barre arrive avec le bouton couleur.
+                Effect::PickTitleBarColor => {}
                 Effect::Exit => event_loop.exit(),
             }
         }

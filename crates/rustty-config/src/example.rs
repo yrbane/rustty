@@ -166,7 +166,7 @@ palette = [
 # "close_window", "toggle_zoom", "rotate", "copy", "paste", "scroll_to_bottom",
 # "reload_config", "rename_tab", "increase_font_size", "decrease_font_size",
 # "reset_font_size", "minimize_window", "toggle_maximize", "open_config",
-# "open_cwd", "none".
+# "open_cwd", "rename_window", "pick_titlebar_color", "none".
 # Touches de ponctuation : "plus", "minus", "equal".
 # Actions à paramètre : { split = "horizontal" | "vertical" },
 # { focus = "left" | "right" | "up" | "down" },
@@ -203,6 +203,7 @@ palette = [
 "ctrl+shift+end" = "scroll_to_bottom"
 "ctrl+shift+f5" = "reload_config"
 "ctrl+shift+alt+t" = "rename_tab"
+"ctrl+shift+alt+w" = "rename_window"
 "ctrl+plus" = "increase_font_size"
 "ctrl+shift+plus" = "increase_font_size"
 "ctrl+equal" = "increase_font_size"
@@ -286,6 +287,8 @@ mod tests {
             "file_manager",
             "open_config",
             "open_cwd",
+            "rename_window",
+            "pick_titlebar_color",
         ] {
             assert!(DEFAULT_TOML.contains(key), "{key} absent de l'exemple");
         }
