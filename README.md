@@ -31,7 +31,11 @@ cargo insta review                           # accepter les snapshots de grille 
 Les tests de rendu comparent des images de référence (`crates/rustty-render/tests/golden/`)
 produites avec la police embarquée DejaVu Sans Mono. Pour les régénérer après un
 changement voulu du rendu : `UPDATE_GOLDEN=1 cargo test -p rustty-render --test offscreen`,
-puis vérifier les PNG à l'œil avant de les committer.
+puis vérifier les PNG à l'œil avant de les committer. `window.png` est la
+fenêtre complète (barre de titre, onglets, bandeaux, texte) ; `python3 -I
+scripts/showcase.py SORTIE.webp` en compose la carte vitrine 1200×630 avec le
+logo (`python3 -I scripts/showcase_test.py` la teste), et
+`scripts/material-icons.sh` régénère la police d'icônes de la barre de titre.
 
 ## Installer
 

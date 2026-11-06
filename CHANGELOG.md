@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.167 — 2026-11-06 · « Script de composition de la carte vitrine »
+
+- `scripts/showcase.py SORTIE.webp` compose la carte vitrine 1200×630 (logo, titre, tagline avec emojis, capture `window.png` du renderer, légende) ; `scripts/showcase_test.py` vérifie la taille et la présence de la capture. Pillow seulement.
+
 ## 0.1.0-alpha.166 — 2026-11-06 · « Capture de fenêtre complète produite par le renderer »
 
 - Nouvelle image de référence `window.png` : la fenêtre entière (barre de titre maison avec icônes Material et survol du bouton couleur, barre d'onglets avec un onglet coloré, deux panneaux sous leurs bandeaux, texte en couleurs) composée hors écran par les fonctions de chrome du renderer et comparée pixel à pixel en CI.
