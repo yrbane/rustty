@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.169 — 2026-11-06 · « Barre de titre : documentation finale »
+
+- README : le statut alpha mentionne la barre de titre maison et le nombre de tests ; `docs/e2e.md` : la section « Barre de titre » sans numéros de plan ni de jalon ; spec : les quatre jalons sont livrés.
+
 ## 0.1.0-alpha.168 — 2026-11-06 · « Finitions : éditeurs de terminal, chemins entre guillemets, renommage et bandeau »
 
 - Bouton réglages : un éditeur de terminal (`vi`, `vim`, `nvim`, `nano`, `micro`, `hx`, `emacs`, `ed`) trouvé dans `editor`, `$VISUAL` ou `$EDITOR` est ignoré au profit de la valeur suivante, puis de l'ouvreur du bureau : lancé détaché sans console, il ne s'ouvrait jamais.

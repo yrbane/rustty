@@ -17,8 +17,11 @@
 > scrollback, opacité, barres de split et couleurs d'onglets configurables,
 > renommage des onglets, zoom de police et rechargement de la configuration à
 > chaud. Les panneaux d'un onglet divisé portent un bandeau et se déplacent à
-> la souris ; les onglets se réordonnent en les glissant. Les tests
-> couvrent toute la logique ; le parcours manuel est dans `docs/e2e.md`.
+> la souris ; les onglets se réordonnent en les glissant. La fenêtre dessine
+> sa propre barre de titre : icônes Material, double clic pour renommer la
+> fenêtre, nuancier pour colorer la barre, réglages et dossier à portée de
+> clic. Plus de 840 tests couvrent la logique et le rendu ; le parcours
+> manuel est dans `docs/e2e.md`.
 
 ## Développement
 

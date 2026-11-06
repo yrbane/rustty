@@ -161,7 +161,7 @@ Serveur
 - [ ] LanguageTool arrêté : aucune boîte, et au plus une requête par 30 s (journal `debug`) ; relancé : la boîte revient au survol suivant.
 - [ ] `[spellcheck] enabled = false` (rechargement à chaud) : plus aucune requête ni boîte. `url = "ftp://x"` : erreur de configuration nommant `spellcheck.url`.
 
-## Barre de titre (plan 11)
+## Barre de titre
 Prérequis : `[titlebar] enabled = true` (le défaut) ; la fenêtre n'a plus de décorations système.
 
 Affichage
@@ -187,7 +187,7 @@ Boutons
 - [ ] `background = "#f0f0f0"` : le titre et les trois icônes d'outils deviennent sombres ; les pastilles gardent leurs couleurs. Survoler un bouton d'outil assombrit son fond (voile noir), le survol reste visible.
 - [ ] Renommer l'onglet actif (menu contextuel) : le titre de la fenêtre reprend ce nom ; le retirer rend le titre du terminal.
 
-Titre et couleur (jalon 3)
+Titre et couleur
 - [ ] Double clic sur le titre : la barre montre un tampon pré-rempli du nom de fenêtre (vide la première fois) suivi de `▌` ; taper `deploy` puis Entrée : la barre et la barre des tâches du bureau (`alt+tab`) affichent « deploy — rustty X ». Pendant la saisie, le titre du bureau montre aussi le tampon et le curseur.
 - [ ] Échap pendant la saisie : l'ancien nom reste. Vider le nom puis Entrée : retour au titre du shell (ou au nom de l'onglet s'il en a un). Plus de 64 caractères : la saisie s'arrête à 64.
 - [ ] Pendant la bannière de confirmation de fermeture (`sleep 1000` puis fermer) : double clic sur le titre, `ctrl+shift+alt+w` ou « Renommer » n'ouvrent rien ; Entrée et Échap restent à la confirmation.
