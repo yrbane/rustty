@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.160 — 2026-11-06 · « Double clic sur le titre : renommage de la fenêtre en place »
+
+- Double-cliquer le titre de la barre maison (ou `ctrl+shift+alt+w`) ouvre l'édition du nom de la fenêtre dans la barre : tampon et curseur `▌`, Entrée valide, Échap annule, 64 caractères, nom vide = retour au titre du shell.
+- Le titre dessiné dans la barre et celui donné au système (barre des tâches, alt-tab) sont le même texte : nom fixe de la fenêtre, sinon nom de l'onglet actif, sinon titre du shell, puis la version.
+
 ## 0.1.0-alpha.159 — 2026-11-06 · « Nom de fenêtre : cible de renommage et action rename_window »
 
 - Le modèle sait renommer la fenêtre : nouvelle cible d'édition `Window`, nom fixe prioritaire sur le titre de l'onglet actif, un nom vide rend la main au titre du shell.

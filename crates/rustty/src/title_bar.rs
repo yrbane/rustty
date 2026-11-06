@@ -6,6 +6,7 @@ use rustty_render::{
     Chrome, TitleBarState, TitleBarStyle, layout_title_bar, title_bar_chrome, title_bar_height,
 };
 
+use crate::rename::RenameTarget;
 use crate::title;
 use crate::window_state::OsWindow;
 
@@ -41,8 +42,9 @@ impl OsWindow {
         self.title_bar = enabled.then(|| layout_title_bar(width, &self.title_style));
     }
 
-    /// Le texte donné à winit et dessiné dans la barre : titre du shell du
-    /// panneau actif, puis la version.
+    /// Le texte donné à winit et dessiné dans la barre : nom fixe de la
+    /// fenêtre, sinon nom de l'onglet actif, sinon titre du shell, puis la
+    /// version ; pendant le renommage de la fenêtre, le tampon et un curseur.
     pub fn window_title_text(&self) -> String {
         let workspace = &self.model.workspace;
         let raw = workspace
@@ -54,7 +56,19 @@ impl OsWindow {
             .tabs()
             .get(workspace.active())
             .and_then(|tab| tab.custom_title.as_deref());
-        title::window_title(custom, raw, crate::VERSION)
+        let editing = self
+            .model
+            .renaming
+            .as_ref()
+            .filter(|r| r.target == RenameTarget::Window)
+            .map(|r| r.buffer.as_str());
+        title::bar_title(
+            self.model.window_name.as_deref(),
+            custom,
+            raw,
+            editing,
+            crate::VERSION,
+        )
     }
 
     pub fn title_bar_chrome(&self) -> Option<Chrome> {

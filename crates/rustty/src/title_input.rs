@@ -2,6 +2,8 @@
 //! machine à états pure `TitleDrag` (clic ou déplacement), puis le câblage
 //! dans la fenêtre (boutons, déplacement, redimensionnement, fermeture).
 
+use std::time::Instant;
+
 use rustty_config::TitleButton;
 use rustty_render::TitleTarget;
 use winit::window::ResizeDirection;
@@ -79,6 +81,12 @@ pub fn button_effects(button: TitleButton) -> Vec<Effect> {
     }
 }
 
+/// Un clic (sans déplacement) relâché sur le titre compte pour le double
+/// clic qui renomme la fenêtre.
+pub fn title_click_renames(event: TitleDragEvent, target: TitleTarget) -> bool {
+    event == TitleDragEvent::Click && target == TitleTarget::Title
+}
+
 /// La position de la souris en pixels entiers, ou `None` hors de la fenêtre
 /// (coordonnées négatives, comme pendant un relâchement à l'extérieur).
 pub fn bar_point(x: f64, y: f64) -> Option<(u32, u32)> {
@@ -145,6 +153,8 @@ impl OsWindow {
         if self.title_drag.moved(x, y, threshold) != TitleDragEvent::StartMove {
             return false;
         }
+        // Un déplacement n'est pas la moitié d'un double clic.
+        self.title_clicks.reset();
         if let Err(e) = self.window.drag_window() {
             tracing::debug!("déplacement refusé par le système : {e}");
         }
@@ -170,8 +180,11 @@ impl OsWindow {
         if pressed.is_none() && !dragging {
             return None;
         }
-        // `Click` servira au double clic sur le titre (jalon 3).
-        let _ = self.title_drag.release();
+        let event = self.title_drag.release();
+        let target = self.title_target(x, y);
+        if title_click_renames(event, target) && self.title_clicks.register(0, Instant::now()) {
+            return Some(self.model.start_window_rename());
+        }
         match pressed {
             Some(b)
                 if button == MouseButton::Left
@@ -188,6 +201,7 @@ impl OsWindow {
     pub fn leave_title_bar(&mut self) -> bool {
         self.title_press = None;
         self.title_drag = TitleDrag::Idle;
+        self.title_clicks.reset();
         self.title_hover.take().is_some()
     }
 

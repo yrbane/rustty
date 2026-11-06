@@ -1,6 +1,7 @@
 use super::*;
 use crate::mouse::MouseButton;
 use rustty_config::TitleButton;
+use rustty_render::TitleTarget;
 
 #[test]
 fn maximize_button_restores_when_maximized() {
@@ -103,4 +104,24 @@ fn a_point_outside_the_window_is_not_in_the_bar() {
     assert_eq!(bar_point(5.0, -1.0), None, "au-dessus de la fenêtre");
     assert_eq!(bar_point(0.0, 0.0), Some((0, 0)));
     assert_eq!(bar_point(12.7, 3.2), Some((12, 3)));
+}
+
+#[test]
+fn only_a_click_on_the_title_counts_towards_a_rename() {
+    assert!(title_click_renames(
+        TitleDragEvent::Click,
+        TitleTarget::Title
+    ));
+    assert!(!title_click_renames(
+        TitleDragEvent::Click,
+        TitleTarget::Background
+    ));
+    assert!(!title_click_renames(
+        TitleDragEvent::None,
+        TitleTarget::Title
+    ));
+    assert!(!title_click_renames(
+        TitleDragEvent::StartMove,
+        TitleTarget::Title
+    ));
 }
