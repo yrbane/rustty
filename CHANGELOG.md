@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.150 — 2026-11-06 · « Police Material Symbols embarquée »
+
+- Nouvelle police d'icônes pour la barre de titre : Material Symbols Rounded (Apache 2.0, licence jointe) réduite aux sept glyphes réglages, palette, dossier, réduire, agrandir, restaurer, fermer ; 2,7 Ko embarqués dans `rustty-render` (`IconFace`, module `icons`). Script `scripts/material-icons.sh` pour la régénérer (fonttools dans un venv jetable).
+
 ## 0.1.0-alpha.149 — 2026-11-06 · « Icônes centrées dans les pastilles »
 
 - Les symboles des boutons de la barre de titre (réduire, agrandir, restaurer, fermer) sont centrés dans leur pastille : ils étaient posés comme un caractère sur une cellule (bord gauche, ligne de base), d'où un décalage visible vers le haut. Nouveau `ChromeIcon` dans `rustty-render` : un glyphe seul centré sur un point par le centre de son encre, placé par le renderer d'après les bornes réelles du bitmap ; image de référence `title_bar.png` régénérée.

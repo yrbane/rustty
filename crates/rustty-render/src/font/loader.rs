@@ -270,7 +270,7 @@ fn coverage_block(ch: char) -> u32 {
 }
 
 /// Identifiant du glyphe de `ch` dans `face`, `None` si la face ne le couvre pas.
-fn glyph_in(face: &FaceData, ch: char) -> Option<u16> {
+pub(crate) fn glyph_in(face: &FaceData, ch: char) -> Option<u16> {
     let font = face.font_ref()?;
     match font.charmap().map(ch) {
         0 => None,
