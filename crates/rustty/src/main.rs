@@ -7,6 +7,7 @@ mod banner;
 mod cell_hit;
 mod cli;
 mod config_watch;
+mod config_write;
 mod context_menu;
 mod desktop;
 mod divider_drag;

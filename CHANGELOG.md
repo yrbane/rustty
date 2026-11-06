@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.162 — 2026-11-06 · « « Par défaut » écrit la couleur de la barre dans la configuration »
+
+- « Par défaut » du nuancier écrit la couleur de session dans `[titlebar] background` du fichier de configuration avec `toml_edit` : seule cette clé change, commentaires, ordre et formatage sont conservés ; la section est créée si elle manque, une table en ligne reste en ligne.
+- Fichier absent : créé d'abord depuis le modèle complet, puis la surveillance démarre. Écriture atomique (temporaire puis renommage) ; un échec (fichier invalide, dossier en lecture seule) passe par le bandeau d'erreur et la couleur de session reste.
+- Après l'écriture, la couleur de session s'efface et la barre garde la couleur écrite sans clignoter en attendant le rechargement à chaud.
+
 ## 0.1.0-alpha.161 — 2026-11-06 · « Nuancier de la barre de titre : couleur de session »
 
 - Le bouton couleur de la barre (ou l'action `pick_titlebar_color`) ouvre le nuancier sous le bouton : douze pastilles de la palette, « Par défaut » et « Couleur du fichier ».

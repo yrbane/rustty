@@ -7,6 +7,7 @@ use rustty_config::Config;
 
 use crate::banner::Banner;
 use crate::config_watch::{self, ReloadOutcome};
+use crate::config_write;
 use crate::events::UserEvent;
 use crate::external;
 use crate::keyboard::paste_bytes;
@@ -72,8 +73,7 @@ impl OsWindow {
                     let effects = self.open_title_bar_palette();
                     self.run_effects(effects, event_loop);
                 }
-                // L'écriture de la couleur arrive avec toml_edit.
-                Effect::SaveTitleBarColor(_) => {}
+                Effect::SaveTitleBarColor(slot) => self.save_titlebar_color(slot),
                 Effect::Exit => event_loop.exit(),
             }
         }
@@ -210,6 +210,30 @@ impl OsWindow {
                 external::spawn_detached(&command, &dir)
             });
         self.report_external("ouvrir le dossier", result);
+    }
+
+    /// « Par défaut » du nuancier : la couleur de session va dans
+    /// `[titlebar] background` du fichier de configuration, puis la couleur
+    /// de session s'efface et la configuration courante prend la couleur
+    /// écrite (pas de clignotement avant le rechargement du veilleur).
+    fn save_titlebar_color(&mut self, slot: usize) {
+        let color = config_write::rgba8_of(self.palette.ansi[slot]);
+        let result = self
+            .config_path
+            .clone()
+            .or_else(Config::default_path)
+            .ok_or_else(|| std::io::Error::other("dossier de configuration introuvable"))
+            .and_then(|path| config_write::save_background(&path, color));
+        match result {
+            Ok(()) => {
+                self.waker.wake(UserEvent::ConfigFileCreated);
+                self.model.titlebar_color = None;
+                self.config.titlebar.background = color;
+                self.rebuild_title_style();
+                self.window.request_redraw();
+            }
+            Err(e) => self.report_external("enregistrer la couleur", Err(e)),
+        }
     }
 
     fn report_external(&mut self, what: &str, result: std::io::Result<()>) {
