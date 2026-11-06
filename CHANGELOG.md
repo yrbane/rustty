@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.158 — 2026-11-06 · « Barre de titre : plan du jalon 3 »
+
+- Plan d'implémentation du jalon 3 « Titre et couleur » : renommage de la fenêtre, nuancier de la barre, couleur de session et écriture de `[titlebar] background` dans la configuration.
+
 ## 0.1.0-alpha.157 — 2026-11-06 · « Correctifs de la revue du jalon 2 »
 
 - Le bouton réglages démarre la surveillance du fichier de configuration quand son dossier n'existait pas au lancement : les modifications enregistrées ensuite sont rechargées à chaud sans redémarrer.
