@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.163 — 2026-11-06 · « Barre de titre : documentation du jalon 3 »
+
+- README : renommage de la fenêtre par double clic ou `ctrl+shift+alt+w`, nuancier du bouton couleur, « Par défaut » et « Couleur du fichier », ordre de priorité du titre, actions `rename_window` et `pick_titlebar_color`.
+- `docs/e2e.md` : vérifications manuelles « Titre et couleur » (saisie, Entrée, Échap, nom vide, 64 caractères, nuancier, rechargement de `[colors]`, « Par défaut » avec fichier absent, table en ligne, lecture seule, fichier invalide).
+- Spec : la couleur de session est un index ANSI de la palette.
+
 ## 0.1.0-alpha.162 — 2026-11-06 · « « Par défaut » écrit la couleur de la barre dans la configuration »
 
 - « Par défaut » du nuancier écrit la couleur de session dans `[titlebar] background` du fichier de configuration avec `toml_edit` : seule cette clé change, commentaires, ordre et formatage sont conservés ; la section est créée si elle manque, une table en ligne reste en ligne.
