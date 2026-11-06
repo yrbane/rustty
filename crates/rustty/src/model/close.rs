@@ -49,6 +49,9 @@ impl Model {
 
     /// Ouvre l'édition du nom de l'onglet `tab`, pré-remplie avec son nom actuel.
     pub fn start_rename(&mut self, tab: usize) -> Vec<Effect> {
+        if self.pending_close.is_some() {
+            return Vec::new();
+        }
         let Some(t) = self.workspace.tabs().get(tab) else {
             return Vec::new();
         };
@@ -59,6 +62,9 @@ impl Model {
 
     /// Ouvre l'édition du nom du panneau `term`, pré-remplie avec son nom actuel.
     pub fn start_pane_rename(&mut self, term: TermId) -> Vec<Effect> {
+        if self.pending_close.is_some() {
+            return Vec::new();
+        }
         if !self
             .workspace
             .tabs()
@@ -76,6 +82,10 @@ impl Model {
     /// Mise en page plutôt que redessin : c'est elle qui pousse le titre
     /// (tampon et curseur) à la fenêtre du système.
     pub fn start_window_rename(&mut self) -> Vec<Effect> {
+        // La confirmation de fermeture garde le clavier (Entrée, Échap).
+        if self.pending_close.is_some() {
+            return Vec::new();
+        }
         let current = self.window_name.clone().unwrap_or_default();
         self.renaming = Some(Rename::new(RenameTarget::Window, &current));
         vec![Effect::Relayout]

@@ -18,13 +18,31 @@ pub fn opener() -> Vec<String> {
 }
 
 /// Première valeur non blanche parmi la clé `editor`, `$VISUAL` et
-/// `$EDITOR`, découpée sur les blancs ; sinon l'ouvreur du bureau.
+/// `$EDITOR`, découpée en mots ; sinon l'ouvreur du bureau. Un éditeur de
+/// terminal (`vim`, `nano`…) lancé détaché sans console ne ferait rien : il
+/// est ignoré au profit de la valeur suivante.
 pub fn editor_command(configured: &str, visual: Option<&str>, editor: Option<&str>) -> Vec<String> {
     [Some(configured), visual, editor]
         .into_iter()
         .flatten()
-        .find_map(split_command)
+        .filter_map(split_command)
+        .find(|cmd| !is_terminal_editor(&cmd[0]))
         .unwrap_or_else(opener)
+}
+
+/// Éditeurs qui vivent dans le terminal : sans console, ils ne s'ouvrent pas.
+const TERMINAL_EDITORS: [&str; 9] = [
+    "vi", "vim", "nvim", "nano", "micro", "hx", "helix", "emacs", "ed",
+];
+
+/// Le programme (chemin et `.exe` ignorés) est-il un éditeur de terminal ?
+pub fn is_terminal_editor(program: &str) -> bool {
+    let name = Path::new(program)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(program);
+    let name = name.strip_suffix(".exe").unwrap_or(name);
+    TERMINAL_EDITORS.contains(&name)
 }
 
 /// La clé `file_manager` découpée sur les blancs ; sinon l'ouvreur du bureau.
@@ -32,9 +50,27 @@ pub fn file_manager_command(configured: &str) -> Vec<String> {
     split_command(configured).unwrap_or_else(opener)
 }
 
+/// Découpe sur les blancs ; des guillemets doubles groupent un mot avec ses
+/// espaces (`"C:\Program Files\Code\code.exe" --wait`) et sont retirés.
 /// `None` pour une valeur blanche.
 fn split_command(value: &str) -> Option<Vec<String>> {
-    let parts: Vec<String> = value.split_whitespace().map(str::to_string).collect();
+    let mut parts = Vec::new();
+    let mut word = String::new();
+    let mut quoted = false;
+    for ch in value.chars() {
+        match ch {
+            '"' => quoted = !quoted,
+            c if c.is_whitespace() && !quoted => {
+                if !word.is_empty() {
+                    parts.push(std::mem::take(&mut word));
+                }
+            }
+            c => word.push(c),
+        }
+    }
+    if !word.is_empty() {
+        parts.push(word);
+    }
     (!parts.is_empty()).then_some(parts)
 }
 

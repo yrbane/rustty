@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.168 — 2026-11-06 · « Finitions : éditeurs de terminal, chemins entre guillemets, renommage et bandeau »
+
+- Bouton réglages : un éditeur de terminal (`vi`, `vim`, `nvim`, `nano`, `micro`, `hx`, `emacs`, `ed`) trouvé dans `editor`, `$VISUAL` ou `$EDITOR` est ignoré au profit de la valeur suivante, puis de l'ouvreur du bureau : lancé détaché sans console, il ne s'ouvrait jamais.
+- `editor` et `file_manager` acceptent des guillemets doubles autour d'un programme dont le chemin contient des espaces (`"C:\Program Files\Code\code.exe" --wait`).
+- Pendant la confirmation de fermeture, ni le double clic sur le titre, ni `rename_window`, ni « Renommer » n'ouvrent une saisie : Entrée et Échap restent à la confirmation.
+- Le bandeau « enregistrer la couleur » tient sur une ligne quand le fichier a une erreur de syntaxe (message seul, sans l'extrait du fichier).
+
 ## 0.1.0-alpha.167 — 2026-11-06 · « Script de composition de la carte vitrine »
 
 - `scripts/showcase.py SORTIE.webp` compose la carte vitrine 1200×630 (logo, titre, tagline avec emojis, capture `window.png` du renderer, légende) ; `scripts/showcase_test.py` vérifie la taille et la présence de la capture. Pillow seulement.

@@ -14,7 +14,9 @@ use crate::external;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WriteError {
-    #[error("configuration invalide : {0}")]
+    /// Le bandeau tient sur une ligne : le message seul, sans l'extrait du
+    /// fichier que `TomlError` affiche en dessous.
+    #[error("configuration invalide : {}", .0.message())]
     Parse(#[from] TomlError),
     #[error("« titlebar » n'est pas une table dans la configuration")]
     NotATable,
