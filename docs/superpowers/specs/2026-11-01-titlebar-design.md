@@ -277,6 +277,8 @@ le rechargement normal ; un échec d'écriture passe par le bandeau d'erreur.
 
 ## Jalons
 
+État : les quatre jalons sont livrés (alpha.145 → alpha.169).
+
 Chaque jalon est une version publiable, dans cet ordre :
 
 1. **Barre et fenêtre** : quad stylé, section de config minimale (`enabled`,

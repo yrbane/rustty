@@ -165,6 +165,15 @@ fn cancelling_a_window_rename_restores_the_system_title() {
     );
 }
 
+#[test]
+fn no_rename_while_a_close_is_pending() {
+    let (mut m, _) = Model::new(0.9, false);
+    m.pending_close = Some(CloseRequest::Window);
+    assert!(m.start_window_rename().is_empty());
+    assert!(m.start_rename(0).is_empty());
+    assert!(m.renaming.is_none());
+}
+
 fn never_running(_: TermId) -> bool {
     false
 }

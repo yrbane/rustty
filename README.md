@@ -7,13 +7,21 @@
 Émulateur de terminal accéléré par GPU, écrit en Rust, inspiré de
 [kitty](https://sw.kovidgoyal.net/kitty/).
 
+<p align="center">
+  <img src="crates/rustty-render/tests/golden/window.png" width="640" alt="Fenêtre rustty composée hors écran par le renderer : barre de titre maison avec icônes Material et pastilles, deux onglets dont un bleu, deux panneaux sous leurs bandeaux colorés">
+  <br><sub>Fenêtre composée hors écran par le renderer, comparée pixel à pixel en CI sur Linux, macOS et Windows.</sub>
+</p>
+
 > Statut : alpha utilisable. Le binaire `rustty` ouvre une fenêtre GPU, lance
 > le shell, gère onglets (bouton ✕ au survol), splits, sélection, presse-papiers,
 > scrollback, opacité, barres de split et couleurs d'onglets configurables,
 > renommage des onglets, zoom de police et rechargement de la configuration à
 > chaud. Les panneaux d'un onglet divisé portent un bandeau et se déplacent à
-> la souris ; les onglets se réordonnent en les glissant. Les tests
-> couvrent toute la logique ; le parcours manuel est dans `docs/e2e.md`.
+> la souris ; les onglets se réordonnent en les glissant. La fenêtre dessine
+> sa propre barre de titre : icônes Material, double clic pour renommer la
+> fenêtre, nuancier pour colorer la barre, réglages et dossier à portée de
+> clic. Plus de 840 tests couvrent la logique et le rendu ; le parcours
+> manuel est dans `docs/e2e.md`.
 
 ## Développement
 
@@ -26,7 +34,11 @@ cargo insta review                           # accepter les snapshots de grille 
 Les tests de rendu comparent des images de référence (`crates/rustty-render/tests/golden/`)
 produites avec la police embarquée DejaVu Sans Mono. Pour les régénérer après un
 changement voulu du rendu : `UPDATE_GOLDEN=1 cargo test -p rustty-render --test offscreen`,
-puis vérifier les PNG à l'œil avant de les committer.
+puis vérifier les PNG à l'œil avant de les committer. `window.png` est la
+fenêtre complète (barre de titre, onglets, bandeaux, texte) ; `python3 -I
+scripts/showcase.py SORTIE.webp` en compose la carte vitrine 1200×630 avec le
+logo (`python3 -I scripts/showcase_test.py` la teste), et
+`scripts/material-icons.sh` régénère la police d'icônes de la barre de titre.
 
 ## Installer
 
@@ -172,9 +184,11 @@ basculé à chaud au rechargement), `height` (28 px logiques), `background`,
 `spacing`, `resize_border` (marge de redimensionnement, 6 px, 0 pour aucune),
 `icon_size` (corps des icônes Material, 14 px logiques, 8 à 32 ; une icône ne
 dépasse jamais les quatre cinquièmes de son bouton), `editor` (éditeur du
-bouton réglages, `"code"` par défaut ; vide : `$VISUAL`, puis `$EDITOR`, puis
-l'ouvreur du bureau), `file_manager` (explorateur du bouton dossier ; vide :
-l'ouvreur du bureau), style commun des boutons `[titlebar.button]` (`size`,
+bouton réglages, `"code"` par défaut, guillemets doubles autour d'un chemin
+avec espaces ; vide : `$VISUAL`, puis `$EDITOR`, en sautant les éditeurs de
+terminal comme `vim` ou `nano` qui ne s'ouvriraient pas détachés, puis
+l'ouvreur du bureau), `file_manager` (explorateur du bouton dossier, même
+découpage ; vide : l'ouvreur du bureau), style commun des boutons `[titlebar.button]` (`size`,
 fond, bordure, rayon, couleur d'icône et leurs variantes au survol) et
 surcharges par bouton `[titlebar.buttons.<nom>]` avec `visible` : à gauche
 `settings`, `color`, `folder` (icônes plates, assombries comme le titre sur un

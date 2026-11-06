@@ -4,6 +4,35 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.170 — 2026-11-06 · « Correctifs de la revue du jalon 4 »
+
+- La clé `editor` est toujours respectée telle quelle, éditeur de terminal compris (choix explicite) ; seuls `$VISUAL` et `$EDITOR` sautent les éditeurs de terminal. `emacs` n'en est plus un (il ouvre une fenêtre), la casse est ignorée (`VIM.EXE`).
+- La règle (guillemets, éditeurs de terminal ignorés dans l'environnement) est documentée dans le README, le modèle de configuration et la doc de la clé.
+
+## 0.1.0-alpha.169 — 2026-11-06 · « Barre de titre : documentation finale »
+
+- README : le statut alpha mentionne la barre de titre maison et le nombre de tests ; `docs/e2e.md` : la section « Barre de titre » sans numéros de plan ni de jalon ; spec : les quatre jalons sont livrés.
+
+## 0.1.0-alpha.168 — 2026-11-06 · « Finitions : éditeurs de terminal, chemins entre guillemets, renommage et bandeau »
+
+- Bouton réglages : un éditeur de terminal (`vi`, `vim`, `nvim`, `nano`, `micro`, `hx`, `emacs`, `ed`) trouvé dans `editor`, `$VISUAL` ou `$EDITOR` est ignoré au profit de la valeur suivante, puis de l'ouvreur du bureau : lancé détaché sans console, il ne s'ouvrait jamais.
+- `editor` et `file_manager` acceptent des guillemets doubles autour d'un programme dont le chemin contient des espaces (`"C:\Program Files\Code\code.exe" --wait`).
+- Pendant la confirmation de fermeture, ni le double clic sur le titre, ni `rename_window`, ni « Renommer » n'ouvrent une saisie : Entrée et Échap restent à la confirmation.
+- Le bandeau « enregistrer la couleur » tient sur une ligne quand le fichier a une erreur de syntaxe (message seul, sans l'extrait du fichier).
+
+## 0.1.0-alpha.167 — 2026-11-06 · « Script de composition de la carte vitrine »
+
+- `scripts/showcase.py SORTIE.webp` compose la carte vitrine 1200×630 (logo, titre, tagline avec emojis, capture `window.png` du renderer, légende) ; `scripts/showcase_test.py` vérifie la taille et la présence de la capture. Pillow seulement.
+
+## 0.1.0-alpha.166 — 2026-11-06 · « Capture de fenêtre complète produite par le renderer »
+
+- Nouvelle image de référence `window.png` : la fenêtre entière (barre de titre maison avec icônes Material et survol du bouton couleur, barre d'onglets avec un onglet coloré, deux panneaux sous leurs bandeaux, texte en couleurs) composée hors écran par les fonctions de chrome du renderer et comparée pixel à pixel en CI.
+- README : cette capture sous le logo, à la place d'une capture d'écran.
+
+## 0.1.0-alpha.165 — 2026-11-06 · « Barre de titre : plan du jalon 4 »
+
+- Plan d'implémentation du jalon 4 « Finitions » : capture de fenêtre complète produite par le renderer, script de carte vitrine, finitions différées par les revues, documentation finale, vitrines publiques.
+
 ## 0.1.0-alpha.164 — 2026-11-06 · « Correctifs de la revue du jalon 3 »
 
 - « Par défaut » ne fait plus tomber rustty quand `titlebar` existe dans le fichier sans être une table (`titlebar = 3`, `[[titlebar]]`) : bandeau d'erreur à la place.

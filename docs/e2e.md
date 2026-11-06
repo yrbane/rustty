@@ -161,7 +161,7 @@ Serveur
 - [ ] LanguageTool arrêté : aucune boîte, et au plus une requête par 30 s (journal `debug`) ; relancé : la boîte revient au survol suivant.
 - [ ] `[spellcheck] enabled = false` (rechargement à chaud) : plus aucune requête ni boîte. `url = "ftp://x"` : erreur de configuration nommant `spellcheck.url`.
 
-## Barre de titre (plan 11)
+## Barre de titre
 Prérequis : `[titlebar] enabled = true` (le défaut) ; la fenêtre n'a plus de décorations système.
 
 Affichage
@@ -177,6 +177,8 @@ Boutons
 - [ ] À gauche : trois icônes grises (engrenage, palette, dossier) ; les survoler éclaircit l'icône sur un fond blanc translucide. Le carré d'agrandir reste bien à l'intérieur de sa pastille.
 - [ ] Réglages : le fichier de configuration s'ouvre dans `code` (clé `editor` par défaut). Sans fichier (`mv ~/.config/rustty/rustty.toml /tmp/`), il est créé depuis le modèle complet puis ouvert ; un fichier existant n'est jamais réécrit.
 - [ ] `editor = ""` : `VISUAL=gedit rustty` ouvre dans gedit ; sans `$VISUAL` ni `$EDITOR`, l'ouvreur du bureau (`xdg-open`) choisit l'application. `editor = "programme-inexistant"` : bandeau d'erreur « ouvrir la configuration : … », l'interface reste vivante.
+- [ ] `VISUAL=vim rustty` avec `editor = ""` : vim (éditeur de terminal, inutilisable détaché) est ignoré et l'ouvreur du bureau prend le relais ; `EDITOR=gedit` derrière `VISUAL=vim` ouvre gedit.
+- [ ] `editor = "\"/tmp/mon éditeur/lance.sh\" --wait"` (script dans un dossier avec espace) : le script est lancé avec `--wait` et le chemin du fichier, pas découpé sur l'espace.
 - [ ] Dossier : l'explorateur s'ouvre sur le dossier courant du panneau actif (`cd /tmp` avant de cliquer) ; `file_manager = "nautilus --new-window"` change de programme. Juste après `ssh` ou avec un shell dont le dossier ne se lit pas : le dossier personnel.
 - [ ] `[keys]` `"ctrl+shift+alt+o" = "open_config"` et `"ctrl+shift+alt+d" = "open_cwd"` font la même chose que les deux boutons.
 - [ ] Sans dossier `~/.config/rustty/` au lancement : cliquer réglages crée dossier et fichier, puis une modification enregistrée dans l'éditeur est rechargée à chaud sans redémarrer.
@@ -185,16 +187,17 @@ Boutons
 - [ ] `background = "#f0f0f0"` : le titre et les trois icônes d'outils deviennent sombres ; les pastilles gardent leurs couleurs. Survoler un bouton d'outil assombrit son fond (voile noir), le survol reste visible.
 - [ ] Renommer l'onglet actif (menu contextuel) : le titre de la fenêtre reprend ce nom ; le retirer rend le titre du terminal.
 
-Titre et couleur (jalon 3)
+Titre et couleur
 - [ ] Double clic sur le titre : la barre montre un tampon pré-rempli du nom de fenêtre (vide la première fois) suivi de `▌` ; taper `deploy` puis Entrée : la barre et la barre des tâches du bureau (`alt+tab`) affichent « deploy — rustty X ». Pendant la saisie, le titre du bureau montre aussi le tampon et le curseur.
 - [ ] Échap pendant la saisie : l'ancien nom reste. Vider le nom puis Entrée : retour au titre du shell (ou au nom de l'onglet s'il en a un). Plus de 64 caractères : la saisie s'arrête à 64.
+- [ ] Pendant la bannière de confirmation de fermeture (`sleep 1000` puis fermer) : double clic sur le titre, `ctrl+shift+alt+w` ou « Renommer » n'ouvrent rien ; Entrée et Échap restent à la confirmation.
 - [ ] `ctrl+shift+alt+w` ouvre la même saisie ; cliquer un panneau ou la barre pendant la saisie l'annule. Un simple clic sur le titre ne fait rien ; deux clics espacés de plus d'un demi-seconde non plus.
 - [ ] Un nom de fenêtre prime sur le nom d'onglet et sur le titre du shell (`printf '\e]0;coucou\a'` ne change plus la barre).
 - [ ] Bouton couleur : le nuancier s'ouvre juste sous le bouton, douze pastilles nommées, puis « Par défaut » et « Couleur du fichier ». Cliquer « Bleu » : le fond de la barre devient bleu (titre et icônes d'outils restent lisibles), onglets et panneaux ne bougent pas. Échap ou un clic ailleurs ferme le nuancier ; `[keys]` `"ctrl+shift+alt+c" = "pick_titlebar_color"` l'ouvre au clavier.
 - [ ] Couleur de session puis modifier `[colors] blue` et sauvegarder : la barre prend le nouveau bleu. Modifier `[titlebar] background` : la barre garde le bleu de session ; « Couleur du fichier » rend la couleur du fichier.
 - [ ] « Par défaut » avec une couleur de session : `background = "#rrggbb"` apparaît dans `[titlebar]` du fichier, les commentaires et les autres clés sont intacts (comparer avec `diff`), la barre garde la couleur sans clignoter, et la couleur de session est oubliée (modifier `background` dans le fichier change maintenant la barre). Sans couleur de session, « Par défaut » ne fait rien.
 - [ ] « Par défaut » sans fichier (`mv ~/.config/rustty/rustty.toml /tmp/`) : le fichier est créé depuis le modèle complet avec la couleur, puis une modification enregistrée est rechargée à chaud. Avec `[titlebar]` écrit en table en ligne (`titlebar = { enabled = true }`) : la clé s'ajoute dans la table en ligne.
-- [ ] Fichier en lecture seule (`chmod 444` sur le dossier `~/.config/rustty`) ou contenant une erreur de syntaxe : bandeau « enregistrer la couleur : … », aucun fichier temporaire ne reste, la couleur de session est conservée.
+- [ ] Fichier en lecture seule (`chmod 444` sur le dossier `~/.config/rustty`) ou contenant une erreur de syntaxe : bandeau « enregistrer la couleur : … » sur une seule ligne (« configuration invalide : … » pour la syntaxe), aucun fichier temporaire ne reste, la couleur de session est conservée.
 - [ ] Fermer un panneau ou un onglet pendant que le nuancier de la barre est ouvert : il reste ouvert et fonctionne.
 - [ ] Déplacer la fenêtre par la barre, relâcher, puis cliquer un onglet : il s'active ; cliquer dans un panneau et relâcher : la sélection ne colle pas à la souris.
 - [ ] Depuis une pastille survolée, sortir la souris d'un coup par le bord de la fenêtre : l'icône de survol s'efface. Idem en changeant de fenêtre (`alt+tab`) la souris sur une pastille.

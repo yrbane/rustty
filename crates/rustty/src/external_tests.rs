@@ -27,9 +27,44 @@ fn editor_falls_back_from_key_to_env_to_opener() {
         editor_command("code --wait", Some("vim"), Some("nano")),
         ["code", "--wait"]
     );
-    assert_eq!(editor_command("", Some("vim"), Some("nano")), ["vim"]);
-    assert_eq!(editor_command("", None, Some("nano -w")), ["nano", "-w"]);
+    assert_eq!(editor_command("", Some("gedit"), Some("kate")), ["gedit"]);
+    assert_eq!(editor_command("", None, Some("subl -w")), ["subl", "-w"]);
     assert_eq!(editor_command("", None, None), opener());
+}
+
+#[test]
+fn quoted_programs_keep_their_spaces() {
+    assert_eq!(
+        editor_command("\"C:\\Program Files\\Code\\code.exe\" --wait", None, None),
+        ["C:\\Program Files\\Code\\code.exe", "--wait"]
+    );
+    assert_eq!(
+        editor_command("\"\"", None, None),
+        opener(),
+        "guillemets vides = blanc"
+    );
+}
+
+#[test]
+fn terminal_editors_yield_to_the_desktop_opener() {
+    assert!(is_terminal_editor("/usr/bin/vim"));
+    assert!(is_terminal_editor("nvim.exe"));
+    assert!(is_terminal_editor("VIM.EXE"), "casse de Windows");
+    assert!(!is_terminal_editor("code"));
+    assert!(
+        !is_terminal_editor("emacs"),
+        "emacs ouvre une fenêtre par défaut"
+    );
+    assert_eq!(editor_command("", Some("vim"), Some("nano -w")), opener());
+    assert_eq!(editor_command("", Some("vim"), Some("gedit")), ["gedit"]);
+}
+
+#[test]
+fn the_editor_key_is_always_respected() {
+    // La clé est un choix explicite : un éditeur de terminal y est lancé tel
+    // quel (à l'utilisateur de le vouloir), seul l'environnement est filtré.
+    assert_eq!(editor_command("vim", Some("gedit"), None), ["vim"]);
+    assert_eq!(editor_command("nano -w", None, None), ["nano", "-w"]);
 }
 
 #[test]

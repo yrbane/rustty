@@ -122,3 +122,27 @@ fn writing_keeps_the_permissions_of_the_original_file() {
     let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
     assert_eq!(mode, 0o600);
 }
+
+#[test]
+fn the_parse_error_banner_is_one_line() {
+    let err = with_titlebar_background("[titlebar\nheight = 28\n", Rgba8::new(0, 0, 0, 0xff))
+        .unwrap_err();
+    let text = err.to_string();
+    assert!(text.starts_with("configuration invalide : "), "{text}");
+    assert!(!text.contains('\n'), "{text}");
+}
+
+#[test]
+fn a_rename_failure_removes_the_temporary_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("rustty.toml");
+    std::fs::create_dir(&target).unwrap();
+    // Dossier non vide : le renommage par-dessus échoue après l'écriture du temporaire.
+    std::fs::write(target.join("occupant"), "").unwrap();
+    assert!(write_atomically(&target, "x").is_err());
+    assert_eq!(
+        std::fs::read_dir(dir.path()).unwrap().count(),
+        1,
+        "pas de .tmp-<pid>"
+    );
+}

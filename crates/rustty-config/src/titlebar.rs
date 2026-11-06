@@ -33,7 +33,9 @@ pub struct TitleBar {
     pub resize_border: u32,
     /// Côté des icônes des boutons, en pixels logiques (8 à 32).
     pub icon_size: u32,
-    /// Éditeur du bouton réglages ; vide : `$VISUAL`, `$EDITOR`, puis l'ouvreur du bureau.
+    /// Éditeur du bouton réglages, découpé en mots (guillemets doubles pour
+    /// un chemin avec espaces) ; vide : `$VISUAL`, `$EDITOR` (les éditeurs de
+    /// terminal y sont ignorés), puis l'ouvreur du bureau.
     pub editor: String,
     /// Explorateur du bouton dossier ; vide : l'ouvreur du bureau.
     pub file_manager: String,

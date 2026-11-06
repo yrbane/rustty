@@ -49,8 +49,11 @@ spacing = 4
 resize_border = 6
 # Côté des icônes Material des boutons (8 à 32).
 icon_size = 14
-# Bouton réglages : éditeur du fichier de configuration, avec ses arguments.
-# Vide : $VISUAL, puis $EDITOR, puis l'ouvreur du bureau (xdg-open, open, start).
+# Bouton réglages : éditeur du fichier de configuration, avec ses arguments ;
+# guillemets doubles autour d'un chemin qui contient des espaces.
+# Vide : $VISUAL, puis $EDITOR (un éditeur de terminal comme vim ou nano y est
+# ignoré : détaché, il ne s'ouvrirait pas), puis l'ouvreur du bureau
+# (xdg-open, open, start).
 editor = "code"
 # Bouton dossier : explorateur ouvert sur le dossier courant du panneau actif.
 # Vide : l'ouvreur du bureau.
