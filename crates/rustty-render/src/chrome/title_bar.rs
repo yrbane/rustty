@@ -216,6 +216,8 @@ pub struct TitleBarState<'a> {
     pub title: &'a str,
     pub hover: Option<TitleButton>,
     pub maximized: bool,
+    /// Couleur de session de la fenêtre, à la place du fond du style.
+    pub background: Option<Rgba>,
 }
 
 pub fn title_bar_chrome(
@@ -224,13 +226,14 @@ pub fn title_bar_chrome(
     state: TitleBarState,
     metrics: CellMetrics,
 ) -> Chrome {
+    let background = state.background.unwrap_or(style.background);
     let mut chrome = Chrome::default();
     chrome.shapes.push(ChromeShape {
         rect: layout.bar,
         style: QuadStyle {
-            fill: style.background.lighten(style.gloss),
-            fill_bottom: style.background,
-            ..QuadStyle::flat(style.background)
+            fill: background.lighten(style.gloss),
+            fill_bottom: background,
+            ..QuadStyle::flat(background)
         },
     });
     if style.gloss > 0.0 {
@@ -253,7 +256,7 @@ pub fn title_bar_chrome(
             // Sur une barre claire, un voile blanc ne se voit pas : le survol
             // des outils prend un voile sombre de même opacité.
             let dark_veil = Rgba::new(0.0, 0.0, 0.0, look.hover_background.a);
-            quad.fill = readable_on(style.background, look.hover_background, dark_veil);
+            quad.fill = readable_on(background, look.hover_background, dark_veil);
             quad.fill_bottom = quad.fill;
         }
         chrome.shapes.push(ChromeShape {
@@ -275,7 +278,7 @@ pub fn title_bar_chrome(
         let color = if button.is_window_control() {
             styled
         } else {
-            readable_on(style.background, styled, DARK_TITLE)
+            readable_on(background, styled, DARK_TITLE)
         };
         chrome.icons.push(ChromeIcon {
             x: rect.x + rect.width / 2,
@@ -293,7 +296,7 @@ pub fn title_bar_chrome(
             x: layout.title.x + layout.title.width.saturating_sub(cells * metrics.width) / 2,
             y: center(layout.bar.y, layout.bar.height, metrics.height),
             text,
-            color: readable_on(style.background, style.title_color, DARK_TITLE),
+            color: readable_on(background, style.title_color, DARK_TITLE),
         });
     }
     chrome

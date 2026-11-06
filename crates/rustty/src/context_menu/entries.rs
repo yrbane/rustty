@@ -15,6 +15,8 @@ pub enum MenuTarget {
     Header(TermId),
     /// Nuancier de l'onglet d'index donné.
     Palette(usize),
+    /// Nuancier de la barre de titre (couleur de session de la fenêtre).
+    TitleBar,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,6 +37,10 @@ pub enum MenuItem {
     /// Une couleur ANSI du nuancier (index de la palette).
     Color(usize),
     DefaultColor,
+    /// Écrit la couleur de session dans `[titlebar] background`.
+    SaveDefaultColor,
+    /// Retire la couleur de session : la barre reprend celle du fichier.
+    ConfigColor,
 }
 
 impl MenuItem {
@@ -55,7 +61,9 @@ impl MenuItem {
             | Self::MoveToNewTab
             | Self::RenamePane
             | Self::Color(_)
-            | Self::DefaultColor => return None,
+            | Self::DefaultColor
+            | Self::SaveDefaultColor
+            | Self::ConfigColor => return None,
         })
     }
 
@@ -88,6 +96,8 @@ impl MenuItem {
                 .position(|s| *s == slot)
                 .map_or("", |i| ACCENT_NAMES[i]),
             Self::DefaultColor => "Couleur par défaut",
+            Self::SaveDefaultColor => "Par défaut",
+            Self::ConfigColor => "Couleur du fichier",
         }
     }
 }
@@ -138,6 +148,11 @@ pub fn entries(target: &MenuTarget) -> Vec<MenuEntry> {
             .iter()
             .map(|slot| Item(M::Color(*slot)))
             .chain([Separator, Item(M::DefaultColor)])
+            .collect(),
+        MenuTarget::TitleBar => ACCENT_SLOTS
+            .iter()
+            .map(|slot| Item(M::Color(*slot)))
+            .chain([Separator, Item(M::SaveDefaultColor), Item(M::ConfigColor)])
             .collect(),
     }
 }

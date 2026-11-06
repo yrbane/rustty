@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0-alpha.157"
+version = "0.1.0-alpha.164"
 edition = "2024"
 license = "GPL-3.0-only"
 repository = "https://github.com/yrbane/rustty"
@@ -20,6 +20,8 @@ proptest = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.9"
+toml_edit = "0.25"
+tempfile = "3"
 thiserror = "2"
 directories = "6"
 portable-pty = "0.9"

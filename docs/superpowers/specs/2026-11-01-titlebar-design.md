@@ -112,7 +112,10 @@ droite dont l'icône n'apparaît qu'au survol.
   dessus `background`. Une entrée « Par défaut » en bas du nuancier écrit la
   couleur résolue dans `[titlebar] background` du TOML, efface la couleur de
   session de cette fenêtre et laisse le rechargement à chaud faire le reste.
-  Une entrée « Couleur du fichier » retire la couleur de session.
+  Une entrée « Couleur du fichier » retire la couleur de session. Mise en
+  œuvre (jalon 3) : la couleur de session est stockée comme index ANSI de la
+  palette (`Option<usize>`), résolue au rendu et à l'écriture, pour qu'elle
+  suive un rechargement de `[colors]`.
 - **Titre.** Le texte de la barre est exactement celui donné à winit :
   `title::window_title(raw, VERSION)`, donc avec le suffixe « — rustty X »,
   où `raw` est le nom fixe de la fenêtre s'il existe, sinon le titre affiché

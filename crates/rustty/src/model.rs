@@ -49,6 +49,10 @@ pub enum Effect {
     OpenConfig,
     /// Ouvrir le dossier courant du panneau actif dans l'explorateur.
     OpenCwd,
+    /// Ouvrir le nuancier de la barre de titre.
+    PickTitleBarColor,
+    /// Écrire la couleur ANSI d'index donné dans `[titlebar] background`.
+    SaveTitleBarColor(usize),
     Exit,
 }
 
@@ -70,8 +74,13 @@ pub struct Model {
     pub hover: HoverTarget,
     pub pending_close: Option<CloseRequest>,
     pub hold: bool,
-    /// Onglet en cours de renommage.
+    /// Onglet, panneau ou fenêtre en cours de renommage.
     pub renaming: Option<Rename>,
+    /// Nom fixe de la fenêtre, prioritaire sur le titre de l'onglet actif.
+    pub window_name: Option<String>,
+    /// Couleur de session de la barre de titre : index ANSI de la palette,
+    /// `None` pour celle du fichier de configuration.
+    pub titlebar_color: Option<usize>,
     notice: Option<Banner>,
     dead: BTreeSet<TermId>,
 }
@@ -85,6 +94,8 @@ impl Model {
             hover: HoverTarget::None,
             pending_close: None,
             renaming: None,
+            window_name: None,
+            titlebar_color: None,
             hold,
             notice: None,
             dead: BTreeSet::new(),
@@ -203,6 +214,8 @@ impl Model {
             Action::ToggleMaximize => vec![Effect::ToggleMaximize],
             Action::OpenConfig => vec![Effect::OpenConfig],
             Action::OpenCwd => vec![Effect::OpenCwd],
+            Action::RenameWindow => self.start_window_rename(),
+            Action::PickTitleBarColor => vec![Effect::PickTitleBarColor],
             Action::Unbind => Vec::new(),
         }
     }

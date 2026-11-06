@@ -74,7 +74,13 @@ horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+
   du système quand un programme tourne encore. À gauche, trois icônes
   Material : réglages ouvre le fichier de configuration dans l'éditeur (créé
   depuis le modèle s'il manque), dossier ouvre le dossier courant du panneau
-  actif dans l'explorateur, couleur n'a pas encore d'effet. Les huit bords et coins
+  actif dans l'explorateur, couleur ouvre un nuancier sous le bouton : une
+  pastille colore le fond de la barre pour la session, « Couleur du fichier »
+  retire cette couleur, « Par défaut » l'écrit dans `[titlebar] background`
+  de la configuration sans toucher au reste du fichier (commentaires, ordre
+  et formatage conservés). Double-cliquer le titre (ou `ctrl+shift+alt+w`)
+  renomme la fenêtre en place : Entrée valide, Échap annule, un nom vide
+  rend le titre du shell. Les huit bords et coins
   redimensionnent la fenêtre (marge `resize_border`, curseur adapté), sauf
   quand elle est agrandie. Cliquer la barre ferme un menu ouvert et termine un
   renommage. Le clic droit n'y fait rien.
@@ -172,11 +178,14 @@ l'ouvreur du bureau), style commun des boutons `[titlebar.button]` (`size`,
 fond, bordure, rayon, couleur d'icône et leurs variantes au survol) et
 surcharges par bouton `[titlebar.buttons.<nom>]` avec `visible` : à gauche
 `settings`, `color`, `folder` (icônes plates, assombries comme le titre sur un
-fond clair ; `color` attend le jalon suivant), à droite `minimize`, `maximize`,
-`close` (pastilles rondes par défaut). Les couleurs acceptent un alpha
-(`"#rrggbbaa"`). Actions clavier `minimize_window`, `toggle_maximize`,
-`open_config` et `open_cwd` (sans raccourci par défaut). Le titre de la
-fenêtre reprend le nom donné à l'onglet actif par « Renommer l'onglet ».
+fond clair), à droite `minimize`, `maximize`, `close` (pastilles rondes par
+défaut). Les couleurs acceptent un alpha (`"#rrggbbaa"`). Actions clavier
+`minimize_window`, `toggle_maximize`, `open_config`, `open_cwd` et
+`pick_titlebar_color` (sans raccourci par défaut), `rename_window`
+(`ctrl+shift+alt+w`). Le titre de la fenêtre est, dans l'ordre, le nom donné
+à la fenêtre, le nom donné à l'onglet actif par « Renommer l'onglet », le titre
+du shell ; la couleur de session choisie au nuancier suit la palette
+`[colors]` au rechargement et « Par défaut » l'écrit dans le fichier.
 
 Nouveautés de personnalisation : `[splits]` (barre entre panneaux avec ou
 sans, épaisseur, couleur fixe ou tirée au sort pour chaque division),

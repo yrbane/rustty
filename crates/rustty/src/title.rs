@@ -33,6 +33,23 @@ pub fn window_title(custom: Option<&str>, term_title: &str, version: &str) -> St
     }
 }
 
+/// Le texte de la barre de titre et de la fenêtre : en cours d'édition du
+/// nom de fenêtre, le tampon et un curseur ; sinon le nom fixe de la
+/// fenêtre, à défaut le nom de l'onglet actif, à défaut le titre du shell,
+/// avec la version.
+pub fn bar_title(
+    window_name: Option<&str>,
+    tab_name: Option<&str>,
+    shell_title: &str,
+    editing: Option<&str>,
+    version: &str,
+) -> String {
+    match editing {
+        Some(buffer) => format!("{buffer}▌"),
+        None => window_title(window_name.or(tab_name), shell_title, version),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,6 +89,31 @@ mod tests {
     fn window_title_carries_the_version() {
         assert_eq!(window_title(None, "bash", "0.1.0"), "bash — rustty 0.1.0");
         assert_eq!(window_title(None, "", "0.1.0"), "rustty 0.1.0");
+    }
+
+    #[test]
+    fn the_bar_title_prefers_the_window_name_then_the_tab_name() {
+        assert_eq!(
+            bar_title(Some("deploy"), Some("build"), "zsh", None, "1.0"),
+            "deploy — rustty 1.0"
+        );
+        assert_eq!(
+            bar_title(None, Some("build"), "zsh", None, "1.0"),
+            "build — rustty 1.0"
+        );
+        assert_eq!(
+            bar_title(None, None, "zsh", None, "1.0"),
+            "zsh — rustty 1.0"
+        );
+    }
+
+    #[test]
+    fn editing_the_window_name_shows_the_buffer_and_a_cursor() {
+        assert_eq!(
+            bar_title(Some("deploy"), None, "zsh", Some("dep"), "1.0"),
+            "dep▌"
+        );
+        assert_eq!(bar_title(None, None, "", Some(""), "1.0"), "▌");
     }
 
     #[test]

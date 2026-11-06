@@ -2,10 +2,13 @@
 //! machine à états pure `TitleDrag` (clic ou déplacement), puis le câblage
 //! dans la fenêtre (boutons, déplacement, redimensionnement, fermeture).
 
+use std::time::Instant;
+
 use rustty_config::TitleButton;
-use rustty_render::TitleTarget;
+use rustty_render::{TitleBarLayout, TitleTarget};
 use winit::window::ResizeDirection;
 
+use crate::context_menu::ContextMenu;
 use crate::model::Effect;
 use crate::mouse::MouseButton;
 use crate::tab::TermId;
@@ -66,17 +69,34 @@ impl TitleDrag {
     }
 }
 
-/// Les effets d'un bouton de fenêtre. Fermer passe par
-/// `OsWindow::request_close_window` ; les boutons d'outils viennent au jalon 2.
+/// Les effets d'un bouton de la barre. Fermer passe par
+/// `OsWindow::request_close_window`, couleur par `open_title_bar_palette`.
 pub fn button_effects(button: TitleButton) -> Vec<Effect> {
     match button {
         TitleButton::Minimize => vec![Effect::Minimize],
         TitleButton::Maximize => vec![Effect::ToggleMaximize],
         TitleButton::Settings => vec![Effect::OpenConfig],
         TitleButton::Folder => vec![Effect::OpenCwd],
-        // Fermer passe par request_close_window ; couleur : jalon 3.
         TitleButton::Close | TitleButton::Color => Vec::new(),
     }
+}
+
+/// Le coin haut-gauche du nuancier de la barre : sous le bouton couleur,
+/// ou sous le début du titre si le bouton est masqué.
+pub fn palette_anchor(layout: &TitleBarLayout) -> (u32, u32) {
+    layout
+        .buttons
+        .iter()
+        .find(|(b, _)| *b == TitleButton::Color)
+        .map_or((layout.title.x, layout.bar.height), |(_, r)| {
+            (r.x, r.y + r.height)
+        })
+}
+
+/// Un clic (sans déplacement) relâché sur le titre compte pour le double
+/// clic qui renomme la fenêtre.
+pub fn title_click_renames(event: TitleDragEvent, target: TitleTarget) -> bool {
+    event == TitleDragEvent::Click && target == TitleTarget::Title
 }
 
 /// La position de la souris en pixels entiers, ou `None` hors de la fenêtre
@@ -145,6 +165,8 @@ impl OsWindow {
         if self.title_drag.moved(x, y, threshold) != TitleDragEvent::StartMove {
             return false;
         }
+        // Un déplacement n'est pas la moitié d'un double clic.
+        self.title_clicks.reset();
         if let Err(e) = self.window.drag_window() {
             tracing::debug!("déplacement refusé par le système : {e}");
         }
@@ -170,8 +192,11 @@ impl OsWindow {
         if pressed.is_none() && !dragging {
             return None;
         }
-        // `Click` servira au double clic sur le titre (jalon 3).
-        let _ = self.title_drag.release();
+        let event = self.title_drag.release();
+        let target = self.title_target(x, y);
+        if title_click_renames(event, target) && self.title_clicks.register(0, Instant::now()) {
+            return Some(self.model.start_window_rename());
+        }
         match pressed {
             Some(b)
                 if button == MouseButton::Left
@@ -188,15 +213,35 @@ impl OsWindow {
     pub fn leave_title_bar(&mut self) -> bool {
         self.title_press = None;
         self.title_drag = TitleDrag::Idle;
+        self.title_clicks.reset();
         self.title_hover.take().is_some()
     }
 
-    /// Les effets d'un bouton de fenêtre, fermer compris.
+    /// Les effets d'un bouton de la barre, fermer et couleur compris.
     pub fn title_button_action(&mut self, button: TitleButton) -> Vec<Effect> {
         match button {
             TitleButton::Close => self.request_close_window(),
+            TitleButton::Color => self.open_title_bar_palette(),
             other => button_effects(other),
         }
+    }
+
+    /// Ouvre le nuancier de la barre de titre (bouton couleur ou action
+    /// `pick_titlebar_color`) ; rien sans barre maison, ni pendant une
+    /// confirmation ou un renommage.
+    pub fn open_title_bar_palette(&mut self) -> Vec<Effect> {
+        let Some(bar) = self.title_bar.as_ref() else {
+            return Vec::new();
+        };
+        if !self.model.accepts_context_menu() {
+            return Vec::new();
+        }
+        let (x, y) = palette_anchor(bar);
+        self.menu = Some(ContextMenu::title_bar(x, y));
+        // Un menu qui s'ouvre met fin à tout glisser en cours.
+        let mut effects = self.cancel_drag();
+        effects.push(Effect::Redraw);
+        effects
     }
 
     /// Demande de fermeture de la fenêtre (croix du système ou bouton de la

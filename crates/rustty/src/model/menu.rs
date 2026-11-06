@@ -20,6 +20,7 @@ impl Model {
             MenuTarget::Header(term) => self.header_command(term, item, confirm_close, running),
             MenuTarget::Tab(tab) => self.tab_command(tab, item, confirm_close, running),
             MenuTarget::Palette(tab) => self.palette_command(tab, item),
+            MenuTarget::TitleBar => self.title_bar_command(item),
         }
     }
 
@@ -91,6 +92,28 @@ impl Model {
         };
         self.workspace.set_tab_color(tab, color);
         vec![Effect::Relayout]
+    }
+
+    /// Nuancier de la barre : une pastille donne la couleur de session,
+    /// « Couleur du fichier » la retire, « Par défaut » l'écrit dans la
+    /// configuration (l'effet l'efface une fois écrite) ; sans couleur de
+    /// session il n'y a rien à écrire.
+    fn title_bar_command(&mut self, item: MenuItem) -> Vec<Effect> {
+        match item {
+            MenuItem::Color(slot) => {
+                self.titlebar_color = Some(slot);
+                vec![Effect::Relayout]
+            }
+            MenuItem::ConfigColor => {
+                self.titlebar_color = None;
+                vec![Effect::Relayout]
+            }
+            MenuItem::SaveDefaultColor => self
+                .titlebar_color
+                .map(|slot| vec![Effect::SaveTitleBarColor(slot)])
+                .unwrap_or_default(),
+            _ => Vec::new(),
+        }
     }
 
     /// Demande la fermeture, avec confirmation si un programme tourne dans les terminaux visés.

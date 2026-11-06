@@ -70,6 +70,8 @@ pub struct OsWindow {
     pub motion: MotionFilter,
     pub tab_clicks: DoubleClick,
     pub header_clicks: DoubleClick,
+    /// Double clic sur le titre de la barre maison (renommage de la fenêtre).
+    pub title_clicks: DoubleClick,
     pub wheel: WheelAccumulator,
     pub press_target: HoverTarget,
     pub tab_bar: Option<TabBarLayout>,
@@ -176,6 +178,7 @@ impl OsWindow {
             motion: MotionFilter::default(),
             tab_clicks: DoubleClick::default(),
             header_clicks: DoubleClick::default(),
+            title_clicks: DoubleClick::default(),
             wheel: WheelAccumulator::default(),
             press_target: HoverTarget::None,
             tab_bar: None,

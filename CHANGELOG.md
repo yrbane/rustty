@@ -4,6 +4,44 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.164 — 2026-11-06 · « Correctifs de la revue du jalon 3 »
+
+- « Par défaut » ne fait plus tomber rustty quand `titlebar` existe dans le fichier sans être une table (`titlebar = 3`, `[[titlebar]]`) : bandeau d'erreur à la place.
+- L'écriture de la configuration suit un lien symbolique (dotfiles par stow, chezmoi…) : la cible est réécrite, le lien reste ; les permissions du fichier (`0600`…) sont conservées.
+- Échap pendant le renommage de la fenêtre remet aussitôt le titre système (barre des tâches, alt-tab) ; le curseur `▌` apparaît dès l'ouverture de la saisie, même avec les décorations du système.
+
+## 0.1.0-alpha.163 — 2026-11-06 · « Barre de titre : documentation du jalon 3 »
+
+- README : renommage de la fenêtre par double clic ou `ctrl+shift+alt+w`, nuancier du bouton couleur, « Par défaut » et « Couleur du fichier », ordre de priorité du titre, actions `rename_window` et `pick_titlebar_color`.
+- `docs/e2e.md` : vérifications manuelles « Titre et couleur » (saisie, Entrée, Échap, nom vide, 64 caractères, nuancier, rechargement de `[colors]`, « Par défaut » avec fichier absent, table en ligne, lecture seule, fichier invalide).
+- Spec : la couleur de session est un index ANSI de la palette.
+
+## 0.1.0-alpha.162 — 2026-11-06 · « « Par défaut » écrit la couleur de la barre dans la configuration »
+
+- « Par défaut » du nuancier écrit la couleur de session dans `[titlebar] background` du fichier de configuration avec `toml_edit` : seule cette clé change, commentaires, ordre et formatage sont conservés ; la section est créée si elle manque, une table en ligne reste en ligne.
+- Fichier absent : créé d'abord depuis le modèle complet, puis la surveillance démarre. Écriture atomique (temporaire puis renommage) ; un échec (fichier invalide, dossier en lecture seule) passe par le bandeau d'erreur et la couleur de session reste.
+- Après l'écriture, la couleur de session s'efface et la barre garde la couleur écrite sans clignoter en attendant le rechargement à chaud.
+
+## 0.1.0-alpha.161 — 2026-11-06 · « Nuancier de la barre de titre : couleur de session »
+
+- Le bouton couleur de la barre (ou l'action `pick_titlebar_color`) ouvre le nuancier sous le bouton : douze pastilles de la palette, « Par défaut » et « Couleur du fichier ».
+- Une pastille donne à la fenêtre, pour la session, cette couleur de fond de barre ; « Couleur du fichier » la retire. La couleur suit la palette `[colors]` au rechargement.
+- « Par défaut » demande l'écriture de la couleur dans la configuration (l'écriture elle-même arrive à la version suivante).
+
+## 0.1.0-alpha.160 — 2026-11-06 · « Double clic sur le titre : renommage de la fenêtre en place »
+
+- Double-cliquer le titre de la barre maison (ou `ctrl+shift+alt+w`) ouvre l'édition du nom de la fenêtre dans la barre : tampon et curseur `▌`, Entrée valide, Échap annule, 64 caractères, nom vide = retour au titre du shell.
+- Le titre dessiné dans la barre et celui donné au système (barre des tâches, alt-tab) sont le même texte : nom fixe de la fenêtre, sinon nom de l'onglet actif, sinon titre du shell, puis la version.
+
+## 0.1.0-alpha.159 — 2026-11-06 · « Nom de fenêtre : cible de renommage et action rename_window »
+
+- Le modèle sait renommer la fenêtre : nouvelle cible d'édition `Window`, nom fixe prioritaire sur le titre de l'onglet actif, un nom vide rend la main au titre du shell.
+- Actions `[keys]` `rename_window` (raccourci par défaut `ctrl+shift+alt+w`) et `pick_titlebar_color` (sans raccourci ; l'ouverture du nuancier arrive avec le bouton couleur).
+
+## 0.1.0-alpha.158 — 2026-11-06 · « Barre de titre : plan du jalon 3 »
+
+- Plan d'implémentation du jalon 3 « Titre et couleur » : renommage de la fenêtre, nuancier de la barre, couleur de session et écriture de `[titlebar] background` dans la configuration.
+
 ## 0.1.0-alpha.157 — 2026-11-06 · « Correctifs de la revue du jalon 2 »
 
 - Le bouton réglages démarre la surveillance du fichier de configuration quand son dossier n'existait pas au lancement : les modifications enregistrées ensuite sont rechargées à chaud sans redémarrer.

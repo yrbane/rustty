@@ -21,11 +21,12 @@ pub enum RenameOutcome {
     Cancel,
 }
 
-/// Ce que l'édition renomme : un onglet (par index) ou un panneau.
+/// Ce que l'édition renomme : un onglet (par index), un panneau ou la fenêtre.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RenameTarget {
     Tab(usize),
     Pane(TermId),
+    Window,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

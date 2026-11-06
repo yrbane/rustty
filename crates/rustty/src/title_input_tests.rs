@@ -1,6 +1,7 @@
 use super::*;
 use crate::mouse::MouseButton;
-use rustty_config::TitleButton;
+use rustty_config::{TitleBar, TitleButton};
+use rustty_render::{TitleBarStyle, TitleTarget, layout_title_bar};
 
 #[test]
 fn maximize_button_restores_when_maximized() {
@@ -103,4 +104,40 @@ fn a_point_outside_the_window_is_not_in_the_bar() {
     assert_eq!(bar_point(5.0, -1.0), None, "au-dessus de la fenêtre");
     assert_eq!(bar_point(0.0, 0.0), Some((0, 0)));
     assert_eq!(bar_point(12.7, 3.2), Some((12, 3)));
+}
+
+#[test]
+fn only_a_click_on_the_title_counts_towards_a_rename() {
+    assert!(title_click_renames(
+        TitleDragEvent::Click,
+        TitleTarget::Title
+    ));
+    assert!(!title_click_renames(
+        TitleDragEvent::Click,
+        TitleTarget::Background
+    ));
+    assert!(!title_click_renames(
+        TitleDragEvent::None,
+        TitleTarget::Title
+    ));
+    assert!(!title_click_renames(
+        TitleDragEvent::StartMove,
+        TitleTarget::Title
+    ));
+}
+
+#[test]
+fn the_palette_hangs_under_the_color_button_or_the_title() {
+    let style = TitleBarStyle::from_config(&TitleBar::default(), 1.0);
+    let layout = layout_title_bar(400, &style);
+    let (_, rect) = layout
+        .buttons
+        .iter()
+        .find(|(b, _)| *b == TitleButton::Color)
+        .unwrap();
+    assert_eq!(palette_anchor(&layout), (rect.x, rect.y + rect.height));
+    let mut cfg = TitleBar::default();
+    cfg.buttons.color.visible = false;
+    let hidden = layout_title_bar(400, &TitleBarStyle::from_config(&cfg, 1.0));
+    assert_eq!(palette_anchor(&hidden), (hidden.title.x, hidden.bar.height));
 }

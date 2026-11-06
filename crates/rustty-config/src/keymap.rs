@@ -45,6 +45,7 @@ const DEFAULTS: &[(&str, Action)] = &[
     ("ctrl+shift+end", Action::ScrollToBottom),
     ("ctrl+shift+f5", Action::ReloadConfig),
     ("ctrl+shift+alt+t", Action::RenameTab),
+    ("ctrl+shift+alt+w", Action::RenameWindow),
     ("ctrl+plus", Action::IncreaseFontSize),
     ("ctrl+shift+plus", Action::IncreaseFontSize),
     ("ctrl+equal", Action::IncreaseFontSize),
@@ -153,6 +154,7 @@ mod tests {
         let k = KeyMap::defaults();
         let r = |s: &str| k.resolve(s.parse().unwrap());
         assert_eq!(r("ctrl+shift+alt+t"), Some(Action::RenameTab));
+        assert_eq!(r("ctrl+shift+alt+w"), Some(Action::RenameWindow));
         assert_eq!(r("ctrl+plus"), Some(Action::IncreaseFontSize));
         assert_eq!(r("ctrl+shift+plus"), Some(Action::IncreaseFontSize));
         assert_eq!(r("ctrl+equal"), Some(Action::IncreaseFontSize));

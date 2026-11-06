@@ -1,7 +1,7 @@
 //! Tests du modèle d'application.
 
 use super::*;
-use crate::rename::RenameKey;
+use crate::rename::{RenameKey, RenameTarget};
 
 #[test]
 fn no_menu_while_a_confirmation_or_rename_is_pending() {
@@ -103,6 +103,67 @@ fn closing_the_renamed_tab_cancels_the_edit() {
     assert!(m.rename_key(RenameKey::Commit).is_empty());
 }
 use rustty_config::SplitAxis;
+
+#[test]
+fn renaming_the_window_sets_its_name() {
+    let (mut m, _) = Model::new(0.9, false);
+    // Le titre système suit la barre : mise en page (qui pousse le titre).
+    assert_eq!(m.start_window_rename(), vec![Effect::Relayout]);
+    assert_eq!(
+        m.renaming.as_ref().map(|r| r.target),
+        Some(RenameTarget::Window)
+    );
+    m.rename_key(RenameKey::Text("build".into()));
+    assert_eq!(m.rename_key(RenameKey::Commit), vec![Effect::Relayout]);
+    assert_eq!(m.window_name.as_deref(), Some("build"));
+    assert!(m.renaming.is_none());
+}
+
+#[test]
+fn an_empty_window_name_returns_to_the_shell_title() {
+    let (mut m, _) = Model::new(0.9, false);
+    m.window_name = Some("build".into());
+    m.start_window_rename();
+    assert_eq!(m.renaming.as_ref().unwrap().buffer, "build", "pré-rempli");
+    for _ in 0..5 {
+        m.rename_key(RenameKey::Backspace);
+    }
+    m.rename_key(RenameKey::Commit);
+    assert_eq!(m.window_name, None);
+}
+
+#[test]
+fn the_rename_window_action_starts_editing() {
+    let (mut m, _) = Model::new(0.9, false);
+    m.apply(Action::RenameWindow, false, &never_running);
+    assert_eq!(
+        m.renaming.as_ref().map(|r| r.target),
+        Some(RenameTarget::Window)
+    );
+    assert_eq!(
+        m.apply(Action::PickTitleBarColor, false, &never_running),
+        vec![Effect::PickTitleBarColor]
+    );
+}
+
+#[test]
+fn cancelling_a_window_rename_restores_the_system_title() {
+    let (mut m, _) = Model::new(0.9, false);
+    m.start_window_rename();
+    m.rename_key(RenameKey::Text("dep".into()));
+    assert_eq!(
+        m.rename_key(RenameKey::Cancel),
+        vec![Effect::Relayout],
+        "Relayout pousse le titre à winit ; Redraw ne le ferait pas"
+    );
+    assert!(m.renaming.is_none());
+    m.start_rename(0);
+    assert_eq!(
+        m.rename_key(RenameKey::Cancel),
+        vec![Effect::Redraw],
+        "un onglet n'a pas changé de largeur : simple redessin"
+    );
+}
 
 fn never_running(_: TermId) -> bool {
     false

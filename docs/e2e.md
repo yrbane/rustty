@@ -184,6 +184,18 @@ Boutons
 - [ ] `[titlebar.buttons.settings] visible = false` : l'icône disparaît et la zone de titre s'élargit vers la gauche.
 - [ ] `background = "#f0f0f0"` : le titre et les trois icônes d'outils deviennent sombres ; les pastilles gardent leurs couleurs. Survoler un bouton d'outil assombrit son fond (voile noir), le survol reste visible.
 - [ ] Renommer l'onglet actif (menu contextuel) : le titre de la fenêtre reprend ce nom ; le retirer rend le titre du terminal.
+
+Titre et couleur (jalon 3)
+- [ ] Double clic sur le titre : la barre montre un tampon pré-rempli du nom de fenêtre (vide la première fois) suivi de `▌` ; taper `deploy` puis Entrée : la barre et la barre des tâches du bureau (`alt+tab`) affichent « deploy — rustty X ». Pendant la saisie, le titre du bureau montre aussi le tampon et le curseur.
+- [ ] Échap pendant la saisie : l'ancien nom reste. Vider le nom puis Entrée : retour au titre du shell (ou au nom de l'onglet s'il en a un). Plus de 64 caractères : la saisie s'arrête à 64.
+- [ ] `ctrl+shift+alt+w` ouvre la même saisie ; cliquer un panneau ou la barre pendant la saisie l'annule. Un simple clic sur le titre ne fait rien ; deux clics espacés de plus d'un demi-seconde non plus.
+- [ ] Un nom de fenêtre prime sur le nom d'onglet et sur le titre du shell (`printf '\e]0;coucou\a'` ne change plus la barre).
+- [ ] Bouton couleur : le nuancier s'ouvre juste sous le bouton, douze pastilles nommées, puis « Par défaut » et « Couleur du fichier ». Cliquer « Bleu » : le fond de la barre devient bleu (titre et icônes d'outils restent lisibles), onglets et panneaux ne bougent pas. Échap ou un clic ailleurs ferme le nuancier ; `[keys]` `"ctrl+shift+alt+c" = "pick_titlebar_color"` l'ouvre au clavier.
+- [ ] Couleur de session puis modifier `[colors] blue` et sauvegarder : la barre prend le nouveau bleu. Modifier `[titlebar] background` : la barre garde le bleu de session ; « Couleur du fichier » rend la couleur du fichier.
+- [ ] « Par défaut » avec une couleur de session : `background = "#rrggbb"` apparaît dans `[titlebar]` du fichier, les commentaires et les autres clés sont intacts (comparer avec `diff`), la barre garde la couleur sans clignoter, et la couleur de session est oubliée (modifier `background` dans le fichier change maintenant la barre). Sans couleur de session, « Par défaut » ne fait rien.
+- [ ] « Par défaut » sans fichier (`mv ~/.config/rustty/rustty.toml /tmp/`) : le fichier est créé depuis le modèle complet avec la couleur, puis une modification enregistrée est rechargée à chaud. Avec `[titlebar]` écrit en table en ligne (`titlebar = { enabled = true }`) : la clé s'ajoute dans la table en ligne.
+- [ ] Fichier en lecture seule (`chmod 444` sur le dossier `~/.config/rustty`) ou contenant une erreur de syntaxe : bandeau « enregistrer la couleur : … », aucun fichier temporaire ne reste, la couleur de session est conservée.
+- [ ] Fermer un panneau ou un onglet pendant que le nuancier de la barre est ouvert : il reste ouvert et fonctionne.
 - [ ] Déplacer la fenêtre par la barre, relâcher, puis cliquer un onglet : il s'active ; cliquer dans un panneau et relâcher : la sélection ne colle pas à la souris.
 - [ ] Depuis une pastille survolée, sortir la souris d'un coup par le bord de la fenêtre : l'icône de survol s'efface. Idem en changeant de fenêtre (`alt+tab`) la souris sur une pastille.
 
