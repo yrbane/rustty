@@ -67,3 +67,14 @@ fn bounds_are_validated_with_the_key_name() {
         "clé inconnue"
     );
 }
+
+#[test]
+fn a_short_bar_names_the_height_not_only_the_default_button_size() {
+    // L'utilisateur n'a écrit que height : l'erreur doit lui montrer les deux clés.
+    let err = Config::from_str("[titlebar]\nheight = 18\n")
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("titlebar.button.size"), "{err}");
+    assert!(err.contains("titlebar.height"), "{err}");
+    assert!(err.contains("18"), "{err}");
+}

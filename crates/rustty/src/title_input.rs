@@ -12,8 +12,8 @@ use crate::tab::TermId;
 use crate::window_edges::resize_direction;
 use crate::window_state::OsWindow;
 
-/// Distance (pixels physiques) à partir de laquelle un appui devient un
-/// déplacement de fenêtre plutôt qu'un clic.
+/// Distance (pixels logiques) à partir de laquelle un appui devient un
+/// déplacement de fenêtre plutôt qu'un clic ; la fenêtre la met à l'échelle.
 pub const MOVE_THRESHOLD: f64 = 4.0;
 
 /// Une fois le déplacement confié au système, celui-ci prend le pointeur et
@@ -43,11 +43,11 @@ impl TitleDrag {
         }
     }
 
-    /// Armé et déplacé d'au moins `MOVE_THRESHOLD` : demande le déplacement,
+    /// Armé et déplacé d'au moins `threshold` pixels : demande le déplacement,
     /// une seule fois, et revient au repos.
-    pub fn moved(&mut self, x: f64, y: f64) -> TitleDragEvent {
+    pub fn moved(&mut self, x: f64, y: f64, threshold: f64) -> TitleDragEvent {
         match *self {
-            TitleDrag::Armed { x: x0, y: y0 } if (x - x0).hypot(y - y0) >= MOVE_THRESHOLD => {
+            TitleDrag::Armed { x: x0, y: y0 } if (x - x0).hypot(y - y0) >= threshold => {
                 *self = TitleDrag::Idle;
                 TitleDragEvent::StartMove
             }
@@ -78,12 +78,19 @@ pub fn button_effects(button: TitleButton) -> Vec<Effect> {
     }
 }
 
+/// La position de la souris en pixels entiers, ou `None` hors de la fenêtre
+/// (coordonnées négatives, comme pendant un relâchement à l'extérieur).
+pub fn bar_point(x: f64, y: f64) -> Option<(u32, u32)> {
+    (x >= 0.0 && y >= 0.0).then_some((x as u32, y as u32))
+}
+
 impl OsWindow {
     /// Ce que la barre de titre a sous `(x, y)` ; `None` sans barre maison.
     fn title_target(&self, x: f64, y: f64) -> TitleTarget {
-        self.title_bar.as_ref().map_or(TitleTarget::None, |bar| {
-            bar.hit_test(x.max(0.0) as u32, y.max(0.0) as u32)
-        })
+        match (self.title_bar.as_ref(), bar_point(x, y)) {
+            (Some(bar), Some((px, py))) => bar.hit_test(px, py),
+            _ => TitleTarget::None,
+        }
     }
 
     /// Le bord ou coin de redimensionnement sous `(x, y)` ; `None` avec les
@@ -111,17 +118,15 @@ impl OsWindow {
         true
     }
 
-    /// Appui sur la barre de titre : ferme le menu, annule le renommage,
-    /// retient le bouton visé ou arme un déplacement. `None` hors de la barre.
+    /// Appui sur la barre de titre : annule le renommage (le menu est déjà
+    /// fermé par `menu_click`), retient le bouton visé ou arme un
+    /// déplacement. `None` hors de la barre.
     pub fn title_press(&mut self, button: MouseButton, x: f64, y: f64) -> Option<Vec<Effect>> {
         let target = self.title_target(x, y);
         if target == TitleTarget::None {
             return None;
         }
-        let mut effects = self.model.cancel_rename();
-        if self.menu.take().is_some() {
-            effects.push(Effect::Redraw);
-        }
+        let effects = self.model.cancel_rename();
         match target {
             TitleTarget::Button(b) => self.title_press = Some(b),
             TitleTarget::Title | TitleTarget::Background => {
@@ -132,24 +137,28 @@ impl OsWindow {
         Some(effects)
     }
 
-    /// Mouvement : démarre le déplacement de la fenêtre au-delà du seuil,
-    /// sinon suit le bouton survolé. `None` si rien n'a changé.
-    pub fn title_moved(&mut self, x: f64, y: f64) -> Option<Vec<Effect>> {
-        if self.title_drag.moved(x, y) == TitleDragEvent::StartMove {
-            if let Err(e) = self.window.drag_window() {
-                tracing::debug!("déplacement refusé par le système : {e}");
-            }
-            return Some(Vec::new());
+    /// Mouvement : démarre le déplacement de la fenêtre au-delà du seuil
+    /// (mis à l'échelle de l'écran). Vrai si le système a pris la main.
+    pub fn title_drag_moved(&mut self, x: f64, y: f64) -> bool {
+        let threshold = MOVE_THRESHOLD * self.window.scale_factor();
+        if self.title_drag.moved(x, y, threshold) != TitleDragEvent::StartMove {
+            return false;
         }
+        if let Err(e) = self.window.drag_window() {
+            tracing::debug!("déplacement refusé par le système : {e}");
+        }
+        true
+    }
+
+    /// Suit le bouton de la barre survolé. Vrai s'il a changé.
+    pub fn update_title_hover(&mut self, x: f64, y: f64) -> bool {
         let hover = match self.title_target(x, y) {
             TitleTarget::Button(b) => Some(b),
             _ => None,
         };
-        if hover == self.title_hover {
-            return None;
-        }
+        let changed = hover != self.title_hover;
         self.title_hover = hover;
-        Some(vec![Effect::Redraw])
+        changed
     }
 
     /// Relâchement : déclenche le bouton si la souris y est encore, termine

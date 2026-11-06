@@ -4,6 +4,16 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.148 — 2026-11-05 · « Mineurs de la revue du jalon 1 »
+
+- Le seuil de déplacement de la fenêtre par la barre (4 px) est en pixels logiques, mis à l'échelle de l'écran (8 px physiques à 200 %).
+- Un relâchement hors de la fenêtre (coordonnées négatives) ne compte plus comme dans la barre : aucune pastille ne se déclenche.
+- Entrer sur une pastille efface aussitôt le surlignage de l'onglet ou du bandeau quitté (plus d'image intermédiaire).
+- Un appui dans la marge de redimensionnement pendant un glisser d'onglet ou de panneau annule ce glisser, dont le relâchement ne reviendrait pas.
+- L'état « agrandie » n'est plus supposé avant la réponse du bureau : il est relu au redimensionnement qui suit, un bureau qui refuse ne laisse pas l'icône « restaurer ».
+- `[titlebar] height` plus petit que la taille par défaut des boutons : l'erreur nomme `titlebar.height` et la taille du bouton, au lieu d'une borne sur une clé que l'utilisateur n'a pas écrite.
+- Nettoyage : fermeture de menu redondante retirée de l'appui sur la barre ; les noms de clés des boutons viennent d'une table au lieu de 21 bras.
+
 ## 0.1.0-alpha.147 — 2026-11-05 · « Correctifs de la revue du jalon 1 »
 
 - Après un déplacement de la fenêtre par la barre de titre, le premier clic suivant n'est plus avalé (sélection qui collait à la souris, onglet qui ne s'activait pas) : le système prend le pointeur dès le début du déplacement et la machine `TitleDrag` revient aussitôt au repos.

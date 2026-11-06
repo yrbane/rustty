@@ -281,41 +281,101 @@ fn validate_button(
     style: &ButtonStyle,
     height: u32,
 ) -> Result<(), ConfigError> {
-    bounded(button_field(prefix, "size"), style.size, 8..=height)?;
-    bounded(button_field(prefix, "radius"), style.radius, 0..=32)?;
+    if style.size > height {
+        return Err(ConfigError::Invalid {
+            field: button_field(prefix, ButtonKey::Size),
+            reason: format!(
+                "{} dépasse titlebar.height = {height} : réduire la taille du bouton ou grandir la barre",
+                style.size
+            ),
+        });
+    }
+    bounded(button_field(prefix, ButtonKey::Size), style.size, 8..=64)?;
     bounded(
-        button_field(prefix, "border_width"),
+        button_field(prefix, ButtonKey::Radius),
+        style.radius,
+        0..=32,
+    )?;
+    bounded(
+        button_field(prefix, ButtonKey::BorderWidth),
         style.border_width,
         0..=4,
     )
 }
 
-/// Nom complet d'une clé de bouton, en `&'static str` comme l'exige `ConfigError`.
-fn button_field(prefix: &'static str, key: &str) -> &'static str {
-    match (prefix, key) {
-        ("titlebar.button", "size") => "titlebar.button.size",
-        ("titlebar.button", "radius") => "titlebar.button.radius",
-        ("titlebar.button", "border_width") => "titlebar.button.border_width",
-        ("titlebar.buttons.settings", "size") => "titlebar.buttons.settings.size",
-        ("titlebar.buttons.settings", "radius") => "titlebar.buttons.settings.radius",
-        ("titlebar.buttons.settings", "border_width") => "titlebar.buttons.settings.border_width",
-        ("titlebar.buttons.color", "size") => "titlebar.buttons.color.size",
-        ("titlebar.buttons.color", "radius") => "titlebar.buttons.color.radius",
-        ("titlebar.buttons.color", "border_width") => "titlebar.buttons.color.border_width",
-        ("titlebar.buttons.folder", "size") => "titlebar.buttons.folder.size",
-        ("titlebar.buttons.folder", "radius") => "titlebar.buttons.folder.radius",
-        ("titlebar.buttons.folder", "border_width") => "titlebar.buttons.folder.border_width",
-        ("titlebar.buttons.minimize", "size") => "titlebar.buttons.minimize.size",
-        ("titlebar.buttons.minimize", "radius") => "titlebar.buttons.minimize.radius",
-        ("titlebar.buttons.minimize", "border_width") => "titlebar.buttons.minimize.border_width",
-        ("titlebar.buttons.maximize", "size") => "titlebar.buttons.maximize.size",
-        ("titlebar.buttons.maximize", "radius") => "titlebar.buttons.maximize.radius",
-        ("titlebar.buttons.maximize", "border_width") => "titlebar.buttons.maximize.border_width",
-        ("titlebar.buttons.close", "size") => "titlebar.buttons.close.size",
-        ("titlebar.buttons.close", "radius") => "titlebar.buttons.close.radius",
-        ("titlebar.buttons.close", "border_width") => "titlebar.buttons.close.border_width",
-        _ => "titlebar.buttons",
-    }
+#[derive(Clone, Copy)]
+enum ButtonKey {
+    Size,
+    Radius,
+    BorderWidth,
+}
+
+/// Noms complets des clés bornées de chaque table de bouton, en
+/// `&'static str` comme l'exige `ConfigError`.
+const BUTTON_FIELDS: [(&str, [&str; 3]); 7] = [
+    (
+        "titlebar.button",
+        [
+            "titlebar.button.size",
+            "titlebar.button.radius",
+            "titlebar.button.border_width",
+        ],
+    ),
+    (
+        "titlebar.buttons.settings",
+        [
+            "titlebar.buttons.settings.size",
+            "titlebar.buttons.settings.radius",
+            "titlebar.buttons.settings.border_width",
+        ],
+    ),
+    (
+        "titlebar.buttons.color",
+        [
+            "titlebar.buttons.color.size",
+            "titlebar.buttons.color.radius",
+            "titlebar.buttons.color.border_width",
+        ],
+    ),
+    (
+        "titlebar.buttons.folder",
+        [
+            "titlebar.buttons.folder.size",
+            "titlebar.buttons.folder.radius",
+            "titlebar.buttons.folder.border_width",
+        ],
+    ),
+    (
+        "titlebar.buttons.minimize",
+        [
+            "titlebar.buttons.minimize.size",
+            "titlebar.buttons.minimize.radius",
+            "titlebar.buttons.minimize.border_width",
+        ],
+    ),
+    (
+        "titlebar.buttons.maximize",
+        [
+            "titlebar.buttons.maximize.size",
+            "titlebar.buttons.maximize.radius",
+            "titlebar.buttons.maximize.border_width",
+        ],
+    ),
+    (
+        "titlebar.buttons.close",
+        [
+            "titlebar.buttons.close.size",
+            "titlebar.buttons.close.radius",
+            "titlebar.buttons.close.border_width",
+        ],
+    ),
+];
+
+fn button_field(prefix: &str, key: ButtonKey) -> &'static str {
+    BUTTON_FIELDS
+        .iter()
+        .find(|(p, _)| *p == prefix)
+        .map_or("titlebar.buttons", |(_, keys)| keys[key as usize])
 }
 
 #[cfg(test)]
