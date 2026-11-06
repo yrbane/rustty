@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.151 — 2026-11-06 · « Clés icon_size, editor, file_manager et actions open_config, open_cwd »
+
+- `[titlebar]` accepte `icon_size` (8 à 32, défaut 14, pixels logiques), `editor` (défaut `"code"` ; vide : `$VISUAL`, `$EDITOR`, puis l'ouvreur du bureau) et `file_manager` (défaut vide : l'ouvreur du bureau). Documentées dans le modèle `--init-config`.
+- Nouvelles actions `[keys]` `open_config` et `open_cwd`, sans raccourci par défaut ; elles ne font rien tant que le lancement n'est pas câblé (prochaines versions).
+
 ## 0.1.0-alpha.150 — 2026-11-06 · « Police Material Symbols embarquée »
 
 - Nouvelle police d'icônes pour la barre de titre : Material Symbols Rounded (Apache 2.0, licence jointe) réduite aux sept glyphes réglages, palette, dossier, réduire, agrandir, restaurer, fermer ; 2,7 Ko embarqués dans `rustty-render` (`IconFace`, module `icons`). Script `scripts/material-icons.sh` pour la régénérer (fonttools dans un venv jetable).

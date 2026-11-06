@@ -45,6 +45,10 @@ pub enum Effect {
     Minimize,
     /// Agrandir la fenêtre, ou la restaurer si elle l'est déjà.
     ToggleMaximize,
+    /// Ouvrir le fichier de configuration dans l'éditeur.
+    OpenConfig,
+    /// Ouvrir le dossier courant du panneau actif dans l'explorateur.
+    OpenCwd,
     Exit,
 }
 
@@ -197,6 +201,8 @@ impl Model {
             Action::ResetFontSize => vec![Effect::FontSize(FontChange::Reset)],
             Action::MinimizeWindow => vec![Effect::Minimize],
             Action::ToggleMaximize => vec![Effect::ToggleMaximize],
+            Action::OpenConfig => vec![Effect::OpenConfig],
+            Action::OpenCwd => vec![Effect::OpenCwd],
             Action::Unbind => Vec::new(),
         }
     }

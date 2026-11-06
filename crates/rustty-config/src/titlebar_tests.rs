@@ -58,6 +58,7 @@ fn bounds_are_validated_with_the_key_name() {
             "titlebar.buttons.close.radius",
         ),
         ("[titlebar]\nresize_border = 17\n", "titlebar.resize_border"),
+        ("[titlebar]\nicon_size = 33\n", "titlebar.icon_size"),
     ] {
         let err = Config::from_str(toml).unwrap_err().to_string();
         assert!(err.contains(key), "{toml}: {err}");
@@ -77,4 +78,25 @@ fn a_short_bar_names_the_height_not_only_the_default_button_size() {
     assert!(err.contains("titlebar.button.size"), "{err}");
     assert!(err.contains("titlebar.height"), "{err}");
     assert!(err.contains("18"), "{err}");
+}
+
+#[test]
+fn icon_size_and_external_commands_have_the_spec_defaults() {
+    let t = TitleBar::default();
+    assert_eq!(
+        (t.icon_size, t.editor.as_str(), t.file_manager.as_str()),
+        (14, "code", "")
+    );
+    let c = Config::from_str(
+        "[titlebar]\nicon_size = 20\neditor = \"\"\nfile_manager = \"nautilus\"\n",
+    )
+    .unwrap();
+    assert_eq!(
+        (
+            c.titlebar.icon_size,
+            c.titlebar.editor.as_str(),
+            c.titlebar.file_manager.as_str()
+        ),
+        (20, "", "nautilus")
+    );
 }

@@ -61,6 +61,9 @@ impl OsWindow {
                     self.window.set_maximized(!self.window.is_maximized());
                     self.window.request_redraw();
                 }
+                // Les deux lancements arrivent avec la tâche 5 du jalon 2.
+                Effect::OpenConfig => tracing::debug!("open_config : pas encore câblé"),
+                Effect::OpenCwd => tracing::debug!("open_cwd : pas encore câblé"),
                 Effect::Exit => event_loop.exit(),
             }
         }
