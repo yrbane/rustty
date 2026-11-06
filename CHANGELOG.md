@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.165 — 2026-11-06 · « Barre de titre : plan du jalon 4 »
+
+- Plan d'implémentation du jalon 4 « Finitions » : capture de fenêtre complète produite par le renderer, script de carte vitrine, finitions différées par les revues, documentation finale, vitrines publiques.
+
 ## 0.1.0-alpha.164 — 2026-11-06 · « Correctifs de la revue du jalon 3 »
 
 - « Par défaut » ne fait plus tomber rustty quand `titlebar` existe dans le fichier sans être une table (`titlebar = 3`, `[[titlebar]]`) : bandeau d'erreur à la place.
