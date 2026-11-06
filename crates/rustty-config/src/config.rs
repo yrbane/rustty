@@ -7,6 +7,7 @@ use serde::Deserialize;
 use crate::error::ConfigError;
 use crate::keymap::KeyMap;
 use crate::sections::{Colors, Font, Spellcheck, Splits, Tabs, Window};
+use crate::titlebar::TitleBar;
 
 /// Plafond de lignes d'historique par fenêtre : au-delà, la mémoire explose
 /// avant que l'utilisateur ne s'en serve.
@@ -21,6 +22,7 @@ pub struct Config {
     pub splits: Splits,
     pub spellcheck: Spellcheck,
     pub colors: Colors,
+    pub titlebar: TitleBar,
     pub keys: KeyMap,
 }
 
@@ -78,6 +80,7 @@ impl Config {
         )?;
         bounded("tabs.padding_vertical", self.tabs.padding_vertical, 0..=32)?;
         bounded("tabs.spacing", self.tabs.spacing, 0..=64)?;
+        self.titlebar.validate()?;
         let url = self.spellcheck.url.trim_end_matches('/');
         if !(url.starts_with("http://") || url.starts_with("https://")) {
             return invalid(

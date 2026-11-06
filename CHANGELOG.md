@@ -4,6 +4,69 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.148 — 2026-11-05 · « Mineurs de la revue du jalon 1 »
+
+- Le seuil de déplacement de la fenêtre par la barre (4 px) est en pixels logiques, mis à l'échelle de l'écran (8 px physiques à 200 %).
+- Un relâchement hors de la fenêtre (coordonnées négatives) ne compte plus comme dans la barre : aucune pastille ne se déclenche.
+- Entrer sur une pastille efface aussitôt le surlignage de l'onglet ou du bandeau quitté (plus d'image intermédiaire).
+- Un appui dans la marge de redimensionnement pendant un glisser d'onglet ou de panneau annule ce glisser, dont le relâchement ne reviendrait pas.
+- L'état « agrandie » n'est plus supposé avant la réponse du bureau : il est relu au redimensionnement qui suit, un bureau qui refuse ne laisse pas l'icône « restaurer ».
+- `[titlebar] height` plus petit que la taille par défaut des boutons : l'erreur nomme `titlebar.height` et la taille du bouton, au lieu d'une borne sur une clé que l'utilisateur n'a pas écrite.
+- Nettoyage : fermeture de menu redondante retirée de l'appui sur la barre ; les noms de clés des boutons viennent d'une table au lieu de 21 bras.
+
+## 0.1.0-alpha.147 — 2026-11-05 · « Correctifs de la revue du jalon 1 »
+
+- Après un déplacement de la fenêtre par la barre de titre, le premier clic suivant n'est plus avalé (sélection qui collait à la souris, onglet qui ne s'activait pas) : le système prend le pointeur dès le début du déplacement et la machine `TitleDrag` revient aussitôt au repos.
+- Le survol d'une pastille s'efface quand la souris quitte la fenêtre d'un coup ou quand la fenêtre perd le focus ; l'appui et le glisser en cours sur la barre sont oubliés dans les mêmes cas.
+- README et parcours E2E : `settings`, `color`, `folder` sont acceptés dans `[titlebar.buttons.*]` mais ne sont pas encore dessinés (la version précédente les disait visibles) ; trois vérifications ajoutées au parcours.
+
+## 0.1.0-alpha.146 — 2026-11-05 · « Barre de titre maison : documentation du jalon 1 »
+
+- Jalon 1 de la barre de titre maison (alpha.138 à alpha.145) : activée par défaut (`[titlebar] enabled = true`), rustty retire les décorations du système et dessine sa barre en haut de la fenêtre, au-dessus des onglets, avec le titre du shell actif et les pastilles réduire, agrandir/restaurer, fermer ; déplacement par la barre, redimensionnement par les bords et coins, bascule à chaud vers la barre du système, actions clavier `minimize_window` et `toggle_maximize`. Les boutons `settings`, `color`, `folder` sont visibles mais sans effet jusqu'au jalon 2.
+- README : section `[titlebar]`, gestes de la barre dans « Souris », `decorations_theme` ne sert que si `enabled = false`.
+- `docs/e2e.md` : parcours « Barre de titre (plan 11) » (affichage, boutons, déplacement et redimensionnement, configuration à chaud).
+- Spec de la barre : le bouton fermer passe par `request_close_window`, pas par l'action `close_window` (qui ferme le panneau).
+
+## 0.1.0-alpha.145 — 2026-11-05 · « Boutons de fenêtre, déplacement et redimensionnement »
+
+- La barre de titre maison réagit à la souris : survol des pastilles, réduire, agrandir ou restaurer, fermer (avec la même confirmation que la croix du système quand un programme tourne encore), glisser la barre déplace la fenêtre, un clic simple ne la déplace pas, un menu d'onglet ou un renommage en cours se ferme en cliquant la barre.
+- Les huit bords et coins de la fenêtre sans décorations redimensionnent (marge `titlebar.resize_border`) avec le curseur correspondant ; rien ne redimensionne quand la fenêtre est agrandie.
+- Nouvelles actions clavier `minimize_window` et `toggle_maximize` (sans raccourci par défaut), citées dans `--init-config` et `docs/rustty.example.toml`.
+- La demande de fermeture de la fenêtre est factorisée dans `OsWindow::request_close_window`, partagée par la croix du système et le bouton de la barre.
+
+## 0.1.0-alpha.144 — 2026-11-05 · « Bords de redimensionnement et seuil de déplacement »
+
+- Nouveaux modules purs dans `rustty`, pas encore branchés sur la souris : `window_edges::resize_direction` dit quel bord ou coin de la fenêtre sans décorations se trouve sous la souris (marge `resize_border`, rien quand la fenêtre est maximisée) et `resize_cursor` donne le curseur correspondant ; `title_input::TitleDrag` distingue un clic sur la zone de titre d'un déplacement de fenêtre (seuil de 4 px, bouton gauche seul).
+
+## 0.1.0-alpha.143 — 2026-11-05 · « La barre de titre dans la fenêtre »
+
+- La barre de titre maison s'affiche en haut de la fenêtre quand `[titlebar] enabled = true` : les décorations système sont retirées à l'ouverture (et remises ou retirées au rechargement de la configuration si la clé change), la barre d'onglets et les panneaux descendent de sa hauteur, le titre du shell actif y est dessiné avec les boutons de fenêtre, l'état maximisé suit la fenêtre et le style se recalcule au changement d'échelle d'écran.
+- Nouveau module `title_bar` dans `rustty` (décorations voulues, changement de décorations, hauteur réservée, disposition et chrome de la barre).
+- Les boutons ne réagissent pas encore à la souris : prochaine étape.
+
+## 0.1.0-alpha.142 — 2026-11-02 · « La géométrie réserve la barre de titre »
+
+- `geometry::window_geometry` accepte la hauteur de la barre de titre, toujours en haut : la barre d'onglets et les panneaux descendent d'autant, même quand la barre d'onglets est en bas ; une fenêtre minuscule ne déborde jamais. Encore appelée avec 0 : rien ne change à l'écran.
+
+## 0.1.0-alpha.141 — 2026-11-02 · « Disposition et dessin de la barre de titre »
+
+- `rustty-render` : module `chrome/title_bar` (pur) : `TitleBarStyle::from_config` convertit la section `[titlebar]` en pixels physiques selon le facteur d'échelle, `layout_title_bar` place les boutons de fenêtre à droite et la zone de titre entre les deux groupes, `hit_test` distingue bouton, titre et fond, `title_bar_chrome` produit le fond à reflet, le liseré, le séparateur, les pastilles (style de survol, rayon, bordure), leurs glyphes et le titre centré, tronqué, assombri sur un fond clair. Image de référence `title_bar.png`. Rien n'est encore branché dans la fenêtre.
+
+## 0.1.0-alpha.140 — 2026-11-02 · « Quads à coins arrondis, bordure et dégradé »
+
+- `rustty-render` : le pipeline de rectangles sait dessiner des coins arrondis (distance signée, antialiasés), une bordure intérieure et un dégradé vertical (`QuadStyle`, `QuadInstance::styled`, `Chrome.shapes`). Aux valeurs neutres, le rendu est identique au pixel près : les images de référence existantes sont inchangées ; nouvelle image `styled_quad.png`.
+
+## 0.1.0-alpha.139 — 2026-11-02 · « Section [titlebar] de la configuration »
+
+- Nouvelle section `[titlebar]` (sans effet visible encore) : `enabled`, `height`, `background`, `gloss`, `separator_color`, `title_color`, `padding`, `spacing`, `resize_border`, style commun `[titlebar.button]` et surcharges `[titlebar.buttons.<nom>]` pour `settings`, `color`, `folder`, `minimize`, `maximize`, `close` (`visible`, fond, bordure, rayon, couleur d'icône, et les mêmes au survol). Tailles en pixels logiques, bornes validées avec le nom de la clé.
+- Les trois boutons de fenêtre ont un préréglage de pastille ronde que la table de l'utilisateur ne remplace que clé par clé.
+- Modèle `--init-config` et `docs/rustty.example.toml` documentent la section.
+
+## 0.1.0-alpha.138 — 2026-11-01 · « Couleurs avec alpha et design de la barre de titre »
+
+- `rustty-config` : type `Rgba8` (`#rrggbb` ou `#rrggbbaa`) pour les couleurs avec opacité de la future section `[titlebar]` ; `rustty-render` : `Rgba::from_rgba8` et `Rgba::lighten`.
+- Design `docs/superpowers/specs/2026-11-01-titlebar-design.md` et plan du jalon 1 `docs/superpowers/plans/2026-11-01-titlebar-1-barre-et-fenetre.md` : barre de titre maison (décorations système retirées, boutons paramétrables, icônes Material, nuancier, renommage).
+
 ## 0.1.0-alpha.137 — 2026-11-01 · « Décorations sombres de la fenêtre »
 
 - `[window] decorations_theme` (`"dark"` par défaut, `"light"`, `"system"`) : thème de la barre de titre et des bordures que winit dessine côté client quand le compositeur ne fournit pas de décorations (GNOME Wayland). Fini le bandeau blanc au-dessus d'un terminal sombre. Le réglage ne concerne que la fenêtre de rustty, jamais la préférence du bureau, et se recharge à chaud.

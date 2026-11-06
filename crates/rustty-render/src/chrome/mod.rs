@@ -2,9 +2,14 @@
 //! traduction en quads et textes pour le renderer. Pur, sans GPU.
 
 mod pane_header;
+mod title_bar;
 mod title_fit;
 
 pub use pane_header::{PaneHeaderSpec, pane_header_chrome, pane_header_close_rect};
+pub use title_bar::{
+    ButtonLook, TitleBarLayout, TitleBarState, TitleBarStyle, TitleTarget, layout_title_bar,
+    title_bar_chrome, title_bar_height,
+};
 
 use rustty_config::{Rgb, Tabs};
 
@@ -241,7 +246,7 @@ pub fn tab_bar_chrome(
             rect: layout.bar,
             color: style.background,
         }],
-        texts: Vec::new(),
+        ..Chrome::default()
     };
     let text_y = layout.bar.y + style.padding_vertical;
     let pad = style.padding_horizontal;

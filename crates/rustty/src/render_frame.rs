@@ -274,7 +274,7 @@ mod tests {
                 rect: PixelRect::new(0, 0, 200, 24),
                 color: Rgba::new(0.0, 0.0, 0.0, 1.0),
             }],
-            texts: Vec::new(),
+            ..Chrome::default()
         };
         let frame = build_frame((200, 124), Rgba::new(0.1, 0.1, 0.1, 0.9), &panes, chrome);
         assert_eq!(frame.viewport, (200, 124));

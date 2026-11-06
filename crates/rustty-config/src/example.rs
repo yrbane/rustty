@@ -28,6 +28,66 @@ osc52_clipboard = true
 # "system" (préférence du bureau). Ne change que cette fenêtre.
 decorations_theme = "dark"
 
+[titlebar]
+# Barre de titre dessinée par rustty (les décorations du système sont retirées).
+# false : barre du système, colorée par window.decorations_theme.
+enabled = true
+# Toutes les tailles de cette section sont en pixels logiques.
+# Hauteur de la barre (16 à 64).
+height = 28
+# Fond ; les couleurs acceptent "#rrggbb" ou "#rrggbbaa" (alpha).
+background = "#141414"
+# Reflet : liseré clair en haut et léger dégradé, de 0.0 (plat) à 1.0.
+gloss = 0.1
+# Trait de 1 px sous la barre.
+separator_color = "#000000"
+title_color = "#d8d8d8"
+# Marge à gauche et à droite, espace entre les boutons.
+padding = 6
+spacing = 4
+# Marge invisible sur le pourtour de la fenêtre qui la redimensionne (0 à 16).
+resize_border = 6
+
+# Style commun des boutons ; chaque bouton peut le surcharger ci-dessous.
+[titlebar.button]
+# Côté du bouton (8 à height).
+size = 22
+background = "#00000000"
+border_color = "#00000000"
+# Largeur de la bordure (0 à 4) et rayon des coins (0 à 32 ; ≥ size/2 : disque).
+border_width = 0
+radius = 5
+icon_color = "#bdbdbd"
+# Au survol.
+hover_background = "#ffffff1a"
+hover_border_color = "#00000000"
+hover_icon_color = "#ffffff"
+
+# Boutons, de gauche à droite : settings, color, folder, puis minimize,
+# maximize, close. Chaque table accepte visible et les clés de [titlebar.button].
+[titlebar.buttons.settings]
+visible = true
+
+[titlebar.buttons.color]
+visible = true
+
+[titlebar.buttons.folder]
+visible = true
+
+# Les trois boutons de fenêtre ont un préréglage : pastille ronde (size = 14,
+# radius = 7, border_width = 1, border_color = "#00000099"), fond jaune
+# "#f6bd3b" / vert "#3dc84f" / rouge "#ff5f57" conservé au survol, icône
+# invisible ("#00000000") sauf au survol ("#111111"). Toute clé écrite ici
+# remplace la valeur du préréglage.
+[titlebar.buttons.minimize]
+visible = true
+
+[titlebar.buttons.maximize]
+visible = true
+
+[titlebar.buttons.close]
+visible = true
+
 [tabs]
 # Position de la barre d'onglets : "top", "bottom" ou "hidden".
 position = "top"
@@ -97,7 +157,7 @@ palette = [
 # Actions sans paramètre : "new_tab", "close_tab", "next_tab", "prev_tab",
 # "close_window", "toggle_zoom", "rotate", "copy", "paste", "scroll_to_bottom",
 # "reload_config", "rename_tab", "increase_font_size", "decrease_font_size",
-# "reset_font_size", "none".
+# "reset_font_size", "minimize_window", "toggle_maximize", "none".
 # Touches de ponctuation : "plus", "minus", "equal".
 # Actions à paramètre : { split = "horizontal" | "vertical" },
 # { focus = "left" | "right" | "up" | "down" },
@@ -180,6 +240,15 @@ mod tests {
             "confirm_close_with_running_children",
             "osc52_clipboard",
             "decorations_theme",
+            "[titlebar]",
+            "enabled",
+            "gloss",
+            "separator_color",
+            "title_color",
+            "resize_border",
+            "[titlebar.button]",
+            "hover_icon_color",
+            "[titlebar.buttons.close]",
             "[tabs]",
             "position",
             "min_tabs",
@@ -201,6 +270,8 @@ mod tests {
             "url",
             "rename_tab",
             "increase_font_size",
+            "minimize_window",
+            "toggle_maximize",
         ] {
             assert!(DEFAULT_TOML.contains(key), "{key} absent de l'exemple");
         }

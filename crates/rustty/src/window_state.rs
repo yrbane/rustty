@@ -7,11 +7,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context as _;
-use rustty_config::{Config, DecorationsTheme, Mods};
+use rustty_config::{Config, DecorationsTheme, Mods, TitleButton};
 use rustty_layout::{Rect, SplitId, WindowId};
 use rustty_pty::Shell;
 use rustty_render::{
     CellMetrics, GpuContext, HoverTarget, Palette, PixelRect, TabBarLayout, TabBarStyle,
+    TitleBarLayout, TitleBarStyle,
 };
 use winit::dpi::LogicalSize;
 use winit::event_loop::ActiveEventLoop;
@@ -32,6 +33,7 @@ use crate::spell::SpellState;
 use crate::tab::TermId;
 use crate::term_window::{Launch, TermWindow};
 use crate::title;
+use crate::title_input::TitleDrag;
 
 /// Icône de fenêtre (X11, Windows) ; Wayland passe par le `.desktop`.
 const ICON_PNG: &[u8] = include_bytes!("../../../assets/icons/rustty-256.png");
@@ -50,6 +52,8 @@ pub struct OsWindow {
     pub pane_fonts: PaneFonts,
     pub palette: Palette,
     pub tab_style: TabBarStyle,
+    /// Barre de titre maison, en pixels physiques.
+    pub title_style: TitleBarStyle,
     pub config: Config,
     pub config_path: Option<PathBuf>,
     pub model: Model,
@@ -69,6 +73,16 @@ pub struct OsWindow {
     pub wheel: WheelAccumulator,
     pub press_target: HoverTarget,
     pub tab_bar: Option<TabBarLayout>,
+    /// Barre de titre maison disposée ; `None` si désactivée.
+    pub title_bar: Option<TitleBarLayout>,
+    /// Bouton de la barre de titre sous la souris.
+    pub title_hover: Option<TitleButton>,
+    /// Bouton de la barre de titre enfoncé, déclenché au relâchement dessus.
+    pub title_press: Option<TitleButton>,
+    /// Clic ou déplacement de fenêtre depuis la zone de titre.
+    pub title_drag: TitleDrag,
+    /// Fenêtre agrandie (icône restaurer).
+    pub maximized: bool,
     /// Rectangles du contenu des panneaux (bandeau retiré).
     pub pane_rects: Vec<(WindowId, PixelRect)>,
     pub headers: Vec<PaneHeader>,
@@ -105,6 +119,7 @@ impl OsWindow {
             .with_inner_size(DEFAULT_SIZE)
             .with_transparent(true)
             .with_theme(winit_theme(config.window.decorations_theme))
+            .with_decorations(crate::title_bar::decorations_wanted(&config.titlebar))
             .with_window_icon(load_icon());
         let attrs = with_app_id(attrs);
         let window = Arc::new(
@@ -129,6 +144,8 @@ impl OsWindow {
         );
         let pane_fonts = PaneFonts::new(config.font.size);
         let tab_style = TabBarStyle::from_config(&palette, &config.tabs);
+        let title_style = TitleBarStyle::from_config(&config.titlebar, window.scale_factor());
+        let maximized = window.is_maximized();
         let (mut model, first) = Model::new(config.window.opacity, hold);
         if let Some(e) = config_error {
             model.set_notice(Some(Banner::error(format!("configuration : {e}"))));
@@ -144,6 +161,7 @@ impl OsWindow {
             pane_fonts,
             palette,
             tab_style,
+            title_style,
             config,
             config_path,
             model,
@@ -161,6 +179,11 @@ impl OsWindow {
             wheel: WheelAccumulator::default(),
             press_target: HoverTarget::None,
             tab_bar: None,
+            title_bar: None,
+            title_hover: None,
+            title_press: None,
+            title_drag: TitleDrag::Idle,
+            maximized,
             pane_rects: Vec::new(),
             headers: Vec::new(),
             header_hover: None,
@@ -248,15 +271,7 @@ impl OsWindow {
     }
 
     pub fn update_title(&self) {
-        let raw = self
-            .model
-            .workspace
-            .focused_term()
-            .and_then(|t| self.titles.get(&t))
-            .map(String::as_str)
-            .unwrap_or("");
-        self.window
-            .set_title(&title::window_title(raw, crate::VERSION));
+        self.window.set_title(&self.window_title_text());
     }
 
     /// Applique une configuration rechargée : palette, police, onglets, opacité, raccourcis.
@@ -275,7 +290,13 @@ impl OsWindow {
             self.window
                 .set_theme(winit_theme(new.window.decorations_theme));
         }
+        let decorations =
+            crate::title_bar::decorations_change(&self.config.titlebar, &new.titlebar);
         self.config = new;
+        self.rebuild_title_style();
+        if let Some(wanted) = decorations {
+            self.window.set_decorations(wanted);
+        }
         if font_changed {
             self.rebuild_fonts();
         } else {

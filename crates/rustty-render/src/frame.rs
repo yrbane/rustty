@@ -5,6 +5,7 @@
 use rustty_vt::Snapshot;
 
 use crate::color::Rgba;
+use crate::pipeline::quad::QuadStyle;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PixelRect {
@@ -45,9 +46,17 @@ pub struct ChromeText {
     pub color: Rgba,
 }
 
+/// Rectangle stylé (coins arrondis, bordure, dégradé), dessiné après les quads.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChromeShape {
+    pub rect: PixelRect,
+    pub style: QuadStyle,
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Chrome {
     pub quads: Vec<ChromeQuad>,
+    pub shapes: Vec<ChromeShape>,
     pub texts: Vec<ChromeText>,
 }
 

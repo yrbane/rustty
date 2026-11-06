@@ -39,7 +39,10 @@ mod spell_input;
 mod tab;
 mod term_window;
 mod title;
+mod title_bar;
+mod title_input;
 mod wheel_input;
+mod window_edges;
 mod window_state;
 mod workspace;
 

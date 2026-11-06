@@ -1,4 +1,5 @@
-//! Rectangles pleins instanciés.
+//! Rectangles instanciés : pleins par défaut, ou stylés (coins arrondis,
+//! bordure, dégradé vertical) pour le chrome de la fenêtre.
 
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt as _;
@@ -6,20 +7,61 @@ use wgpu::util::DeviceExt as _;
 use super::{Globals, alpha_target, globals_layout};
 use crate::color::Rgba;
 
+/// Aspect d'un rectangle stylé. Aux valeurs neutres (`flat`), le rendu est
+/// celui d'un rectangle plein.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct QuadStyle {
+    /// Couleur en haut.
+    pub fill: Rgba,
+    /// Couleur en bas (dégradé vertical linéaire).
+    pub fill_bottom: Rgba,
+    /// Rayon des coins en pixels.
+    pub radius: f32,
+    /// Largeur de la bordure intérieure en pixels, 0 pour aucune.
+    pub border_width: f32,
+    pub border: Rgba,
+}
+
+impl QuadStyle {
+    pub const fn flat(color: Rgba) -> Self {
+        Self {
+            fill: color,
+            fill_bottom: color,
+            radius: 0.0,
+            border_width: 0.0,
+            border: Rgba::new(0.0, 0.0, 0.0, 0.0),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
 pub struct QuadInstance {
     pub pos: [f32; 2],
     pub size: [f32; 2],
     pub color: [f32; 4],
+    pub color_bottom: [f32; 4],
+    pub border_color: [f32; 4],
+    pub radius: f32,
+    pub border_width: f32,
+    pub _pad: [f32; 2],
 }
 
 impl QuadInstance {
     pub fn new(x: f32, y: f32, w: f32, h: f32, color: Rgba) -> Self {
+        Self::styled(x, y, w, h, QuadStyle::flat(color))
+    }
+
+    pub fn styled(x: f32, y: f32, w: f32, h: f32, style: QuadStyle) -> Self {
         Self {
             pos: [x, y],
             size: [w, h],
-            color: color.to_array(),
+            color: style.fill.to_array(),
+            color_bottom: style.fill_bottom.to_array(),
+            border_color: style.border.to_array(),
+            radius: style.radius,
+            border_width: style.border_width,
+            _pad: [0.0; 2],
         }
     }
 }
@@ -68,7 +110,7 @@ impl QuadPipeline {
                 buffers: &[Some(wgpu::VertexBufferLayout {
                     array_stride: std::mem::size_of::<QuadInstance>() as u64,
                     step_mode: wgpu::VertexStepMode::Instance,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4],
+                    attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32, 6 => Float32],
                 })],
             },
             primitive: wgpu::PrimitiveState::default(),

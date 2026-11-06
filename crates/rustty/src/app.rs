@@ -62,24 +62,17 @@ impl ApplicationHandler<UserEvent> for App {
             return;
         };
         let effects = match event {
-            WindowEvent::CloseRequested => {
-                let confirm = w.config.window.confirm_close_with_running_children;
-                let terms = &w.terms;
-                let running = |t| {
-                    terms
-                        .get(&t)
-                        .is_some_and(crate::term_window::TermWindow::has_running_children)
-                };
-                w.model.request_close_window(confirm, &running)
-            }
+            WindowEvent::CloseRequested => w.request_close_window(),
             WindowEvent::Resized(size) => {
                 w.menu = None;
                 w.leave_spell_word();
+                w.maximized = w.window.is_maximized();
                 w.surface.resize(&w.ctx, size.width, size.height);
                 vec![Effect::Relayout]
             }
             WindowEvent::ScaleFactorChanged { .. } => {
                 w.rebuild_fonts();
+                w.rebuild_title_style();
                 vec![Effect::Relayout]
             }
             WindowEvent::RedrawRequested => {

@@ -54,6 +54,13 @@ impl OsWindow {
                     self.relayout();
                     self.window.request_redraw();
                 }
+                Effect::Minimize => self.window.set_minimized(true),
+                Effect::ToggleMaximize => {
+                    // `maximized` est relu au `Resized` qui suit : un bureau
+                    // qui refuse ne laisse pas l'icône « restaurer ».
+                    self.window.set_maximized(!self.window.is_maximized());
+                    self.window.request_redraw();
+                }
                 Effect::Exit => event_loop.exit(),
             }
         }

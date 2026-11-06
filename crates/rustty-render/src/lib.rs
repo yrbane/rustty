@@ -22,12 +22,12 @@ pub mod pipeline;
 
 pub use pipeline::glyph::{AtlasTexture, GlyphBatch, GlyphInstance, GlyphPipeline};
 pub use pipeline::image::{ImageBatch, ImageInstance, ImagePipeline, ImageTextures};
-pub use pipeline::quad::{QuadBatch, QuadInstance, QuadPipeline};
+pub use pipeline::quad::{QuadBatch, QuadInstance, QuadPipeline, QuadStyle};
 pub mod frame;
 pub mod grid;
 pub mod images;
 
-pub use frame::{Chrome, ChromeQuad, ChromeText, Frame, PaneFrame, PixelRect};
+pub use frame::{Chrome, ChromeQuad, ChromeShape, ChromeText, Frame, PaneFrame, PixelRect};
 pub use grid::{
     CURSOR_BAR_WIDTH, GlyphRequest, GridGeometry, PaneInstances, grid_geometry, pane_instances,
 };
@@ -38,7 +38,8 @@ pub use renderer::Renderer;
 pub mod chrome;
 
 pub use chrome::{
-    HoverTarget, INACTIVE_ACCENT_DIM, PaneHeaderSpec, TAB_BAR_PADDING, TabBarLayout, TabBarStyle,
-    TabRect, TabSpec, layout_tab_bar, pane_header_chrome, pane_header_close_rect, tab_bar_chrome,
-    tab_bar_height,
+    ButtonLook, HoverTarget, INACTIVE_ACCENT_DIM, PaneHeaderSpec, TAB_BAR_PADDING, TabBarLayout,
+    TabBarStyle, TabRect, TabSpec, TitleBarLayout, TitleBarState, TitleBarStyle, TitleTarget,
+    layout_tab_bar, layout_title_bar, pane_header_chrome, pane_header_close_rect, tab_bar_chrome,
+    tab_bar_height, title_bar_chrome, title_bar_height,
 };

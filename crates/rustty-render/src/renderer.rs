@@ -129,6 +129,15 @@ impl Renderer {
                 q.color,
             )
         }));
+        overlay.extend(frame.chrome.shapes.iter().map(|s| {
+            QuadInstance::styled(
+                s.rect.x as f32,
+                s.rect.y as f32,
+                s.rect.width as f32,
+                s.rect.height as f32,
+                s.style,
+            )
+        }));
         let mut chrome_requests = Vec::new();
         for text in &frame.chrome.texts {
             let mut col = 0u32;

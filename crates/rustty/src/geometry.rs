@@ -14,6 +14,8 @@ pub fn split_gap(splits: &Splits) -> u32 {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WindowGeometry {
+    /// Barre de titre maison, toujours en haut ; `None` si désactivée.
+    pub title_bar_y: Option<u32>,
     pub tab_bar_y: Option<u32>,
     pub content: Rect,
 }
@@ -25,23 +27,35 @@ pub fn window_geometry(
     tab_count: usize,
     min_tabs: u32,
     bar_height: u32,
+    title_height: u32,
 ) -> WindowGeometry {
+    let title_height = title_height.min(height);
+    let title_bar_y = (title_height > 0).then_some(0);
+    let below = height - title_height;
     let visible = position != TabBarPosition::Hidden && tab_count as u64 >= u64::from(min_tabs);
     if !visible {
         return WindowGeometry {
+            title_bar_y,
             tab_bar_y: None,
-            content: Rect::new(0, 0, width, height),
+            content: Rect::new(0, title_height, width, below),
         };
     }
-    let content_height = height.saturating_sub(bar_height);
+    let content_height = below.saturating_sub(bar_height);
     match position {
         TabBarPosition::Bottom => WindowGeometry {
-            tab_bar_y: Some(content_height),
-            content: Rect::new(0, 0, width, content_height),
+            title_bar_y,
+            tab_bar_y: Some(title_height + content_height),
+            content: Rect::new(0, title_height, width, content_height),
         },
         _ => WindowGeometry {
-            tab_bar_y: Some(0),
-            content: Rect::new(0, bar_height.min(height), width, content_height),
+            title_bar_y,
+            tab_bar_y: Some(title_height),
+            content: Rect::new(
+                0,
+                (title_height + bar_height).min(height),
+                width,
+                content_height,
+            ),
         },
     }
 }
@@ -185,14 +199,14 @@ mod tests {
 
     #[test]
     fn tab_bar_on_top_pushes_the_content_down() {
-        let g = window_geometry(800, 600, TabBarPosition::Top, 1, 1, 24);
+        let g = window_geometry(800, 600, TabBarPosition::Top, 1, 1, 24, 0);
         assert_eq!(g.tab_bar_y, Some(0));
         assert_eq!(g.content, Rect::new(0, 24, 800, 576));
     }
 
     #[test]
     fn tab_bar_at_the_bottom_keeps_the_content_on_top() {
-        let g = window_geometry(800, 600, TabBarPosition::Bottom, 2, 1, 24);
+        let g = window_geometry(800, 600, TabBarPosition::Bottom, 2, 1, 24, 0);
         assert_eq!(g.tab_bar_y, Some(576));
         assert_eq!(g.content, Rect::new(0, 0, 800, 576));
     }
@@ -200,20 +214,53 @@ mod tests {
     #[test]
     fn hidden_bar_or_too_few_tabs_gives_the_whole_window() {
         assert_eq!(
-            window_geometry(800, 600, TabBarPosition::Hidden, 3, 1, 24).tab_bar_y,
+            window_geometry(800, 600, TabBarPosition::Hidden, 3, 1, 24, 0).tab_bar_y,
             None
         );
-        let g = window_geometry(800, 600, TabBarPosition::Top, 1, 2, 24);
+        let g = window_geometry(800, 600, TabBarPosition::Top, 1, 2, 24, 0);
         assert_eq!(g.tab_bar_y, None);
         assert_eq!(g.content, Rect::new(0, 0, 800, 600));
     }
 
     #[test]
+    fn title_bar_pushes_tabs_and_content_down() {
+        let g = window_geometry(800, 600, TabBarPosition::Top, 1, 1, 24, 29);
+        assert_eq!(g.title_bar_y, Some(0));
+        assert_eq!(g.tab_bar_y, Some(29));
+        assert_eq!(g.content, Rect::new(0, 53, 800, 547));
+        let b = window_geometry(800, 600, TabBarPosition::Bottom, 1, 1, 24, 29);
+        assert_eq!(b.title_bar_y, Some(0));
+        assert_eq!(b.tab_bar_y, Some(576));
+        assert_eq!(b.content, Rect::new(0, 29, 800, 547));
+    }
+
+    #[test]
+    fn disabled_title_bar_reserves_nothing() {
+        let g = window_geometry(800, 600, TabBarPosition::Top, 1, 1, 24, 0);
+        assert_eq!(g.title_bar_y, None);
+        assert_eq!(g.content, Rect::new(0, 24, 800, 576));
+    }
+
+    #[test]
+    fn title_bar_alone_in_a_tiny_window_never_underflows() {
+        let g = window_geometry(10, 10, TabBarPosition::Hidden, 1, 1, 24, 29);
+        assert_eq!(g.content.height, 0);
+        assert_eq!(g.title_bar_y, Some(0));
+        let b = window_geometry(10, 10, TabBarPosition::Bottom, 1, 1, 24, 29);
+        assert_eq!(b.content.height, 0);
+        assert_eq!(
+            b.tab_bar_y,
+            Some(10),
+            "la barre d'onglets est repoussée hors de la fenêtre"
+        );
+    }
+
+    #[test]
     fn tiny_windows_never_underflow() {
-        let g = window_geometry(10, 10, TabBarPosition::Top, 1, 1, 24);
+        let g = window_geometry(10, 10, TabBarPosition::Top, 1, 1, 24, 0);
         assert_eq!(g.content.height, 0);
         assert_eq!(g.tab_bar_y, Some(0));
-        let b = window_geometry(10, 10, TabBarPosition::Bottom, 1, 1, 24);
+        let b = window_geometry(10, 10, TabBarPosition::Bottom, 1, 1, 24, 0);
         assert_eq!(b.tab_bar_y, Some(0));
     }
 

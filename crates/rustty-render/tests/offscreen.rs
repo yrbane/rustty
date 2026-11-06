@@ -5,7 +5,7 @@ mod common;
 mod support;
 
 use rustty_config::Colors;
-use rustty_render::{Frame, Offscreen, Palette, PaneFrame, PixelRect, Rgba};
+use rustty_render::{Chrome, Frame, Offscreen, Palette, PaneFrame, PixelRect, Rgba};
 use rustty_vt::Term;
 use support::{PADDING, assert_matches_golden, pixel, render_term, renderer};
 
@@ -246,5 +246,113 @@ fn pane_header_matches_golden() {
         pixel(&px, width, close.x + close.width / 2, 2),
         style.close_hover_background.to_u8(),
         "le ✕ survolé est dans sa couleur de survol"
+    );
+}
+
+#[test]
+fn styled_quad_matches_golden() {
+    use rustty_render::{ChromeShape, QuadStyle};
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let (w, h) = (64, 40);
+    let target = Offscreen::new(&ctx, w, h);
+    let red = Rgba::new(1.0, 0.0, 0.0, 1.0);
+    let blue = Rgba::new(0.0, 0.0, 1.0, 1.0);
+    let shapes = vec![
+        ChromeShape {
+            rect: PixelRect::new(4, 4, 24, 32),
+            style: QuadStyle {
+                fill: red,
+                fill_bottom: blue,
+                radius: 8.0,
+                border_width: 2.0,
+                border: Rgba::new(1.0, 1.0, 1.0, 1.0),
+            },
+        },
+        ChromeShape {
+            rect: PixelRect::new(36, 4, 24, 32),
+            style: QuadStyle::flat(red),
+        },
+    ];
+    let frame = Frame {
+        viewport: (w, h),
+        background: Rgba::new(0.0, 0.0, 0.0, 1.0),
+        panes: vec![],
+        chrome: Chrome {
+            shapes,
+            ..Default::default()
+        },
+    };
+    r.render(&ctx, target.view(), &frame);
+    let px = target.read_rgba(&ctx).unwrap();
+    assert_matches_golden("styled_quad", &px, w, h);
+    assert_eq!(
+        pixel(&px, w, 4, 4),
+        [0, 0, 0, 255],
+        "le coin arrondi laisse voir le fond"
+    );
+    assert_eq!(
+        pixel(&px, w, 16, 5),
+        [255, 255, 255, 255],
+        "bordure en haut au milieu"
+    );
+    assert_eq!(
+        pixel(&px, w, 36, 4),
+        [255, 0, 0, 255],
+        "le quad plat garde son coin"
+    );
+    let top = pixel(&px, w, 16, 8);
+    let bottom = pixel(&px, w, 16, 31);
+    assert!(
+        top[0] > bottom[0] && bottom[2] > top[2],
+        "dégradé rouge → bleu : {top:?} / {bottom:?}"
+    );
+}
+
+#[test]
+fn title_bar_matches_golden() {
+    use rustty_config::TitleButton;
+    use rustty_render::{TitleBarState, TitleBarStyle, layout_title_bar, title_bar_chrome};
+    let Some(ctx) = common::gpu_or_skip() else {
+        return;
+    };
+    let mut r = renderer(&ctx);
+    let m = r.metrics();
+    let style = TitleBarStyle::from_config(&rustty_config::TitleBar::default(), 1.0);
+    let (w, h) = (320, 30);
+    let layout = layout_title_bar(w, &style);
+    let chrome = title_bar_chrome(
+        &layout,
+        &style,
+        TitleBarState {
+            title: "1: zsh — rustty 0.1",
+            hover: Some(TitleButton::Maximize),
+            maximized: false,
+        },
+        m,
+    );
+    let target = Offscreen::new(&ctx, w, h);
+    let frame = Frame {
+        viewport: (w, h),
+        background: Rgba::new(0.12, 0.12, 0.18, 1.0),
+        panes: vec![],
+        chrome,
+    };
+    r.render(&ctx, target.view(), &frame);
+    let px = target.read_rgba(&ctx).unwrap();
+    assert_matches_golden("title_bar", &px, w, h);
+    let close = layout.buttons[2].1;
+    assert_eq!(
+        pixel(&px, w, close.x + 2, close.y + 7),
+        [255, 95, 87, 255],
+        "pastille fermer"
+    );
+    let maximize = layout.buttons[1].1;
+    assert_eq!(
+        pixel(&px, w, maximize.x + 1, maximize.y + 7),
+        [61, 200, 79, 255],
+        "pastille agrandir, même fond au survol (entre bordure et icône)"
     );
 }

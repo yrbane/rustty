@@ -161,6 +161,34 @@ Serveur
 - [ ] LanguageTool arrêté : aucune boîte, et au plus une requête par 30 s (journal `debug`) ; relancé : la boîte revient au survol suivant.
 - [ ] `[spellcheck] enabled = false` (rechargement à chaud) : plus aucune requête ni boîte. `url = "ftp://x"` : erreur de configuration nommant `spellcheck.url`.
 
+## Barre de titre (plan 11)
+Prérequis : `[titlebar] enabled = true` (le défaut) ; la fenêtre n'a plus de décorations système.
+
+Affichage
+- [ ] Au lancement : une barre de 28 px logiques en haut, fond sombre à reflet, liseré en bas, titre du shell centré ; la barre d'onglets (quand elle est visible) et les panneaux commencent sous elle, même avec `[tabs] position = "bottom"`.
+- [ ] Le titre suit le panneau actif (`printf '\e]0;coucou\a'`) et porte la version ; un titre trop long est tronqué avec `…`.
+- [ ] Survoler une pastille : son fond de survol et son icône apparaissent ; la quitter les efface. Rien ne change sur le fond de la barre.
+- [ ] HiDPI (si disponible, `WINIT_X11_SCALE_FACTOR=2` ou un écran à 200 %) : la barre, les pastilles et la marge doublent ; changer d'écran en cours de route recalcule le style.
+
+Boutons
+- [ ] Réduire : la fenêtre va dans la barre des tâches. Agrandir : la fenêtre remplit l'écran et l'icône devient « restaurer » ; cliquer de nouveau restaure. Agrandir par le bureau (double clic du système, raccourci du WM) met aussi l'icône à jour.
+- [ ] Fermer sans programme en cours : la fenêtre se ferme. Avec `sleep 1000` lancé : la bannière de confirmation apparaît ; `Entrée` ferme, `Échap` annule.
+- [ ] Appuyer sur une pastille, glisser hors d'elle, relâcher : rien ne se passe. Clic droit ou du milieu sur une pastille : rien.
+- [ ] `settings`, `color`, `folder` : acceptés dans `[titlebar.buttons.*]` mais pas dessinés (jalon 2) ; seules les trois pastilles de fenêtre apparaissent.
+- [ ] Déplacer la fenêtre par la barre, relâcher, puis cliquer un onglet : il s'active ; cliquer dans un panneau et relâcher : la sélection ne colle pas à la souris.
+- [ ] Depuis une pastille survolée, sortir la souris d'un coup par le bord de la fenêtre : l'icône de survol s'efface. Idem en changeant de fenêtre (`alt+tab`) la souris sur une pastille.
+
+Déplacement et redimensionnement
+- [ ] Glisser la barre (titre ou fond) de plus de 4 px déplace la fenêtre ; un clic simple ne la déplace pas et ne fait rien. Clic droit sur la barre : rien.
+- [ ] Un menu d'onglet ouvert ou un renommage en cours se ferme en cliquant la barre.
+- [ ] Les huit bords et coins : le curseur change (↔, ↕, diagonales) dans la marge de 6 px et le glisser redimensionne dans la bonne direction ; juste après la marge, le curseur redevient ordinaire.
+- [ ] Fenêtre agrandie : aucun curseur de redimensionnement, aucun redimensionnement, le déplacement par la barre reste possible selon le compositeur.
+- [ ] `resize_border = 0` : plus aucun bord ne redimensionne.
+
+Configuration à chaud
+- [ ] `enabled = false` puis sauvegarde : les décorations du système reviennent, la barre disparaît, onglets et panneaux remontent ; `enabled = true` : l'inverse. `height`, couleurs, `visible` des boutons : pris en compte au rechargement.
+- [ ] `[keys]` `"ctrl+shift+m" = "minimize_window"` et `"ctrl+shift+u" = "toggle_maximize"` : les raccourcis agissent comme les pastilles.
+
 ## Robustesse
-- [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique.
+- [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique, la barre de titre seule reste visible.
 - [ ] `cargo run -p rustty` : rien sur la sortie d'erreur pendant le parcours ; `RUSTTY_LOG=rustty=debug` pour le détail.

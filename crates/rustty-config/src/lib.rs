@@ -4,7 +4,7 @@
 pub mod action;
 pub mod color;
 
-pub use color::{ColorParseError, Rgb};
+pub use color::{ColorAlphaParseError, ColorParseError, Rgb, Rgba8};
 
 pub mod config;
 pub mod error;
@@ -23,3 +23,5 @@ pub use sections::{
     CloseButtonStyle, Colors, DecorationsTheme, Font, Spellcheck, Splits, TabBarPosition,
     TabColors, Tabs, Window,
 };
+pub mod titlebar;
+pub use titlebar::{ButtonOverride, ButtonStyle, TitleBar, TitleButton, TitleButtons};

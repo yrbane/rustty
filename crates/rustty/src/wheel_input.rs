@@ -103,6 +103,10 @@ impl OsWindow {
             self.menu = None;
             // Le relâchement ne nous parviendra peut-être pas : pas de dépôt.
             effects = self.cancel_drag();
+            // Ni pour la barre de titre : plus de survol, d'appui ni de glisser.
+            if self.leave_title_bar() {
+                effects.push(Effect::Redraw);
+            }
             // Plus de souris à suivre : le glisser de barre s'arrête.
             if self.divider_drag.take().is_some() {
                 self.update_cursor_icon(self.cursor.0, self.cursor.1);

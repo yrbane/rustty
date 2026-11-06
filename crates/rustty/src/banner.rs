@@ -89,7 +89,7 @@ pub fn banner_chrome(
             rect: band,
             color: band_color(banner.kind, palette),
         }],
-        texts: Vec::new(),
+        ..Chrome::default()
     };
     let max_cells = (viewport_width / cw).saturating_sub(2) as usize;
     let text = fit(&banner.text, max_cells);

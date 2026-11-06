@@ -1,7 +1,7 @@
 //! Résolution des couleurs : des `Color` abstraites de l'émulation vers des
 //! `Rgba` concrètes, selon la palette de la configuration.
 
-use rustty_config::{Colors, Rgb};
+use rustty_config::{Colors, Rgb, Rgba8};
 use rustty_vt::{Attrs, Color, Style};
 
 /// Couleur flottante non pré-multipliée, composantes dans [0, 1].
@@ -25,6 +25,21 @@ impl Rgba {
             f32::from(rgb.b) / 255.0,
             1.0,
         )
+    }
+
+    pub fn from_rgba8(c: Rgba8) -> Self {
+        Self::new(
+            f32::from(c.r) / 255.0,
+            f32::from(c.g) / 255.0,
+            f32::from(c.b) / 255.0,
+            f32::from(c.a) / 255.0,
+        )
+    }
+
+    /// Rapproche chaque composante de couleur du blanc, pas l'alpha.
+    pub fn lighten(self, amount: f32) -> Self {
+        let up = |c: f32| c + (1.0 - c) * amount;
+        Self::new(up(self.r), up(self.g), up(self.b), self.a)
     }
 
     pub const fn with_alpha(self, a: f32) -> Self {
@@ -132,6 +147,14 @@ impl Palette {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn from_rgba8_and_lighten() {
+        let c = Rgba::from_rgba8(rustty_config::Rgba8::new(255, 0, 0, 128));
+        assert!((c.r - 1.0).abs() < 1e-6 && c.g == 0.0 && (c.a - 128.0 / 255.0).abs() < 1e-6);
+        let l = Rgba::new(0.0, 0.5, 1.0, 0.3).lighten(0.5);
+        assert_eq!(l, Rgba::new(0.5, 0.75, 1.0, 0.3));
+    }
 
     #[test]
     fn luminance_of_black_white_and_green() {
