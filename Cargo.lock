@@ -2182,11 +2182,12 @@ dependencies = [
 
 [[package]]
 name = "rustty"
-version = "0.1.0-alpha.153"
+version = "0.1.0-alpha.154"
 dependencies = [
  "anyhow",
  "arboard",
  "base64 0.22.1",
+ "directories",
  "image",
  "libc",
  "notify",
@@ -2211,7 +2212,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-config"
-version = "0.1.0-alpha.153"
+version = "0.1.0-alpha.154"
 dependencies = [
  "bitflags 2.13.2",
  "directories",
@@ -2222,14 +2223,14 @@ dependencies = [
 
 [[package]]
 name = "rustty-layout"
-version = "0.1.0-alpha.153"
+version = "0.1.0-alpha.154"
 dependencies = [
  "proptest",
 ]
 
 [[package]]
 name = "rustty-pty"
-version = "0.1.0-alpha.153"
+version = "0.1.0-alpha.154"
 dependencies = [
  "libc",
  "portable-pty",
@@ -2238,7 +2239,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-render"
-version = "0.1.0-alpha.153"
+version = "0.1.0-alpha.154"
 dependencies = [
  "base64 0.22.1",
  "bytemuck",
@@ -2255,7 +2256,7 @@ dependencies = [
 
 [[package]]
 name = "rustty-vt"
-version = "0.1.0-alpha.153"
+version = "0.1.0-alpha.154"
 dependencies = [
  "base64 0.22.1",
  "bitflags 2.13.2",

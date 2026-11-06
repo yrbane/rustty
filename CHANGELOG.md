@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.154 — 2026-11-06 · « Réglages et dossier ouvrent l'éditeur et l'explorateur »
+
+- Le bouton réglages (et l'action `open_config`) ouvre le fichier de configuration dans `titlebar.editor` ; clé vide : `$VISUAL`, puis `$EDITOR`, puis l'ouvreur du bureau (`xdg-open`, `open`, `start`). Le fichier est créé depuis le modèle s'il manquait, jamais réécrit.
+- Le bouton dossier (et l'action `open_cwd`) ouvre le dossier courant du panneau actif dans `titlebar.file_manager` (vide : l'ouvreur du bureau), ou le dossier personnel quand le dossier courant ne se lit pas.
+- Les programmes sont lancés détachés, sans bloquer l'interface ; un échec de lancement s'affiche dans le bandeau d'erreur.
+
 ## 0.1.0-alpha.153 — 2026-11-06 · « Six boutons et glyphes Material dans la barre »
 
 - Les boutons réglages, couleur et dossier sont dessinés à gauche de la barre de titre avec les glyphes Material `settings`, `palette`, `folder_open`, au style commun `[titlebar.button]` ; `visible = false` sur l'un d'eux élargit la zone de titre. Sur un fond de barre clair, leurs icônes s'assombrissent comme le titre ; les pastilles de fenêtre gardent leur style.

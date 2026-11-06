@@ -3,12 +3,16 @@
 
 use winit::event_loop::ActiveEventLoop;
 
+use rustty_config::Config;
+
 use crate::banner::Banner;
 use crate::config_watch::{self, ReloadOutcome};
+use crate::external;
 use crate::keyboard::paste_bytes;
 use crate::model::Effect;
 use crate::pane_fonts::zoom_target;
 use crate::tab::TermId;
+use crate::term_window::TermWindow;
 use crate::window_state::OsWindow;
 
 impl OsWindow {
@@ -61,9 +65,8 @@ impl OsWindow {
                     self.window.set_maximized(!self.window.is_maximized());
                     self.window.request_redraw();
                 }
-                // Les deux lancements arrivent avec la tâche 5 du jalon 2.
-                Effect::OpenConfig => tracing::debug!("open_config : pas encore câblé"),
-                Effect::OpenCwd => tracing::debug!("open_cwd : pas encore câblé"),
+                Effect::OpenConfig => self.open_config(),
+                Effect::OpenCwd => self.open_cwd(),
                 Effect::Exit => event_loop.exit(),
             }
         }
@@ -159,6 +162,61 @@ impl OsWindow {
 /// ne désignent plus les mêmes lignes (effacer coûte moins que décaler).
 pub fn scroll_clears_selection(selected: Option<TermId>, scrolled: TermId) -> bool {
     selected == Some(scrolled)
+}
+
+impl OsWindow {
+    /// Bouton réglages : le fichier de configuration dans l'éditeur, créé
+    /// depuis le modèle s'il manquait.
+    fn open_config(&mut self) {
+        let result = self
+            .config_path
+            .clone()
+            .or_else(Config::default_path)
+            .ok_or_else(|| std::io::Error::other("dossier de configuration introuvable"))
+            .and_then(|path| {
+                external::ensure_config_file(&path)?;
+                let command = external::editor_command(
+                    &self.config.titlebar.editor,
+                    env("VISUAL").as_deref(),
+                    env("EDITOR").as_deref(),
+                );
+                external::spawn_detached(&command, &path)
+            });
+        self.report_external("ouvrir la configuration", result);
+    }
+
+    /// Bouton dossier : le dossier courant du panneau actif, sinon le dossier
+    /// personnel, dans l'explorateur.
+    fn open_cwd(&mut self) {
+        let cwd = self
+            .model
+            .workspace
+            .focused_term()
+            .and_then(|t| self.terms.get(&t))
+            .and_then(TermWindow::cwd);
+        let home = directories::BaseDirs::new().map(|b| b.home_dir().to_path_buf());
+        let result = external::folder_to_open(cwd, home)
+            .ok_or_else(|| std::io::Error::other("aucun dossier à ouvrir"))
+            .and_then(|dir| {
+                let command = external::file_manager_command(&self.config.titlebar.file_manager);
+                external::spawn_detached(&command, &dir)
+            });
+        self.report_external("ouvrir le dossier", result);
+    }
+
+    fn report_external(&mut self, what: &str, result: std::io::Result<()>) {
+        if let Err(e) = result {
+            tracing::error!("{what} : {e}");
+            self.model
+                .set_notice(Some(Banner::error(format!("{what} : {e}"))));
+            self.window.request_redraw();
+        }
+    }
+}
+
+/// Une variable d'environnement, `None` si absente.
+fn env(name: &str) -> Option<String> {
+    std::env::var(name).ok()
 }
 
 #[cfg(test)]
