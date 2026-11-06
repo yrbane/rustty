@@ -12,6 +12,14 @@ use toml_edit::{DocumentMut, TomlError};
 
 use crate::external;
 
+#[derive(Debug, thiserror::Error)]
+pub enum WriteError {
+    #[error("configuration invalide : {0}")]
+    Parse(#[from] TomlError),
+    #[error("« titlebar » n'est pas une table dans la configuration")]
+    NotATable,
+}
+
 /// « Par défaut » du nuancier : `[titlebar] background = <color>` dans le
 /// fichier `path`, créé depuis le modèle s'il manquait, le reste intact.
 pub fn save_background(path: &Path, color: Rgba8) -> io::Result<()> {
@@ -23,13 +31,24 @@ pub fn save_background(path: &Path, color: Rgba8) -> io::Result<()> {
 
 /// Le texte TOML avec `[titlebar] background = "<couleur>"`, tout le reste
 /// intact. La section est créée si elle manque ; une table en ligne reste en
-/// ligne. Un texte invalide est rendu tel quel en erreur, rien n'est deviné.
-pub fn with_titlebar_background(toml: &str, color: Rgba8) -> Result<String, TomlError> {
+/// ligne. Un texte invalide, ou un `titlebar` qui n'est pas une table, est
+/// une erreur : rien n'est deviné.
+pub fn with_titlebar_background(toml: &str, color: Rgba8) -> Result<String, WriteError> {
     let mut doc: DocumentMut = toml.parse()?;
     if doc.get("titlebar").is_none() {
         doc["titlebar"] = toml_edit::table();
     }
-    doc["titlebar"]["background"] = toml_edit::value(color.to_string());
+    let table = doc["titlebar"]
+        .as_table_like_mut()
+        .ok_or(WriteError::NotATable)?;
+    let value = toml_edit::value(color.to_string());
+    match table.get_mut("background") {
+        // Remplacer la valeur seule garde la clé et son commentaire.
+        Some(item) => *item = value,
+        None => {
+            table.insert("background", value);
+        }
+    }
     if let Some(inline) = doc["titlebar"].as_inline_table_mut() {
         // La clé ajoutée hérite d'espaces mal placés : on remet en forme la
         // seule table en ligne visée.
@@ -40,15 +59,22 @@ pub fn with_titlebar_background(toml: &str, color: Rgba8) -> Result<String, Toml
 
 /// Remplace `path` d'un bloc : le contenu va dans un fichier temporaire du
 /// même dossier, renommé par-dessus ensuite ; un échec ne laisse ni fichier
-/// à moitié écrit ni temporaire.
+/// à moitié écrit ni temporaire. Un lien symbolique est suivi (la cible est
+/// réécrite, le lien reste) et les permissions du fichier sont conservées.
 pub fn write_atomically(path: &Path, contents: &str) -> io::Result<()> {
-    let name = path
+    let target = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let name = target
         .file_name()
         .ok_or_else(|| io::Error::other("chemin sans nom de fichier"))?;
     let mut tmp_name = name.to_os_string();
     tmp_name.push(format!(".tmp-{}", std::process::id()));
-    let tmp = path.with_file_name(tmp_name);
-    let written = fs::write(&tmp, contents).and_then(|()| fs::rename(&tmp, path));
+    let tmp = target.with_file_name(tmp_name);
+    let written = fs::write(&tmp, contents)
+        .and_then(|()| match fs::metadata(&target) {
+            Ok(meta) => fs::set_permissions(&tmp, meta.permissions()),
+            Err(_) => Ok(()),
+        })
+        .and_then(|()| fs::rename(&tmp, &target));
     if written.is_err() {
         let _ = fs::remove_file(&tmp);
     }

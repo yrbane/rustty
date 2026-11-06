@@ -88,3 +88,37 @@ fn saving_creates_a_missing_file_from_the_template_first() {
         "le modèle complet, pas un fichier vide"
     );
 }
+
+#[test]
+fn a_titlebar_value_that_is_not_a_table_is_an_error_not_a_panic() {
+    let black = Rgba8::new(0, 0, 0, 0xff);
+    assert!(with_titlebar_background("titlebar = 3\n", black).is_err());
+    assert!(with_titlebar_background("titlebar = \"x\"\n", black).is_err());
+    assert!(with_titlebar_background("[[titlebar]]\nheight = 28\n", black).is_err());
+}
+
+#[cfg(unix)]
+#[test]
+fn writing_through_a_symlink_updates_the_target_and_keeps_the_link() {
+    let dir = tempfile::tempdir().unwrap();
+    let real = dir.path().join("dotfiles-rustty.toml");
+    let link = dir.path().join("rustty.toml");
+    std::fs::write(&real, "old").unwrap();
+    std::os::unix::fs::symlink(&real, &link).unwrap();
+    write_atomically(&link, "new").unwrap();
+    assert!(std::fs::symlink_metadata(&link).unwrap().is_symlink());
+    assert_eq!(std::fs::read_to_string(&real).unwrap(), "new");
+}
+
+#[cfg(unix)]
+#[test]
+fn writing_keeps_the_permissions_of_the_original_file() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("rustty.toml");
+    std::fs::write(&path, "old").unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    write_atomically(&path, "new").unwrap();
+    let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o600);
+}

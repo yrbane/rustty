@@ -107,7 +107,8 @@ use rustty_config::SplitAxis;
 #[test]
 fn renaming_the_window_sets_its_name() {
     let (mut m, _) = Model::new(0.9, false);
-    assert_eq!(m.start_window_rename(), vec![Effect::Redraw]);
+    // Le titre système suit la barre : mise en page (qui pousse le titre).
+    assert_eq!(m.start_window_rename(), vec![Effect::Relayout]);
     assert_eq!(
         m.renaming.as_ref().map(|r| r.target),
         Some(RenameTarget::Window)
@@ -142,6 +143,25 @@ fn the_rename_window_action_starts_editing() {
     assert_eq!(
         m.apply(Action::PickTitleBarColor, false, &never_running),
         vec![Effect::PickTitleBarColor]
+    );
+}
+
+#[test]
+fn cancelling_a_window_rename_restores_the_system_title() {
+    let (mut m, _) = Model::new(0.9, false);
+    m.start_window_rename();
+    m.rename_key(RenameKey::Text("dep".into()));
+    assert_eq!(
+        m.rename_key(RenameKey::Cancel),
+        vec![Effect::Relayout],
+        "Relayout pousse le titre à winit ; Redraw ne le ferait pas"
+    );
+    assert!(m.renaming.is_none());
+    m.start_rename(0);
+    assert_eq!(
+        m.rename_key(RenameKey::Cancel),
+        vec![Effect::Redraw],
+        "un onglet n'a pas changé de largeur : simple redessin"
     );
 }
 

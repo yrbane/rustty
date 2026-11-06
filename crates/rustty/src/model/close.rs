@@ -73,10 +73,12 @@ impl Model {
     }
 
     /// Ouvre l'édition du nom de la fenêtre, pré-remplie avec le nom actuel.
+    /// Mise en page plutôt que redessin : c'est elle qui pousse le titre
+    /// (tampon et curseur) à la fenêtre du système.
     pub fn start_window_rename(&mut self) -> Vec<Effect> {
         let current = self.window_name.clone().unwrap_or_default();
         self.renaming = Some(Rename::new(RenameTarget::Window, &current));
-        vec![Effect::Redraw]
+        vec![Effect::Relayout]
     }
 
     pub fn rename_key(&mut self, key: RenameKey) -> Vec<Effect> {
@@ -97,8 +99,14 @@ impl Model {
                 vec![Effect::Relayout]
             }
             RenameOutcome::Cancel => {
+                // La fenêtre doit reprendre son titre système : mise en page.
+                let window = rename.target == RenameTarget::Window;
                 self.renaming = None;
-                vec![Effect::Redraw]
+                vec![if window {
+                    Effect::Relayout
+                } else {
+                    Effect::Redraw
+                }]
             }
         }
     }

@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.164 — 2026-11-06 · « Correctifs de la revue du jalon 3 »
+
+- « Par défaut » ne fait plus tomber rustty quand `titlebar` existe dans le fichier sans être une table (`titlebar = 3`, `[[titlebar]]`) : bandeau d'erreur à la place.
+- L'écriture de la configuration suit un lien symbolique (dotfiles par stow, chezmoi…) : la cible est réécrite, le lien reste ; les permissions du fichier (`0600`…) sont conservées.
+- Échap pendant le renommage de la fenêtre remet aussitôt le titre système (barre des tâches, alt-tab) ; le curseur `▌` apparaît dès l'ouverture de la saisie, même avec les décorations du système.
+
 ## 0.1.0-alpha.163 — 2026-11-06 · « Barre de titre : documentation du jalon 3 »
 
 - README : renommage de la fenêtre par double clic ou `ctrl+shift+alt+w`, nuancier du bouton couleur, « Par défaut » et « Couleur du fichier », ordre de priorité du titre, actions `rename_window` et `pick_titlebar_color`.
