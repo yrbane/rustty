@@ -4,6 +4,47 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.157 — 2026-11-06 · « Correctifs de la revue du jalon 2 »
+
+- Le bouton réglages démarre la surveillance du fichier de configuration quand son dossier n'existait pas au lancement : les modifications enregistrées ensuite sont rechargées à chaud sans redémarrer.
+- Sur une barre de titre claire, le survol des boutons réglages, couleur et dossier reste visible : le voile de survol devient sombre, de même opacité.
+
+## 0.1.0-alpha.156 — 2026-11-06 · « Barre de titre : documentation du jalon 2 »
+
+- README : icônes Material, clés `icon_size`, `editor`, `file_manager`, boutons réglages et dossier et leurs actions `open_config`, `open_cwd`, titre de la fenêtre et nom d'onglet.
+- `docs/e2e.md` : la section « Barre de titre » couvre les trois boutons d'outils, la création du fichier de configuration, les replis `$VISUAL`/`$EDITOR`/ouvreur, le bandeau d'erreur, `icon_size` à chaud, le fond clair et le nom d'onglet.
+- Spec : chemin et licence de la police embarquée.
+
+## 0.1.0-alpha.155 — 2026-11-06 · « Le titre de la fenêtre suit le nom d'onglet personnalisé »
+
+- Le titre de la fenêtre (barre de titre maison et titre système) reprend le nom donné à l'onglet actif par « Renommer l'onglet » ; sans nom personnalisé, le titre du terminal comme avant.
+
+## 0.1.0-alpha.154 — 2026-11-06 · « Réglages et dossier ouvrent l'éditeur et l'explorateur »
+
+- Le bouton réglages (et l'action `open_config`) ouvre le fichier de configuration dans `titlebar.editor` ; clé vide : `$VISUAL`, puis `$EDITOR`, puis l'ouvreur du bureau (`xdg-open`, `open`, `start`). Le fichier est créé depuis le modèle s'il manquait, jamais réécrit.
+- Le bouton dossier (et l'action `open_cwd`) ouvre le dossier courant du panneau actif dans `titlebar.file_manager` (vide : l'ouvreur du bureau), ou le dossier personnel quand le dossier courant ne se lit pas.
+- Les programmes sont lancés détachés, sans bloquer l'interface ; un échec de lancement s'affiche dans le bandeau d'erreur.
+
+## 0.1.0-alpha.153 — 2026-11-06 · « Six boutons et glyphes Material dans la barre »
+
+- Les boutons réglages, couleur et dossier sont dessinés à gauche de la barre de titre avec les glyphes Material `settings`, `palette`, `folder_open`, au style commun `[titlebar.button]` ; `visible = false` sur l'un d'eux élargit la zone de titre. Sur un fond de barre clair, leurs icônes s'assombrissent comme le titre ; les pastilles de fenêtre gardent leur style.
+- Cliquer sur réglages ou dossier émet les effets `OpenConfig` et `OpenCwd` (câblés à la version suivante) ; le bouton couleur attend le jalon 3.
+- Image de référence `title_bar.png` régénérée avec les six boutons.
+
+## 0.1.0-alpha.152 — 2026-11-06 · « Face d'icônes Material dans le renderer »
+
+- Les icônes de la barre de titre sont rastérisées depuis la police Material embarquée, à leur propre corps (`icon_size` × facteur d'échelle), indépendamment de la police de texte ; jamais de repli vers une police du système. Chaque `ChromeIcon` porte son corps et le cache de glyphes le distingue.
+- Les boutons de fenêtre (réduire, agrandir, restaurer, fermer) utilisent désormais les glyphes Material `remove`, `crop_square`, `filter_none`, `close`. Une icône ne dépasse jamais les quatre cinquièmes de son bouton : dans une pastille de 14 px, le carré d'agrandir fait 8 px au lieu de la remplir. Image de référence `title_bar.png` régénérée.
+
+## 0.1.0-alpha.151 — 2026-11-06 · « Clés icon_size, editor, file_manager et actions open_config, open_cwd »
+
+- `[titlebar]` accepte `icon_size` (8 à 32, défaut 14, pixels logiques), `editor` (défaut `"code"` ; vide : `$VISUAL`, `$EDITOR`, puis l'ouvreur du bureau) et `file_manager` (défaut vide : l'ouvreur du bureau). Documentées dans le modèle `--init-config`.
+- Nouvelles actions `[keys]` `open_config` et `open_cwd`, sans raccourci par défaut ; elles ne font rien tant que le lancement n'est pas câblé (prochaines versions).
+
+## 0.1.0-alpha.150 — 2026-11-06 · « Police Material Symbols embarquée »
+
+- Nouvelle police d'icônes pour la barre de titre : Material Symbols Rounded (Apache 2.0, licence jointe) réduite aux sept glyphes réglages, palette, dossier, réduire, agrandir, restaurer, fermer ; 2,7 Ko embarqués dans `rustty-render` (`IconFace`, module `icons`). Script `scripts/material-icons.sh` pour la régénérer (fonttools dans un venv jetable).
+
 ## 0.1.0-alpha.149 — 2026-11-06 · « Icônes centrées dans les pastilles »
 
 - Les symboles des boutons de la barre de titre (réduire, agrandir, restaurer, fermer) sont centrés dans leur pastille : ils étaient posés comme un caractère sur une cellule (bord gauche, ligne de base), d'où un décalage visible vers le haut. Nouveau `ChromeIcon` dans `rustty-render` : un glyphe seul centré sur un point par le centre de son encre, placé par le renderer d'après les bornes réelles du bitmap ; image de référence `title_bar.png` régénérée.

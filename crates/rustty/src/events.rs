@@ -17,6 +17,9 @@ pub enum UserEvent {
     /// Le thread lecteur a paniqué : le panneau est perdu, l'application continue.
     TermFailed(TermId, String),
     ConfigChanged,
+    /// Le fichier de configuration vient d'être créé (bouton réglages) : la
+    /// surveillance démarre si son dossier manquait au lancement.
+    ConfigFileCreated,
     /// Réponse de LanguageTool pour un mot survolé : `Ok(None)` sans
     /// correspondance, `Err` si le serveur ne répond pas.
     SpellResult(LookupKey, Result<Option<Suggestion>, String>),

@@ -157,8 +157,8 @@ contextuel et annule un renommage d'onglet en cours, comme un appui ailleurs.
   `color_bottom = color`, la sortie est identique au pixel près à l'actuelle :
   les images de référence existantes (`tests/golden/tab_bar.png`) ne bougent
   pas.
-- **Icônes.** Police `assets/MaterialSymbolsRounded-subset.ttf` (Apache 2.0,
-  fichier `LICENSE` à côté), réduite aux sept glyphes utilisés, régénérée par
+- **Icônes.** Police `crates/rustty-render/assets/MaterialSymbolsRounded-subset.ttf`
+  (Apache 2.0, `LICENSE-MaterialSymbols` à côté), réduite aux sept glyphes utilisés, régénérée par
   `scripts/material-icons.sh` (fonttools dans un venv jetable, comme
   `scripts/icons.sh` pour l'icône d'application). Elle est chargée depuis les
   octets embarqués dans une face **dédiée** : les codepoints Material sont en

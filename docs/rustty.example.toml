@@ -44,6 +44,14 @@ padding = 6
 spacing = 4
 # Marge invisible sur le pourtour de la fenêtre qui la redimensionne (0 à 16).
 resize_border = 6
+# Côté des icônes Material des boutons (8 à 32).
+icon_size = 14
+# Bouton réglages : éditeur du fichier de configuration, avec ses arguments.
+# Vide : $VISUAL, puis $EDITOR, puis l'ouvreur du bureau (xdg-open, open, start).
+editor = "code"
+# Bouton dossier : explorateur ouvert sur le dossier courant du panneau actif.
+# Vide : l'ouvreur du bureau.
+file_manager = ""
 
 # Style commun des boutons ; chaque bouton peut le surcharger ci-dessous.
 [titlebar.button]
@@ -154,7 +162,8 @@ palette = [
 # Actions sans paramètre : "new_tab", "close_tab", "next_tab", "prev_tab",
 # "close_window", "toggle_zoom", "rotate", "copy", "paste", "scroll_to_bottom",
 # "reload_config", "rename_tab", "increase_font_size", "decrease_font_size",
-# "reset_font_size", "minimize_window", "toggle_maximize", "none".
+# "reset_font_size", "minimize_window", "toggle_maximize", "open_config",
+# "open_cwd", "none".
 # Touches de ponctuation : "plus", "minus", "equal".
 # Actions à paramètre : { split = "horizontal" | "vertical" },
 # { focus = "left" | "right" | "up" | "down" },

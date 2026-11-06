@@ -6,7 +6,7 @@ use rustty_config::{ButtonStyle, TitleBar, TitleButton};
 
 use super::title_fit::{fit_title, title_cells};
 use crate::color::{Rgba, readable_on};
-use crate::font::CellMetrics;
+use crate::font::{CellMetrics, glyphs};
 use crate::frame::{Chrome, ChromeIcon, ChromeShape, ChromeText, PixelRect};
 use crate::pipeline::quad::QuadStyle;
 
@@ -14,10 +14,13 @@ use crate::pipeline::quad::QuadStyle;
 const DARK_TITLE: Rgba = Rgba::new(0.07, 0.07, 0.07, 1.0);
 
 /// Glyphes des boutons de fenêtre en attendant les icônes Material.
-const MINIMIZE_GLYPH: char = '–';
-const MAXIMIZE_GLYPH: char = '□';
-const RESTORE_GLYPH: char = '❐';
-const CLOSE_GLYPH: char = '✕';
+const SETTINGS_GLYPH: char = glyphs::SETTINGS;
+const COLOR_GLYPH: char = glyphs::PALETTE;
+const FOLDER_GLYPH: char = glyphs::FOLDER_OPEN;
+const MINIMIZE_GLYPH: char = glyphs::REMOVE;
+const MAXIMIZE_GLYPH: char = glyphs::CROP_SQUARE;
+const RESTORE_GLYPH: char = glyphs::FILTER_NONE;
+const CLOSE_GLYPH: char = glyphs::CLOSE;
 
 /// Aspect d'un bouton, en pixels physiques.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -64,6 +67,13 @@ impl ButtonLook {
     }
 }
 
+/// Corps de l'icône d'un bouton : `icon_size`, plafonné aux quatre cinquièmes
+/// du bouton pour qu'un glyphe plein (le carré d'agrandir) reste dans une
+/// pastille ronde.
+fn icon_size_in(style: &TitleBarStyle, look: &ButtonLook) -> u32 {
+    style.icon_size.min(look.size * 4 / 5)
+}
+
 /// Pixels logiques → physiques.
 fn px(logical: u32, scale: f64) -> u32 {
     (f64::from(logical) * scale).round() as u32
@@ -78,17 +88,18 @@ pub struct TitleBarStyle {
     pub title_color: Rgba,
     pub padding: u32,
     pub spacing: u32,
+    /// Côté des icônes, en pixels physiques.
+    pub icon_size: u32,
     /// Boutons visibles, dans l'ordre d'affichage.
     pub buttons: Vec<(TitleButton, ButtonLook)>,
 }
 
 impl TitleBarStyle {
-    /// Tailles converties en pixels physiques. Ce jalon ne dessine que les
-    /// boutons de fenêtre ; les autres viendront avec leurs icônes.
+    /// Tailles converties en pixels physiques ; seuls les boutons visibles.
     pub fn from_config(cfg: &TitleBar, scale_factor: f64) -> Self {
         let buttons = TitleButton::ALL
             .into_iter()
-            .filter(|b| b.is_window_control() && cfg.button_visible(*b))
+            .filter(|b| cfg.button_visible(*b))
             .map(|b| {
                 (
                     b,
@@ -104,6 +115,7 @@ impl TitleBarStyle {
             title_color: Rgba::from_rgba8(cfg.title_color),
             padding: px(cfg.padding, scale_factor),
             spacing: px(cfg.spacing, scale_factor),
+            icon_size: px(cfg.icon_size, scale_factor),
             buttons,
         }
     }
@@ -236,22 +248,41 @@ pub fn title_bar_chrome(
             continue;
         };
         let hovered = state.hover == Some(*button);
+        let mut quad = look.quad_style(hovered);
+        if hovered && !button.is_window_control() {
+            // Sur une barre claire, un voile blanc ne se voit pas : le survol
+            // des outils prend un voile sombre de même opacité.
+            let dark_veil = Rgba::new(0.0, 0.0, 0.0, look.hover_background.a);
+            quad.fill = readable_on(style.background, look.hover_background, dark_veil);
+            quad.fill_bottom = quad.fill;
+        }
         chrome.shapes.push(ChromeShape {
             rect: *rect,
-            style: look.quad_style(hovered),
+            style: quad,
         });
         let glyph = match button {
+            TitleButton::Settings => SETTINGS_GLYPH,
+            TitleButton::Color => COLOR_GLYPH,
+            TitleButton::Folder => FOLDER_GLYPH,
             TitleButton::Minimize => MINIMIZE_GLYPH,
             TitleButton::Maximize if state.maximized => RESTORE_GLYPH,
             TitleButton::Maximize => MAXIMIZE_GLYPH,
             TitleButton::Close => CLOSE_GLYPH,
-            _ => continue,
+        };
+        let styled = if hovered { look.hover_icon } else { look.icon };
+        // Les boutons d'outils suivent la lisibilité du titre ; les boutons de
+        // fenêtre gardent leur style (pastilles colorées).
+        let color = if button.is_window_control() {
+            styled
+        } else {
+            readable_on(style.background, styled, DARK_TITLE)
         };
         chrome.icons.push(ChromeIcon {
             x: rect.x + rect.width / 2,
             y: rect.y + rect.height / 2,
             ch: glyph,
-            color: if hovered { look.hover_icon } else { look.icon },
+            size: icon_size_in(style, look),
+            color,
         });
     }
     let max_cells = layout.title.width / metrics.width.max(1);

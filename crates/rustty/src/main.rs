@@ -15,6 +15,7 @@ mod drag_input;
 mod drag_preview;
 mod effects;
 mod events;
+mod external;
 mod font_zoom;
 mod geometry;
 mod gpu_surface;

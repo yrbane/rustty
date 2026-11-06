@@ -1,12 +1,14 @@
 //! Polices : découverte (`fontdb`), variantes gras/italique, repli, métriques
 //! de cellule, rastérisation (`swash`).
 
+pub mod icons;
 pub mod loader;
 pub mod metrics;
 pub mod raster;
 
 use rustty_vt::Attrs;
 
+pub use icons::{IconFace, glyphs};
 pub use loader::{EMBEDDED_FONT, FaceData, FontSet, GlyphRef};
 pub use metrics::CellMetrics;
 pub use raster::{GlyphBitmap, Rasterizer};

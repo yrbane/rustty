@@ -343,13 +343,13 @@ fn title_bar_matches_golden() {
     r.render(&ctx, target.view(), &frame);
     let px = target.read_rgba(&ctx).unwrap();
     assert_matches_golden("title_bar", &px, w, h);
-    let close = layout.buttons[2].1;
+    let close = layout.buttons[5].1;
     assert_eq!(
         pixel(&px, w, close.x + 2, close.y + 7),
         [255, 95, 87, 255],
         "pastille fermer"
     );
-    let maximize = layout.buttons[1].1;
+    let maximize = layout.buttons[4].1;
     assert_eq!(
         pixel(&px, w, maximize.x + 1, maximize.y + 7),
         [61, 200, 79, 255],

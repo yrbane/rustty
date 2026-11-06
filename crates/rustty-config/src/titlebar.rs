@@ -31,6 +31,12 @@ pub struct TitleBar {
     pub spacing: u32,
     /// Marge invisible sur le pourtour qui redimensionne la fenêtre (0 à 16).
     pub resize_border: u32,
+    /// Côté des icônes des boutons, en pixels logiques (8 à 32).
+    pub icon_size: u32,
+    /// Éditeur du bouton réglages ; vide : `$VISUAL`, `$EDITOR`, puis l'ouvreur du bureau.
+    pub editor: String,
+    /// Explorateur du bouton dossier ; vide : l'ouvreur du bureau.
+    pub file_manager: String,
     /// Style commun des boutons.
     pub button: ButtonStyle,
     /// Surcharges écrites par l'utilisateur, bouton par bouton.
@@ -49,6 +55,9 @@ impl Default for TitleBar {
             padding: 6,
             spacing: 4,
             resize_border: 6,
+            icon_size: 14,
+            editor: "code".into(),
+            file_manager: String::new(),
             button: ButtonStyle::default(),
             buttons: TitleButtons::default(),
         }
@@ -242,6 +251,7 @@ impl TitleBar {
         bounded("titlebar.padding", self.padding, 0..=32)?;
         bounded("titlebar.spacing", self.spacing, 0..=32)?;
         bounded("titlebar.resize_border", self.resize_border, 0..=16)?;
+        bounded("titlebar.icon_size", self.icon_size, 8..=32)?;
         if !(0.0..=1.0).contains(&self.gloss) {
             return Err(ConfigError::Invalid {
                 field: "titlebar.gloss",

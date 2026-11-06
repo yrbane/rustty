@@ -8,7 +8,7 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::atlas::{AtlasPacker, atlas_size_for};
 use crate::color::Palette;
-use crate::font::{CellMetrics, FontSet, Rasterizer, Variant};
+use crate::font::{CellMetrics, FontSet, IconFace, Rasterizer, Variant};
 use crate::frame::Frame;
 use crate::gpu::{GpuContext, to_wgpu_color};
 use crate::grid::{GlyphRequest, pane_instances};
@@ -28,6 +28,8 @@ pub struct Renderer {
     packer: AtlasPacker,
     cache: HashMap<GlyphKey, Option<CachedGlyph>>,
     fonts: FontSet,
+    /// Face des icônes de la barre de titre.
+    icons: IconFace,
     rasterizer: Rasterizer,
     palette: Palette,
     padding: u32,
@@ -64,6 +66,7 @@ impl Renderer {
             packer: AtlasPacker::new(atlas_size),
             cache: HashMap::new(),
             fonts,
+            icons: IconFace::new(),
             rasterizer: Rasterizer::new(),
             palette,
             padding,

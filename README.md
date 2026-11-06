@@ -71,7 +71,10 @@ horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+
   défaut), on tire la fenêtre par la barre (au-delà de 4 px ; en dessous,
   c'est un clic sans effet) ; les pastilles de droite réduisent, agrandissent
   ou restaurent, et ferment la fenêtre avec la même confirmation que la croix
-  du système quand un programme tourne encore. Les huit bords et coins
+  du système quand un programme tourne encore. À gauche, trois icônes
+  Material : réglages ouvre le fichier de configuration dans l'éditeur (créé
+  depuis le modèle s'il manque), dossier ouvre le dossier courant du panneau
+  actif dans l'explorateur, couleur n'a pas encore d'effet. Les huit bords et coins
   redimensionnent la fenêtre (marge `resize_border`, curseur adapté), sauf
   quand elle est agrandie. Cliquer la barre ferme un menu ouvert et termine un
   renommage. Le clic droit n'y fait rien.
@@ -161,13 +164,19 @@ de la fenêtre, au-dessus des onglets ; `false` rend la barre du système,
 basculé à chaud au rechargement), `height` (28 px logiques), `background`,
 `gloss` (reflet, 0 à 1), `separator_color`, `title_color`, `padding`,
 `spacing`, `resize_border` (marge de redimensionnement, 6 px, 0 pour aucune),
-style commun des boutons `[titlebar.button]` (`size`, fond, bordure, rayon,
-couleur d'icône et leurs variantes au survol) et surcharges par bouton
-`[titlebar.buttons.<nom>]` avec `visible` : `minimize`, `maximize`, `close`
-(pastilles rondes par défaut) ; `settings`, `color`, `folder` sont acceptés
-dans la configuration mais ne sont pas encore dessinés (jalon suivant). Les couleurs acceptent un alpha
-(`"#rrggbbaa"`). Actions clavier `minimize_window` et `toggle_maximize`
-(sans raccourci par défaut).
+`icon_size` (corps des icônes Material, 14 px logiques, 8 à 32 ; une icône ne
+dépasse jamais les quatre cinquièmes de son bouton), `editor` (éditeur du
+bouton réglages, `"code"` par défaut ; vide : `$VISUAL`, puis `$EDITOR`, puis
+l'ouvreur du bureau), `file_manager` (explorateur du bouton dossier ; vide :
+l'ouvreur du bureau), style commun des boutons `[titlebar.button]` (`size`,
+fond, bordure, rayon, couleur d'icône et leurs variantes au survol) et
+surcharges par bouton `[titlebar.buttons.<nom>]` avec `visible` : à gauche
+`settings`, `color`, `folder` (icônes plates, assombries comme le titre sur un
+fond clair ; `color` attend le jalon suivant), à droite `minimize`, `maximize`,
+`close` (pastilles rondes par défaut). Les couleurs acceptent un alpha
+(`"#rrggbbaa"`). Actions clavier `minimize_window`, `toggle_maximize`,
+`open_config` et `open_cwd` (sans raccourci par défaut). Le titre de la
+fenêtre reprend le nom donné à l'onglet actif par « Renommer l'onglet ».
 
 Nouveautés de personnalisation : `[splits]` (barre entre panneaux avec ou
 sans, épaisseur, couleur fixe ou tirée au sort pour chaque division),
@@ -194,4 +203,7 @@ sa valeur par défaut et les raccourcis fournis.
 
 ## Licence
 
-GPL-3.0, voir [LICENSE](LICENSE).
+GPL-3.0, voir [LICENSE](LICENSE). Polices embarquées : DejaVu Sans Mono
+(licence DejaVu) et Material Symbols Rounded (Apache 2.0), réduite aux icônes
+de la barre de titre par `scripts/material-icons.sh` ; licences dans
+`crates/rustty-render/assets/`.

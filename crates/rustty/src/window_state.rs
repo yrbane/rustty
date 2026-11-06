@@ -115,7 +115,7 @@ impl OsWindow {
         waker: Waker,
     ) -> anyhow::Result<Self> {
         let attrs = Window::default_attributes()
-            .with_title(title::window_title("", crate::VERSION))
+            .with_title(title::window_title(None, "", crate::VERSION))
             .with_inner_size(DEFAULT_SIZE)
             .with_transparent(true)
             .with_theme(winit_theme(config.window.decorations_theme))

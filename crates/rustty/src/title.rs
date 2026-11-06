@@ -22,11 +22,14 @@ pub fn display_title(
     }
 }
 
-pub fn window_title(term_title: &str, version: &str) -> String {
-    if term_title.is_empty() {
+/// Titre de la fenêtre : le nom d'onglet personnalisé s'il y en a un, sinon
+/// le titre du terminal, puis « rustty » et sa version.
+pub fn window_title(custom: Option<&str>, term_title: &str, version: &str) -> String {
+    let title = custom.filter(|c| !c.is_empty()).unwrap_or(term_title);
+    if title.is_empty() {
         format!("rustty {version}")
     } else {
-        format!("{term_title} — rustty {version}")
+        format!("{title} — rustty {version}")
     }
 }
 
@@ -67,7 +70,16 @@ mod tests {
 
     #[test]
     fn window_title_carries_the_version() {
-        assert_eq!(window_title("bash", "0.1.0"), "bash — rustty 0.1.0");
-        assert_eq!(window_title("", "0.1.0"), "rustty 0.1.0");
+        assert_eq!(window_title(None, "bash", "0.1.0"), "bash — rustty 0.1.0");
+        assert_eq!(window_title(None, "", "0.1.0"), "rustty 0.1.0");
+    }
+
+    #[test]
+    fn window_title_prefers_the_custom_tab_name() {
+        assert_eq!(
+            window_title(Some("build"), "zsh", "1.0"),
+            "build — rustty 1.0"
+        );
+        assert_eq!(window_title(Some(""), "", "1.0"), "rustty 1.0");
     }
 }

@@ -61,11 +61,12 @@ fn an_icon_is_centered_on_its_point_whatever_its_ink_box() {
         0,
         256,
     );
-    for ch in ['✕', '□', '–', '❐'] {
+    for ch in crate::font::glyphs::ALL {
         let icon = crate::frame::ChromeIcon {
             x: 100,
             y: 50,
             ch,
+            size: 14,
             color: Rgba::new(1.0, 1.0, 1.0, 1.0),
         };
         let inst = r.icon_instance(&ctx, &icon).expect("glyphe présent");
@@ -78,6 +79,51 @@ fn an_icon_is_centered_on_its_point_whatever_its_ink_box() {
             "{ch} : centre de l'encre ({cx}, {cy}) ≠ (100, 50)"
         );
     }
+}
+
+#[test]
+fn icon_glyphs_scale_with_the_icon_size_not_the_text_size() {
+    let Ok(ctx) = GpuContext::headless() else {
+        eprintln!("test GPU ignoré");
+        return;
+    };
+    let mut r = Renderer::with_atlas_size(
+        &ctx,
+        OFFSCREEN_FORMAT,
+        FontSet::embedded(16.0),
+        Palette::from_config(&Colors::default(), false),
+        0,
+        512,
+    );
+    let icon = |ch, size| crate::frame::ChromeIcon {
+        x: 100,
+        y: 50,
+        ch,
+        size,
+        color: Rgba::new(1.0, 1.0, 1.0, 1.0),
+    };
+    let small = r
+        .icon_instance(&ctx, &icon(crate::font::glyphs::CLOSE, 14))
+        .unwrap();
+    let big = r
+        .icon_instance(&ctx, &icon(crate::font::glyphs::CLOSE, 28))
+        .unwrap();
+    assert!(
+        big.size[1] >= small.size[1] * 1.6,
+        "{} vs {}",
+        big.size[1],
+        small.size[1]
+    );
+    assert!(
+        small.size[1] >= 8.0 && small.size[1] <= 14.0,
+        "encre d'un ✕ Material à 14 px : {}",
+        small.size[1]
+    );
+    assert_eq!(
+        r.icon_instance(&ctx, &icon('a', 14)),
+        None,
+        "la face d'icônes ne couvre que les sept glyphes"
+    );
 }
 
 #[test]

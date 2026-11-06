@@ -44,14 +44,17 @@ impl OsWindow {
     /// Le texte donné à winit et dessiné dans la barre : titre du shell du
     /// panneau actif, puis la version.
     pub fn window_title_text(&self) -> String {
-        let raw = self
-            .model
-            .workspace
+        let workspace = &self.model.workspace;
+        let raw = workspace
             .focused_term()
             .and_then(|t| self.titles.get(&t))
             .map(String::as_str)
             .unwrap_or("");
-        title::window_title(raw, crate::VERSION)
+        let custom = workspace
+            .tabs()
+            .get(workspace.active())
+            .and_then(|tab| tab.custom_title.as_deref());
+        title::window_title(custom, raw, crate::VERSION)
     }
 
     pub fn title_bar_chrome(&self) -> Option<Chrome> {

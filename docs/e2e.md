@@ -174,7 +174,16 @@ Boutons
 - [ ] Réduire : la fenêtre va dans la barre des tâches. Agrandir : la fenêtre remplit l'écran et l'icône devient « restaurer » ; cliquer de nouveau restaure. Agrandir par le bureau (double clic du système, raccourci du WM) met aussi l'icône à jour.
 - [ ] Fermer sans programme en cours : la fenêtre se ferme. Avec `sleep 1000` lancé : la bannière de confirmation apparaît ; `Entrée` ferme, `Échap` annule.
 - [ ] Appuyer sur une pastille, glisser hors d'elle, relâcher : rien ne se passe. Clic droit ou du milieu sur une pastille : rien.
-- [ ] `settings`, `color`, `folder` : acceptés dans `[titlebar.buttons.*]` mais pas dessinés (jalon 2) ; seules les trois pastilles de fenêtre apparaissent.
+- [ ] À gauche : trois icônes grises (engrenage, palette, dossier) ; les survoler éclaircit l'icône sur un fond blanc translucide. Le carré d'agrandir reste bien à l'intérieur de sa pastille.
+- [ ] Réglages : le fichier de configuration s'ouvre dans `code` (clé `editor` par défaut). Sans fichier (`mv ~/.config/rustty/rustty.toml /tmp/`), il est créé depuis le modèle complet puis ouvert ; un fichier existant n'est jamais réécrit.
+- [ ] `editor = ""` : `VISUAL=gedit rustty` ouvre dans gedit ; sans `$VISUAL` ni `$EDITOR`, l'ouvreur du bureau (`xdg-open`) choisit l'application. `editor = "programme-inexistant"` : bandeau d'erreur « ouvrir la configuration : … », l'interface reste vivante.
+- [ ] Dossier : l'explorateur s'ouvre sur le dossier courant du panneau actif (`cd /tmp` avant de cliquer) ; `file_manager = "nautilus --new-window"` change de programme. Juste après `ssh` ou avec un shell dont le dossier ne se lit pas : le dossier personnel.
+- [ ] `[keys]` `"ctrl+shift+alt+o" = "open_config"` et `"ctrl+shift+alt+d" = "open_cwd"` font la même chose que les deux boutons.
+- [ ] Sans dossier `~/.config/rustty/` au lancement : cliquer réglages crée dossier et fichier, puis une modification enregistrée dans l'éditeur est rechargée à chaud sans redémarrer.
+- [ ] `icon_size = 24` puis sauvegarde : les icônes d'outils grandissent à chaud (les pastilles gardent une icône aux quatre cinquièmes de leur taille) ; HiDPI : les icônes doublent avec le reste.
+- [ ] `[titlebar.buttons.settings] visible = false` : l'icône disparaît et la zone de titre s'élargit vers la gauche.
+- [ ] `background = "#f0f0f0"` : le titre et les trois icônes d'outils deviennent sombres ; les pastilles gardent leurs couleurs. Survoler un bouton d'outil assombrit son fond (voile noir), le survol reste visible.
+- [ ] Renommer l'onglet actif (menu contextuel) : le titre de la fenêtre reprend ce nom ; le retirer rend le titre du terminal.
 - [ ] Déplacer la fenêtre par la barre, relâcher, puis cliquer un onglet : il s'active ; cliquer dans un panneau et relâcher : la sélection ne colle pas à la souris.
 - [ ] Depuis une pastille survolée, sortir la souris d'un coup par le bord de la fenêtre : l'icône de survol s'efface. Idem en changeant de fenêtre (`alt+tab`) la souris sur une pastille.
 

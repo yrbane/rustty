@@ -60,6 +60,10 @@ pub enum Action {
     MinimizeWindow,
     /// Agrandir la fenêtre, ou la restaurer si elle l'est déjà.
     ToggleMaximize,
+    /// Ouvrir le fichier de configuration dans l'éditeur (`titlebar.editor`).
+    OpenConfig,
+    /// Ouvrir le dossier courant du panneau actif dans l'explorateur.
+    OpenCwd,
     /// `"none"` : retire un raccourci par défaut.
     Unbind,
 }
@@ -85,6 +89,8 @@ enum Simple {
     ResetFontSize,
     MinimizeWindow,
     ToggleMaximize,
+    OpenConfig,
+    OpenCwd,
     None,
 }
 
@@ -147,6 +153,8 @@ impl From<Simple> for Action {
             Simple::ResetFontSize => Self::ResetFontSize,
             Simple::MinimizeWindow => Self::MinimizeWindow,
             Simple::ToggleMaximize => Self::ToggleMaximize,
+            Simple::OpenConfig => Self::OpenConfig,
+            Simple::OpenCwd => Self::OpenCwd,
             Simple::None => Self::Unbind,
         }
     }
@@ -219,6 +227,8 @@ mod tests {
             parse("\"toggle_maximize\"").unwrap(),
             Action::ToggleMaximize
         );
+        assert_eq!(parse("\"open_config\"").unwrap(), Action::OpenConfig);
+        assert_eq!(parse("\"open_cwd\"").unwrap(), Action::OpenCwd);
     }
 
     fn parse(toml_value: &str) -> Result<Action, toml::de::Error> {

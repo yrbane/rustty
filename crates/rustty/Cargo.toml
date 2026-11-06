@@ -18,6 +18,7 @@ rustty-pty = { path = "../rustty-pty" }
 rustty-render = { path = "../rustty-render" }
 rustty-vt = { path = "../rustty-vt" }
 anyhow.workspace = true
+directories.workspace = true
 arboard.workspace = true
 image = { workspace = true, features = ["png", "jpeg", "gif", "webp", "bmp"] }
 base64.workspace = true

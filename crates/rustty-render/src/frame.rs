@@ -54,6 +54,8 @@ pub struct ChromeIcon {
     pub x: u32,
     pub y: u32,
     pub ch: char,
+    /// Corps de la police d'icônes, en pixels.
+    pub size: u32,
     pub color: Rgba,
 }
 

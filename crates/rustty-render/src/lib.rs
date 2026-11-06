@@ -7,7 +7,8 @@ pub use color::{Palette, Rgba, readable_on};
 pub mod font;
 
 pub use font::{
-    CellMetrics, FaceData, FontError, FontSet, GlyphBitmap, GlyphRef, Rasterizer, Variant,
+    CellMetrics, FaceData, FontError, FontSet, GlyphBitmap, GlyphRef, IconFace, Rasterizer,
+    Variant, glyphs as icons,
 };
 pub mod builtin;
 
