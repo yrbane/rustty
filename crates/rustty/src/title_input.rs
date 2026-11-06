@@ -72,9 +72,10 @@ pub fn button_effects(button: TitleButton) -> Vec<Effect> {
     match button {
         TitleButton::Minimize => vec![Effect::Minimize],
         TitleButton::Maximize => vec![Effect::ToggleMaximize],
-        TitleButton::Close | TitleButton::Settings | TitleButton::Color | TitleButton::Folder => {
-            Vec::new()
-        }
+        TitleButton::Settings => vec![Effect::OpenConfig],
+        TitleButton::Folder => vec![Effect::OpenCwd],
+        // Fermer passe par request_close_window ; couleur : jalon 3.
+        TitleButton::Close | TitleButton::Color => Vec::new(),
     }
 }
 

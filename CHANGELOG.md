@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.153 — 2026-11-06 · « Six boutons et glyphes Material dans la barre »
+
+- Les boutons réglages, couleur et dossier sont dessinés à gauche de la barre de titre avec les glyphes Material `settings`, `palette`, `folder_open`, au style commun `[titlebar.button]` ; `visible = false` sur l'un d'eux élargit la zone de titre. Sur un fond de barre clair, leurs icônes s'assombrissent comme le titre ; les pastilles de fenêtre gardent leur style.
+- Cliquer sur réglages ou dossier émet les effets `OpenConfig` et `OpenCwd` (câblés à la version suivante) ; le bouton couleur attend le jalon 3.
+- Image de référence `title_bar.png` régénérée avec les six boutons.
+
 ## 0.1.0-alpha.152 — 2026-11-06 · « Face d'icônes Material dans le renderer »
 
 - Les icônes de la barre de titre sont rastérisées depuis la police Material embarquée, à leur propre corps (`icon_size` × facteur d'échelle), indépendamment de la police de texte ; jamais de repli vers une police du système. Chaque `ChromeIcon` porte son corps et le cache de glyphes le distingue.

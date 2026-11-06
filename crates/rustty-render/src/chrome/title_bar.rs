@@ -14,6 +14,9 @@ use crate::pipeline::quad::QuadStyle;
 const DARK_TITLE: Rgba = Rgba::new(0.07, 0.07, 0.07, 1.0);
 
 /// Glyphes des boutons de fenêtre en attendant les icônes Material.
+const SETTINGS_GLYPH: char = glyphs::SETTINGS;
+const COLOR_GLYPH: char = glyphs::PALETTE;
+const FOLDER_GLYPH: char = glyphs::FOLDER_OPEN;
 const MINIMIZE_GLYPH: char = glyphs::REMOVE;
 const MAXIMIZE_GLYPH: char = glyphs::CROP_SQUARE;
 const RESTORE_GLYPH: char = glyphs::FILTER_NONE;
@@ -92,12 +95,11 @@ pub struct TitleBarStyle {
 }
 
 impl TitleBarStyle {
-    /// Tailles converties en pixels physiques. Ce jalon ne dessine que les
-    /// boutons de fenêtre ; les autres viendront avec leurs icônes.
+    /// Tailles converties en pixels physiques ; seuls les boutons visibles.
     pub fn from_config(cfg: &TitleBar, scale_factor: f64) -> Self {
         let buttons = TitleButton::ALL
             .into_iter()
-            .filter(|b| b.is_window_control() && cfg.button_visible(*b))
+            .filter(|b| cfg.button_visible(*b))
             .map(|b| {
                 (
                     b,
@@ -251,18 +253,28 @@ pub fn title_bar_chrome(
             style: look.quad_style(hovered),
         });
         let glyph = match button {
+            TitleButton::Settings => SETTINGS_GLYPH,
+            TitleButton::Color => COLOR_GLYPH,
+            TitleButton::Folder => FOLDER_GLYPH,
             TitleButton::Minimize => MINIMIZE_GLYPH,
             TitleButton::Maximize if state.maximized => RESTORE_GLYPH,
             TitleButton::Maximize => MAXIMIZE_GLYPH,
             TitleButton::Close => CLOSE_GLYPH,
-            _ => continue,
+        };
+        let styled = if hovered { look.hover_icon } else { look.icon };
+        // Les boutons d'outils suivent la lisibilité du titre ; les boutons de
+        // fenêtre gardent leur style (pastilles colorées).
+        let color = if button.is_window_control() {
+            styled
+        } else {
+            readable_on(style.background, styled, DARK_TITLE)
         };
         chrome.icons.push(ChromeIcon {
             x: rect.x + rect.width / 2,
             y: rect.y + rect.height / 2,
             ch: glyph,
             size: icon_size_in(style, look),
-            color: if hovered { look.hover_icon } else { look.icon },
+            color,
         });
     }
     let max_cells = layout.title.width / metrics.width.max(1);
