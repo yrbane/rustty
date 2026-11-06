@@ -11,7 +11,7 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy}
 use winit::window::WindowId;
 
 use crate::banner::Banner;
-use crate::config_watch::ConfigWatcher;
+use crate::config_watch::{self, ConfigWatcher};
 use crate::events::UserEvent;
 use crate::model::{CloseRequest, Effect};
 use crate::window_state::OsWindow;
@@ -135,6 +135,13 @@ impl ApplicationHandler<UserEvent> for App {
             }
             UserEvent::ConfigChanged => {
                 w.reload_config();
+                Vec::new()
+            }
+            UserEvent::ConfigFileCreated => {
+                if let Some(path) = self.config_path.clone().or_else(Config::default_path) {
+                    let waker = Arc::new(self.proxy.clone());
+                    config_watch::ensure_watcher(&mut self.watcher, &path, waker);
+                }
                 Vec::new()
             }
         };

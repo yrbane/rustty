@@ -7,6 +7,7 @@ use rustty_config::Config;
 
 use crate::banner::Banner;
 use crate::config_watch::{self, ReloadOutcome};
+use crate::events::UserEvent;
 use crate::external;
 use crate::keyboard::paste_bytes;
 use crate::model::Effect;
@@ -175,6 +176,7 @@ impl OsWindow {
             .ok_or_else(|| std::io::Error::other("dossier de configuration introuvable"))
             .and_then(|path| {
                 external::ensure_config_file(&path)?;
+                self.waker.wake(UserEvent::ConfigFileCreated);
                 let command = external::editor_command(
                     &self.config.titlebar.editor,
                     env("VISUAL").as_deref(),

@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.157 — 2026-11-06 · « Correctifs de la revue du jalon 2 »
+
+- Le bouton réglages démarre la surveillance du fichier de configuration quand son dossier n'existait pas au lancement : les modifications enregistrées ensuite sont rechargées à chaud sans redémarrer.
+- Sur une barre de titre claire, le survol des boutons réglages, couleur et dossier reste visible : le voile de survol devient sombre, de même opacité.
+
 ## 0.1.0-alpha.156 — 2026-11-06 · « Barre de titre : documentation du jalon 2 »
 
 - README : icônes Material, clés `icon_size`, `editor`, `file_manager`, boutons réglages et dossier et leurs actions `open_config`, `open_cwd`, titre de la fenêtre et nom d'onglet.

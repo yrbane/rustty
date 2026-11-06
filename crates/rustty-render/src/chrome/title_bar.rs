@@ -248,9 +248,17 @@ pub fn title_bar_chrome(
             continue;
         };
         let hovered = state.hover == Some(*button);
+        let mut quad = look.quad_style(hovered);
+        if hovered && !button.is_window_control() {
+            // Sur une barre claire, un voile blanc ne se voit pas : le survol
+            // des outils prend un voile sombre de même opacité.
+            let dark_veil = Rgba::new(0.0, 0.0, 0.0, look.hover_background.a);
+            quad.fill = readable_on(style.background, look.hover_background, dark_veil);
+            quad.fill_bottom = quad.fill;
+        }
         chrome.shapes.push(ChromeShape {
             rect: *rect,
-            style: look.quad_style(hovered),
+            style: quad,
         });
         let glyph = match button {
             TitleButton::Settings => SETTINGS_GLYPH,

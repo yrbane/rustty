@@ -67,6 +67,14 @@ fn publish(
     result
 }
 
+/// Démarre la surveillance si elle manque encore : le dossier de
+/// configuration peut n'apparaître qu'après le lancement (bouton réglages).
+pub fn ensure_watcher(watcher: &mut Option<ConfigWatcher>, path: &Path, waker: Waker) {
+    if watcher.is_none() {
+        *watcher = ConfigWatcher::start(path, waker);
+    }
+}
+
 pub struct ConfigWatcher {
     _watcher: RecommendedWatcher,
 }
@@ -103,6 +111,22 @@ impl ConfigWatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn watcher_starts_once_the_directory_exists() {
+        let dir = temp_dir("lazy");
+        let path = dir.join("absent/rustty.toml");
+        let waker: crate::events::Waker = Arc::new(std::sync::mpsc::channel::<UserEvent>().0);
+        let mut watcher = None;
+        ensure_watcher(&mut watcher, &path, Arc::clone(&waker));
+        assert!(watcher.is_none(), "pas de dossier : pas de surveillance");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        ensure_watcher(&mut watcher, &path, waker);
+        assert!(
+            watcher.is_some(),
+            "le dossier existe : surveillance démarrée"
+        );
+    }
 
     #[test]
     fn init_config_writes_the_example_once() {

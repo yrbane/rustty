@@ -341,3 +341,40 @@ fn light_background_darkens_title_and_tool_icons() {
         "fermer garde son style"
     );
 }
+
+#[test]
+fn tool_hover_stays_visible_on_a_light_background() {
+    let cfg = TitleBar {
+        background: rustty_config::Rgba8::new(0xf0, 0xf0, 0xf0, 0xff),
+        ..TitleBar::default()
+    };
+    let s = TitleBarStyle::from_config(&cfg, 1.0);
+    let l = layout_title_bar(400, &s);
+    let chrome = |hover| {
+        title_bar_chrome(
+            &l,
+            &s,
+            TitleBarState {
+                title: "x",
+                hover,
+                maximized: false,
+            },
+            metrics(),
+        )
+    };
+    let fill = |c: &Chrome| {
+        c.shapes
+            .iter()
+            .find(|sh| sh.rect == l.buttons[0].1)
+            .unwrap()
+            .style
+            .fill
+    };
+    let plain = fill(&chrome(None));
+    let hovered = fill(&chrome(Some(TitleButton::Settings)));
+    assert_ne!(hovered, plain, "le survol change le fond");
+    assert!(
+        hovered.a > 0.0 && hovered.luminance() < 0.5,
+        "fond de survol sombre sur une barre claire : {hovered:?}"
+    );
+}
