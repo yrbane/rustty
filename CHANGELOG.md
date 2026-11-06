@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.155 — 2026-11-06 · « Le titre de la fenêtre suit le nom d'onglet personnalisé »
+
+- Le titre de la fenêtre (barre de titre maison et titre système) reprend le nom donné à l'onglet actif par « Renommer l'onglet » ; sans nom personnalisé, le titre du terminal comme avant.
+
 ## 0.1.0-alpha.154 — 2026-11-06 · « Réglages et dossier ouvrent l'éditeur et l'explorateur »
 
 - Le bouton réglages (et l'action `open_config`) ouvre le fichier de configuration dans `titlebar.editor` ; clé vide : `$VISUAL`, puis `$EDITOR`, puis l'ouvreur du bureau (`xdg-open`, `open`, `start`). Le fichier est créé depuis le modèle s'il manquait, jamais réécrit.
