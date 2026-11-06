@@ -77,13 +77,19 @@ impl ContextMenu {
         Self::build(MenuTarget::Palette(tab), x, y, None)
     }
 
+    /// Le nuancier de la barre de titre, coin haut-gauche en `(x, y)`.
+    pub fn title_bar(x: u32, y: u32) -> Self {
+        Self::build(MenuTarget::TitleBar, x, y, None)
+    }
+
     /// La fin du terminal `term` invalide-t-elle ce menu ? Panneau et bandeau
     /// visent un terminal ; onglet et nuancier visent un index que la
-    /// disparition d'un onglet décalerait.
+    /// disparition d'un onglet décalerait ; la barre de titre ne vise rien.
     pub fn dropped_by_exit_of(&self, term: TermId) -> bool {
         match self.target {
             MenuTarget::Pane(t) | MenuTarget::Header(t) => t == term,
             MenuTarget::Tab(_) | MenuTarget::Palette(_) => true,
+            MenuTarget::TitleBar => false,
         }
     }
 

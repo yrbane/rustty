@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.161 — 2026-11-06 · « Nuancier de la barre de titre : couleur de session »
+
+- Le bouton couleur de la barre (ou l'action `pick_titlebar_color`) ouvre le nuancier sous le bouton : douze pastilles de la palette, « Par défaut » et « Couleur du fichier ».
+- Une pastille donne à la fenêtre, pour la session, cette couleur de fond de barre ; « Couleur du fichier » la retire. La couleur suit la palette `[colors]` au rechargement.
+- « Par défaut » demande l'écriture de la couleur dans la configuration (l'écriture elle-même arrive à la version suivante).
+
 ## 0.1.0-alpha.160 — 2026-11-06 · « Double clic sur le titre : renommage de la fenêtre en place »
 
 - Double-cliquer le titre de la barre maison (ou `ctrl+shift+alt+w`) ouvre l'édition du nom de la fenêtre dans la barre : tampon et curseur `▌`, Entrée valide, Échap annule, 64 caractères, nom vide = retour au titre du shell.

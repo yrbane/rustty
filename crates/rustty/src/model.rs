@@ -51,6 +51,8 @@ pub enum Effect {
     OpenCwd,
     /// Ouvrir le nuancier de la barre de titre.
     PickTitleBarColor,
+    /// Écrire la couleur ANSI d'index donné dans `[titlebar] background`.
+    SaveTitleBarColor(usize),
     Exit,
 }
 
@@ -76,6 +78,9 @@ pub struct Model {
     pub renaming: Option<Rename>,
     /// Nom fixe de la fenêtre, prioritaire sur le titre de l'onglet actif.
     pub window_name: Option<String>,
+    /// Couleur de session de la barre de titre : index ANSI de la palette,
+    /// `None` pour celle du fichier de configuration.
+    pub titlebar_color: Option<usize>,
     notice: Option<Banner>,
     dead: BTreeSet<TermId>,
 }
@@ -90,6 +95,7 @@ impl Model {
             pending_close: None,
             renaming: None,
             window_name: None,
+            titlebar_color: None,
             hold,
             notice: None,
             dead: BTreeSet::new(),

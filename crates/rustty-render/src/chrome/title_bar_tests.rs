@@ -118,6 +118,7 @@ fn chrome_has_gloss_hover_and_centered_title() {
             title: "zsh — rustty",
             hover: Some(TitleButton::Close),
             maximized: false,
+            background: None,
         },
         metrics(),
     );
@@ -168,6 +169,7 @@ fn long_title_is_truncated_to_the_title_zone() {
             title: &long,
             hover: None,
             maximized: false,
+            background: None,
         },
         metrics(),
     );
@@ -187,6 +189,7 @@ fn light_background_darkens_the_title() {
             title: "x",
             hover: None,
             maximized: false,
+            background: None,
         },
         metrics(),
     );
@@ -206,6 +209,7 @@ fn zero_gloss_gives_a_flat_bar() {
             title: "",
             hover: None,
             maximized: true,
+            background: None,
         },
         metrics(),
     );
@@ -236,6 +240,7 @@ fn icons_are_centered_on_their_button() {
             title: "x",
             hover: None,
             maximized: false,
+            background: None,
         },
         metrics(),
     );
@@ -256,6 +261,7 @@ fn icons_never_exceed_four_fifths_of_their_button() {
         title: "x",
         hover: None,
         maximized: false,
+        background: None,
     };
     let s = style();
     let c = title_bar_chrome(&layout_title_bar(400, &s), &s, state, metrics());
@@ -300,6 +306,7 @@ fn icons_use_the_material_glyphs() {
             title: "x",
             hover: None,
             maximized: true,
+            background: None,
         },
         metrics(),
     );
@@ -331,6 +338,7 @@ fn light_background_darkens_title_and_tool_icons() {
             title: "x",
             hover: Some(TitleButton::Close),
             maximized: false,
+            background: None,
         },
         metrics(),
     );
@@ -358,6 +366,7 @@ fn tool_hover_stays_visible_on_a_light_background() {
                 title: "x",
                 hover,
                 maximized: false,
+                background: None,
             },
             metrics(),
         )
@@ -377,4 +386,27 @@ fn tool_hover_stays_visible_on_a_light_background() {
         hovered.a > 0.0 && hovered.luminance() < 0.5,
         "fond de survol sombre sur une barre claire : {hovered:?}"
     );
+}
+
+#[test]
+fn a_session_color_replaces_the_background() {
+    let s = style();
+    let l = layout_title_bar(400, &s);
+    let red = Rgba::new(0.8, 0.1, 0.1, 1.0);
+    let c = title_bar_chrome(
+        &l,
+        &s,
+        TitleBarState {
+            title: "x",
+            hover: None,
+            maximized: false,
+            background: Some(red),
+        },
+        metrics(),
+    );
+    assert_eq!(
+        c.shapes[0].style.fill_bottom, red,
+        "le fond de la barre est la couleur de session"
+    );
+    assert_eq!(c.shapes[0].style.fill, red.lighten(s.gloss));
 }

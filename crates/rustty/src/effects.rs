@@ -68,8 +68,12 @@ impl OsWindow {
                 }
                 Effect::OpenConfig => self.open_config(),
                 Effect::OpenCwd => self.open_cwd(),
-                // Le nuancier de la barre arrive avec le bouton couleur.
-                Effect::PickTitleBarColor => {}
+                Effect::PickTitleBarColor => {
+                    let effects = self.open_title_bar_palette();
+                    self.run_effects(effects, event_loop);
+                }
+                // L'écriture de la couleur arrive avec toml_edit.
+                Effect::SaveTitleBarColor(_) => {}
                 Effect::Exit => event_loop.exit(),
             }
         }

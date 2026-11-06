@@ -179,3 +179,26 @@ fn pane_and_header_menus_are_dropped_only_by_their_own_term() {
         assert!(!menu.dropped_by_exit_of(TermId(2)));
     }
 }
+
+#[test]
+fn the_title_bar_palette_lists_the_accents_then_default_and_file() {
+    let menu = ContextMenu::title_bar(10, 28);
+    assert_eq!(menu.target, MenuTarget::TitleBar);
+    let items = items(&menu.entries);
+    assert_eq!(items.len(), 14);
+    for (i, slot) in ACCENT_SLOTS.iter().enumerate() {
+        assert_eq!(items[i], MenuItem::Color(*slot));
+    }
+    assert_eq!(items[12], MenuItem::SaveDefaultColor);
+    assert_eq!(items[13], MenuItem::ConfigColor);
+    assert_eq!(menu.label(MenuItem::SaveDefaultColor), "Par défaut");
+    assert_eq!(menu.label(MenuItem::ConfigColor), "Couleur du fichier");
+    assert!(menu.shortcuts.iter().all(Option::is_none));
+    assert_eq!(MenuItem::SaveDefaultColor.action(), None);
+    assert_eq!(MenuItem::ConfigColor.swatch(), None);
+}
+
+#[test]
+fn the_title_bar_palette_survives_a_terminal_exit() {
+    assert!(!ContextMenu::title_bar(0, 0).dropped_by_exit_of(TermId(1)));
+}

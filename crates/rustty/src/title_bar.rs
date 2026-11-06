@@ -81,6 +81,7 @@ impl OsWindow {
                 title: &title,
                 hover: self.title_hover,
                 maximized: self.maximized,
+                background: self.model.titlebar_color.map(|s| self.palette.ansi[s]),
             },
             self.metrics(),
         ))

@@ -189,3 +189,47 @@ fn pane_target_keeps_the_current_behavior() {
         ]
     );
 }
+
+#[test]
+fn a_swatch_gives_the_window_a_session_color() {
+    let mut m = three_tabs();
+    assert_eq!(
+        m.menu_command(MenuTarget::TitleBar, MenuItem::Color(4), false, &idle),
+        vec![Effect::Relayout]
+    );
+    assert_eq!(m.titlebar_color, Some(4));
+    assert_eq!(
+        m.menu_command(MenuTarget::TitleBar, MenuItem::ConfigColor, false, &idle),
+        vec![Effect::Relayout]
+    );
+    assert_eq!(m.titlebar_color, None);
+}
+
+#[test]
+fn default_writes_the_session_color_and_does_nothing_without_one() {
+    let mut m = three_tabs();
+    assert!(
+        m.menu_command(
+            MenuTarget::TitleBar,
+            MenuItem::SaveDefaultColor,
+            false,
+            &idle
+        )
+        .is_empty()
+    );
+    m.titlebar_color = Some(2);
+    assert_eq!(
+        m.menu_command(
+            MenuTarget::TitleBar,
+            MenuItem::SaveDefaultColor,
+            false,
+            &idle
+        ),
+        vec![Effect::SaveTitleBarColor(2)]
+    );
+    assert_eq!(
+        m.titlebar_color,
+        Some(2),
+        "effacée par l'effet, après l'écriture"
+    );
+}

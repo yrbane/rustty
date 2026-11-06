@@ -330,6 +330,7 @@ fn title_bar_matches_golden() {
             title: "1: zsh — rustty 0.1",
             hover: Some(TitleButton::Maximize),
             maximized: false,
+            background: None,
         },
         m,
     );
