@@ -1,6 +1,6 @@
 //! Police d'icônes de la barre de titre : Material Symbols Rounded réduite
 //! aux sept glyphes utilisés (voir `scripts/material-icons.sh`). Face dédiée,
-//! chargée à la taille des icônes et jamais mêlée aux replis système.
+//! rastérisée à la taille de chaque icône et jamais mêlée aux replis système.
 
 use std::sync::Arc;
 
@@ -29,26 +29,26 @@ pub mod glyphs {
     ];
 }
 
-/// La face d'icônes à une taille donnée (pixels physiques).
+/// La face d'icônes ; la taille se choisit à chaque rastérisation.
 pub struct IconFace {
     face: FaceData,
-    size_px: f32,
+}
+
+impl Default for IconFace {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl IconFace {
     /// Police embarquée : toujours valide.
-    pub fn new(size_px: f32) -> Self {
+    pub fn new() -> Self {
         Self {
             face: FaceData {
                 data: Arc::new(ICON_FONT.to_vec()),
                 index: 0,
             },
-            size_px,
         }
-    }
-
-    pub fn size_px(&self) -> f32 {
-        self.size_px
     }
 
     pub fn face(&self) -> &FaceData {
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn every_icon_has_a_glyph_in_the_subset() {
-        let face = IconFace::new(14.0);
+        let face = IconFace::new();
         for ch in glyphs::ALL {
             assert!(face.glyph_id(ch).is_some(), "{:x}", u32::from(ch));
         }
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn the_subset_holds_nothing_else() {
-        let face = IconFace::new(14.0);
+        let face = IconFace::new();
         assert_eq!(face.glyph_id('a'), None);
         assert_eq!(face.glyph_id('\u{e000}'), None, "zone privée hors des sept");
     }

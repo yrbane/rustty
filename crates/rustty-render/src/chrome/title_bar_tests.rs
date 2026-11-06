@@ -119,12 +119,12 @@ fn chrome_has_gloss_hover_and_centered_title() {
     assert!(
         c.icons
             .iter()
-            .any(|i| i.ch == '✕' && i.color == s.buttons[2].1.hover_icon)
+            .any(|i| i.ch == glyphs::CLOSE && i.color == s.buttons[2].1.hover_icon)
     );
     assert!(
         c.icons
             .iter()
-            .any(|i| i.ch == '□' && i.color == s.buttons[1].1.icon)
+            .any(|i| i.ch == glyphs::CROP_SQUARE && i.color == s.buttons[1].1.icon)
     );
 }
 
@@ -188,7 +188,7 @@ fn zero_gloss_gives_a_flat_bar() {
         "pas de liseré : la deuxième forme est le séparateur"
     );
     assert!(
-        c.icons.iter().any(|i| i.ch == '❐'),
+        c.icons.iter().any(|i| i.ch == glyphs::FILTER_NONE),
         "agrandi : icône restaurer"
     );
     assert!(
@@ -220,4 +220,26 @@ fn icons_are_centered_on_their_button() {
             icon.ch
         );
     }
+}
+
+#[test]
+fn icons_never_exceed_four_fifths_of_their_button() {
+    let state = TitleBarState {
+        title: "x",
+        hover: None,
+        maximized: false,
+    };
+    let s = style();
+    let c = title_bar_chrome(&layout_title_bar(400, &s), &s, state, metrics());
+    assert!(
+        c.icons.iter().all(|i| i.size == 11),
+        "pastilles de 14 px : icônes à 11 px, pas icon_size"
+    );
+    let s = TitleBarStyle::from_config(&TitleBar::default(), 2.0);
+    let c = title_bar_chrome(&layout_title_bar(800, &s), &s, state, metrics());
+    assert!(c.icons.iter().all(|i| i.size == 22), "28 px → 22 px");
+    let mut s = style();
+    s.buttons[0].1.size = 40;
+    let c = title_bar_chrome(&layout_title_bar(400, &s), &s, state, metrics());
+    assert_eq!(c.icons[0].size, 14, "grand bouton : icon_size tel quel");
 }

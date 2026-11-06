@@ -15,6 +15,8 @@ use crate::pipeline::glyph::{AtlasTexture, GlyphInstance};
 pub(super) struct GlyphKey {
     ch: char,
     variant: Variant,
+    /// Corps en pixels d'un glyphe de la face d'icônes ; `None` : texte.
+    icon_px: Option<u32>,
 }
 
 #[derive(Clone, Copy)]
@@ -72,7 +74,7 @@ impl Renderer {
         ctx: &GpuContext,
         req: &GlyphRequest,
     ) -> Option<GlyphInstance> {
-        let cached = self.cached_glyph(ctx, req.ch, req.variant)?;
+        let cached = self.cached_glyph(ctx, req.ch, req.variant, None)?;
         let metrics = self.metrics();
         let x = req.x + cached.left as f32;
         let y = req.y + metrics.baseline as f32 - cached.top as f32;
@@ -86,7 +88,7 @@ impl Renderer {
         ctx: &GpuContext,
         icon: &ChromeIcon,
     ) -> Option<GlyphInstance> {
-        let cached = self.cached_glyph(ctx, icon.ch, Variant::Regular)?;
+        let cached = self.cached_glyph(ctx, icon.ch, Variant::Regular, Some(icon.size))?;
         let x = icon.x as f32 - cached.region.width as f32 / 2.0;
         let y = icon.y as f32 - cached.region.height as f32 / 2.0;
         Some(self.instance(cached, x, y, icon.color))
@@ -97,8 +99,13 @@ impl Renderer {
         ctx: &GpuContext,
         ch: char,
         variant: Variant,
+        icon_px: Option<u32>,
     ) -> Option<CachedGlyph> {
-        let key = GlyphKey { ch, variant };
+        let key = GlyphKey {
+            ch,
+            variant,
+            icon_px,
+        };
         match self.cache.get(&key) {
             Some(c) => *c,
             None => {
@@ -139,14 +146,20 @@ impl Renderer {
     }
 
     fn load_glyph(&mut self, ctx: &GpuContext, key: GlyphKey) -> Option<CachedGlyph> {
-        let metrics = self.metrics();
-        let bitmap = match builtin_glyph(key.ch, metrics) {
-            Some(b) => b,
-            None => {
-                let glyph = self.fonts.glyph(key.ch, key.variant)?;
-                let face = self.fonts.face_by_slot(glyph.slot).clone();
-                self.rasterizer
-                    .rasterize(&face, self.fonts.size_px(), glyph.glyph_id)?
+        let bitmap = if let Some(px) = key.icon_px {
+            // Face dédiée : ni glyphe intégré ni repli système.
+            let gid = self.icons.glyph_id(key.ch)?;
+            let face = self.icons.face().clone();
+            self.rasterizer.rasterize(&face, px as f32, gid)?
+        } else {
+            match builtin_glyph(key.ch, self.metrics()) {
+                Some(b) => b,
+                None => {
+                    let glyph = self.fonts.glyph(key.ch, key.variant)?;
+                    let face = self.fonts.face_by_slot(glyph.slot).clone();
+                    self.rasterizer
+                        .rasterize(&face, self.fonts.size_px(), glyph.glyph_id)?
+                }
             }
         };
         let region = match self.packer.insert(bitmap.width, bitmap.height) {

@@ -6,7 +6,7 @@ use rustty_config::{ButtonStyle, TitleBar, TitleButton};
 
 use super::title_fit::{fit_title, title_cells};
 use crate::color::{Rgba, readable_on};
-use crate::font::CellMetrics;
+use crate::font::{CellMetrics, glyphs};
 use crate::frame::{Chrome, ChromeIcon, ChromeShape, ChromeText, PixelRect};
 use crate::pipeline::quad::QuadStyle;
 
@@ -14,10 +14,10 @@ use crate::pipeline::quad::QuadStyle;
 const DARK_TITLE: Rgba = Rgba::new(0.07, 0.07, 0.07, 1.0);
 
 /// Glyphes des boutons de fenêtre en attendant les icônes Material.
-const MINIMIZE_GLYPH: char = '–';
-const MAXIMIZE_GLYPH: char = '□';
-const RESTORE_GLYPH: char = '❐';
-const CLOSE_GLYPH: char = '✕';
+const MINIMIZE_GLYPH: char = glyphs::REMOVE;
+const MAXIMIZE_GLYPH: char = glyphs::CROP_SQUARE;
+const RESTORE_GLYPH: char = glyphs::FILTER_NONE;
+const CLOSE_GLYPH: char = glyphs::CLOSE;
 
 /// Aspect d'un bouton, en pixels physiques.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -64,6 +64,13 @@ impl ButtonLook {
     }
 }
 
+/// Corps de l'icône d'un bouton : `icon_size`, plafonné aux quatre cinquièmes
+/// du bouton pour qu'un glyphe plein (le carré d'agrandir) reste dans une
+/// pastille ronde.
+fn icon_size_in(style: &TitleBarStyle, look: &ButtonLook) -> u32 {
+    style.icon_size.min(look.size * 4 / 5)
+}
+
 /// Pixels logiques → physiques.
 fn px(logical: u32, scale: f64) -> u32 {
     (f64::from(logical) * scale).round() as u32
@@ -78,6 +85,8 @@ pub struct TitleBarStyle {
     pub title_color: Rgba,
     pub padding: u32,
     pub spacing: u32,
+    /// Côté des icônes, en pixels physiques.
+    pub icon_size: u32,
     /// Boutons visibles, dans l'ordre d'affichage.
     pub buttons: Vec<(TitleButton, ButtonLook)>,
 }
@@ -104,6 +113,7 @@ impl TitleBarStyle {
             title_color: Rgba::from_rgba8(cfg.title_color),
             padding: px(cfg.padding, scale_factor),
             spacing: px(cfg.spacing, scale_factor),
+            icon_size: px(cfg.icon_size, scale_factor),
             buttons,
         }
     }
@@ -251,6 +261,7 @@ pub fn title_bar_chrome(
             x: rect.x + rect.width / 2,
             y: rect.y + rect.height / 2,
             ch: glyph,
+            size: icon_size_in(style, look),
             color: if hovered { look.hover_icon } else { look.icon },
         });
     }

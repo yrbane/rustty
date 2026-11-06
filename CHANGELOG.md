@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.152 — 2026-11-06 · « Face d'icônes Material dans le renderer »
+
+- Les icônes de la barre de titre sont rastérisées depuis la police Material embarquée, à leur propre corps (`icon_size` × facteur d'échelle), indépendamment de la police de texte ; jamais de repli vers une police du système. Chaque `ChromeIcon` porte son corps et le cache de glyphes le distingue.
+- Les boutons de fenêtre (réduire, agrandir, restaurer, fermer) utilisent désormais les glyphes Material `remove`, `crop_square`, `filter_none`, `close`. Une icône ne dépasse jamais les quatre cinquièmes de son bouton : dans une pastille de 14 px, le carré d'agrandir fait 8 px au lieu de la remplir. Image de référence `title_bar.png` régénérée.
+
 ## 0.1.0-alpha.151 — 2026-11-06 · « Clés icon_size, editor, file_manager et actions open_config, open_cwd »
 
 - `[titlebar]` accepte `icon_size` (8 à 32, défaut 14, pixels logiques), `editor` (défaut `"code"` ; vide : `$VISUAL`, `$EDITOR`, puis l'ouvreur du bureau) et `file_manager` (défaut vide : l'ouvreur du bureau). Documentées dans le modèle `--init-config`.
