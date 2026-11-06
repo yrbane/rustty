@@ -149,7 +149,7 @@ impl OsWindow {
                     self.cursor_icon = CursorIcon::Default;
                     self.window.set_cursor(CursorIcon::Default);
                 }
-                if self.model.hover_changed(HoverTarget::None) {
+                if self.model.hover_changed(HoverTarget::None) | self.title_hover.take().is_some() {
                     menu_effects.push(Effect::Redraw);
                 }
                 return menu_effects;

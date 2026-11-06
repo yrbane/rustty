@@ -4,6 +4,18 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.171 — 2026-11-06 · « Correctifs différés de la barre de titre »
+
+- Fenêtre très étroite : les pastilles de fenêtre gagnent le clic sur les boutons d'outils qui les recouvrent.
+- Une demande de fermeture à confirmer (croix du système, alt+F4) abandonne la saisie de nom en cours : Entrée va à la confirmation, le titre système reprend sa valeur.
+- Souris dans le nuancier : le bouton couleur n'est plus surligné.
+- Une pastille ou « Couleur du fichier » ne redessine que la barre, sans recalcul de la mise en page.
+- `editor` / `file_manager` : un argument `""` entre guillemets est transmis vide ; une valeur réduite à `""` vaut blanc.
+- Windows : l'ouvreur du bureau passe par `rundll32 url.dll,FileProtocolHandler` au lieu de `cmd /C start ""` (pas de console, pas d'échappement de `&` ou `^`).
+- Tests hors écran : les boutons de la barre sont cherchés par identité, plus par rang.
+- Carte vitrine : légende raccourcie dans la marge, police emoji cherchée aussi dans les polices utilisateur, message clair si `window.png` manque, Python 3.9 accepté, police emoji chargée une fois, séparateur absent détecté sans exception ; `__pycache__/` ignoré par git ; la docstring des tests donne la bonne commande.
+- README : la capture est « comparée à son image de référence », la comparaison étant tolérante.
+
 ## 0.1.0-alpha.170 — 2026-11-06 · « Correctifs de la revue du jalon 4 »
 
 - La clé `editor` est toujours respectée telle quelle, éditeur de terminal compris (choix explicite) ; seuls `$VISUAL` et `$EDITOR` sautent les éditeurs de terminal. `emacs` n'en est plus un (il ouvre une fenêtre), la casse est ignorée (`VIM.EXE`).

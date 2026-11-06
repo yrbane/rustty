@@ -82,7 +82,17 @@ fn opener_matches_the_platform() {
     if cfg!(target_os = "linux") {
         assert_eq!(opener(), ["xdg-open"]);
     }
+    if cfg!(windows) {
+        // Pas de `cmd /C start` : ni console qui clignote, ni échappement.
+        assert_eq!(opener(), ["rundll32", "url.dll,FileProtocolHandler"]);
+    }
     assert!(!opener().is_empty());
+}
+
+#[test]
+fn empty_quoted_arguments_are_kept_but_a_lone_one_is_blank() {
+    assert_eq!(editor_command("code \"\"", None, None), ["code", ""]);
+    assert_eq!(editor_command("\"\"", None, None), opener());
 }
 
 #[test]

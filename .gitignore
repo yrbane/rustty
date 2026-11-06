@@ -8,3 +8,6 @@
 
 # Maquettes du compagnon visuel de brainstorming
 .superpowers/
+
+# Caches Python des scripts
+__pycache__/

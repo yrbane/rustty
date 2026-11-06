@@ -167,11 +167,27 @@ fn cancelling_a_window_rename_restores_the_system_title() {
 
 #[test]
 fn no_rename_while_a_close_is_pending() {
-    let (mut m, _) = Model::new(0.9, false);
+    let (mut m, first) = Model::new(0.9, false);
     m.pending_close = Some(CloseRequest::Window);
     assert!(m.start_window_rename().is_empty());
     assert!(m.start_rename(0).is_empty());
+    assert!(m.start_pane_rename(first).is_empty());
     assert!(m.renaming.is_none());
+}
+
+#[test]
+fn a_close_request_needing_confirmation_cancels_the_rename() {
+    // alt+F4 (CloseRequested du système) pendant une saisie : la
+    // confirmation prend le clavier, la saisie ne doit pas capter Entrée.
+    let (mut m, _) = Model::new(0.9, false);
+    m.start_window_rename();
+    let effects = m.request_close_window(true, &|_| true);
+    assert_eq!(m.pending_close, Some(CloseRequest::Window));
+    assert!(m.renaming.is_none());
+    assert!(
+        effects.contains(&Effect::Relayout),
+        "le titre système reprend sa valeur"
+    );
 }
 
 fn never_running(_: TermId) -> bool {

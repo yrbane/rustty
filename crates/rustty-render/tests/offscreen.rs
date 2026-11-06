@@ -9,6 +9,19 @@ use rustty_render::{Chrome, Frame, Offscreen, Palette, PaneFrame, PixelRect, Rgb
 use rustty_vt::Term;
 use support::{PADDING, assert_matches_golden, pixel, render_term, renderer};
 
+/// Le rectangle d'un bouton de la barre de titre, quel que soit son rang.
+fn button_rect(
+    layout: &rustty_render::TitleBarLayout,
+    button: rustty_config::TitleButton,
+) -> PixelRect {
+    layout
+        .buttons
+        .iter()
+        .find(|(b, _)| *b == button)
+        .map(|(_, r)| *r)
+        .unwrap_or_else(|| panic!("bouton {button:?} absent de la barre"))
+}
+
 #[test]
 fn hello_world_matches_golden() {
     let Some(ctx) = common::gpu_or_skip() else {
@@ -344,13 +357,13 @@ fn title_bar_matches_golden() {
     r.render(&ctx, target.view(), &frame);
     let px = target.read_rgba(&ctx).unwrap();
     assert_matches_golden("title_bar", &px, w, h);
-    let close = layout.buttons[5].1;
+    let close = button_rect(&layout, TitleButton::Close);
     assert_eq!(
         pixel(&px, w, close.x + 2, close.y + 7),
         [255, 95, 87, 255],
         "pastille fermer"
     );
-    let maximize = layout.buttons[4].1;
+    let maximize = button_rect(&layout, TitleButton::Maximize);
     assert_eq!(
         pixel(&px, w, maximize.x + 1, maximize.y + 7),
         [61, 200, 79, 255],
@@ -478,7 +491,7 @@ fn window_mockup_matches_golden() {
     r.render(&ctx, target.view(), &frame);
     let px = target.read_rgba(&ctx).unwrap();
     assert_matches_golden("window", &px, w, h);
-    let color_button = title_layout.buttons[1].1;
+    let color_button = button_rect(&title_layout, rustty_config::TitleButton::Color);
     let sum = |p: [u8; 4]| u32::from(p[0]) + u32::from(p[1]) + u32::from(p[2]);
     assert!(
         sum(pixel(&px, w, color_button.x + 2, color_button.y + 2)) > sum(pixel(&px, w, w / 2, 2)),

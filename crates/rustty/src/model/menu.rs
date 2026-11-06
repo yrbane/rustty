@@ -102,11 +102,11 @@ impl Model {
         match item {
             MenuItem::Color(slot) => {
                 self.titlebar_color = Some(slot);
-                vec![Effect::Relayout]
+                vec![Effect::Redraw]
             }
             MenuItem::ConfigColor => {
                 self.titlebar_color = None;
-                vec![Effect::Relayout]
+                vec![Effect::Redraw]
             }
             MenuItem::SaveDefaultColor => self
                 .titlebar_color

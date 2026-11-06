@@ -195,12 +195,12 @@ fn a_swatch_gives_the_window_a_session_color() {
     let mut m = three_tabs();
     assert_eq!(
         m.menu_command(MenuTarget::TitleBar, MenuItem::Color(4), false, &idle),
-        vec![Effect::Relayout]
+        vec![Effect::Redraw]
     );
     assert_eq!(m.titlebar_color, Some(4));
     assert_eq!(
         m.menu_command(MenuTarget::TitleBar, MenuItem::ConfigColor, false, &idle),
-        vec![Effect::Relayout]
+        vec![Effect::Redraw]
     );
     assert_eq!(m.titlebar_color, None);
 }
