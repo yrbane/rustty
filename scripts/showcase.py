@@ -4,11 +4,16 @@ la capture de fenêtre produite par le renderer (`tests/golden/window.png`).
 
     python3 -I scripts/showcase.py ~/Dev/yrbane.github.io/shots/rustty.webp
 
-Dépendance : Pillow. La police est DejaVu Sans Mono (système, sinon celle
-embarquée dans rustty-render).
+Dépendance : Pillow (Python 3.9 ou plus). La police est DejaVu Sans Mono
+(système, sinon celle embarquée dans rustty-render) ; les emojis de la
+tagline demandent Noto Color Emoji (paquet noto-fonts-emoji sous Linux) et
+sont simplement omis sans elle.
 """
 
+from __future__ import annotations
+
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -37,6 +42,9 @@ BOLD_CANDIDATES = [
 EMOJI_CANDIDATES = [
     Path("/usr/share/fonts/noto/NotoColorEmoji.ttf"),
     Path("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"),
+    Path("/usr/share/fonts/google-noto-emoji/NotoColorEmoji.ttf"),
+    Path.home() / ".local/share/fonts/NotoColorEmoji.ttf",
+    Path.home() / "Library/Fonts/NotoColorEmoji.ttf",
 ]
 # Noto Color Emoji n'existe qu'en 109 px (bitmaps CBDT) : rendu puis réduit.
 EMOJI_NATIVE_PX = 109
@@ -46,7 +54,7 @@ TAGLINE = [
     "bouton ✕ · splits · barre de titre maison 🪟 · nuancier 🎨",
     "images 🖼️ · glisser-déposer à la Terminator 🖱️",
 ]
-CAPTION = "Fenêtre composée hors écran par le renderer, comparée pixel à pixel sur Linux, macOS et Windows."
+CAPTION = "Fenêtre composée hors écran par le renderer et vérifiée en CI sur Linux, macOS et Windows."
 
 
 def font(root: Path, px: int, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -58,6 +66,7 @@ def font(root: Path, px: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     raise FileNotFoundError("DejaVu Sans Mono introuvable")
 
 
+@lru_cache(maxsize=1)
 def emoji_font() -> ImageFont.FreeTypeFont | None:
     for path in EMOJI_CANDIDATES:
         if path.exists():
@@ -151,15 +160,24 @@ def compose(root: Path, out: Path) -> None:
     card.save(out, "WEBP", quality=90)
 
 
+def separator_row(image: Image.Image) -> int | None:
+    """Première rangée dont le pixel de gauche est noir (le séparateur sous
+    la barre de titre), `None` s'il n'y en a pas."""
+    return next(
+        (yy for yy in range(image.height) if image.getpixel((0, yy))[:3] == (0, 0, 0)),
+        None,
+    )
+
+
 def contains_capture(root: Path, card: Image.Image) -> bool:
     """La rangée du séparateur noir de la capture se retrouve, mise à
     l'échelle, à la position où `compose` l'a posée."""
     x, y, w, h = capture_box(root)
     with Image.open(capture_path(root)) as im:
         ratio = h / im.height
-        separator = next(
-            yy for yy in range(im.height) if im.getpixel((0, yy))[:3] == (0, 0, 0)
-        )
+        separator = separator_row(im)
+    if separator is None:
+        return False
     row = y + int(separator * ratio)
     pixels = [card.getpixel((x + i, row))[:3] for i in range(4, w - 4, max(1, w // 32))]
     return all(sum(p) < 60 for p in pixels)
@@ -170,7 +188,11 @@ def main(argv: list[str]) -> int:
         print(__doc__, file=sys.stderr)
         return 2
     root = Path(__file__).resolve().parent.parent
-    compose(root, Path(argv[1]))
+    try:
+        compose(root, Path(argv[1]))
+    except FileNotFoundError as err:
+        print(f"fichier introuvable : {err.filename} (lancer cargo test -p rustty-render d'abord ?)", file=sys.stderr)
+        return 1
     print(argv[1])
     return 0
 

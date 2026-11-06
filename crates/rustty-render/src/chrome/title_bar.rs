@@ -142,7 +142,11 @@ impl TitleBarLayout {
         if !inside(self.bar, x, y) {
             return TitleTarget::None;
         }
-        if let Some((button, _)) = self.buttons.iter().find(|(_, r)| inside(*r, x, y)) {
+        // Fenêtre trop étroite : les outils passent sous les pastilles, qui
+        // restent cliquables en premier.
+        let controls = self.buttons.iter().filter(|(b, _)| b.is_window_control());
+        let tools = self.buttons.iter().filter(|(b, _)| !b.is_window_control());
+        if let Some((button, _)) = controls.chain(tools).find(|(_, r)| inside(*r, x, y)) {
             return TitleTarget::Button(*button);
         }
         if inside(self.title, x, y) {

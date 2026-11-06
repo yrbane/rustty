@@ -199,6 +199,9 @@ Titre et couleur
 - [ ] « Par défaut » sans fichier (`mv ~/.config/rustty/rustty.toml /tmp/`) : le fichier est créé depuis le modèle complet avec la couleur, puis une modification enregistrée est rechargée à chaud. Avec `[titlebar]` écrit en table en ligne (`titlebar = { enabled = true }`) : la clé s'ajoute dans la table en ligne.
 - [ ] Fichier en lecture seule (`chmod 444` sur le dossier `~/.config/rustty`) ou contenant une erreur de syntaxe : bandeau « enregistrer la couleur : … » sur une seule ligne (« configuration invalide : … » pour la syntaxe), aucun fichier temporaire ne reste, la couleur de session est conservée.
 - [ ] Fermer un panneau ou un onglet pendant que le nuancier de la barre est ouvert : il reste ouvert et fonctionne.
+- [ ] Nuancier ouvert, souris dans le nuancier : le bouton couleur n'est plus surligné ; elle ressort vers la barre : le survol reprend.
+- [ ] Fenêtre réduite à moins de 140 px de large : les boutons d'outils passent sous les pastilles, qui restent cliquables.
+- [ ] Windows : le bouton dossier ouvre l'Explorateur sans console qui clignote, y compris pour un dossier dont le nom contient `&`.
 - [ ] Déplacer la fenêtre par la barre, relâcher, puis cliquer un onglet : il s'active ; cliquer dans un panneau et relâcher : la sélection ne colle pas à la souris.
 - [ ] Depuis une pastille survolée, sortir la souris d'un coup par le bord de la fenêtre : l'icône de survol s'efface. Idem en changeant de fenêtre (`alt+tab`) la souris sur une pastille.
 

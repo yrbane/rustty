@@ -90,6 +90,29 @@ fn narrow_window_keeps_buttons_and_drops_the_title() {
 }
 
 #[test]
+fn window_controls_win_the_hit_test_where_tools_overlap_them() {
+    // Fenêtre plus étroite que les six boutons : les outils gardent leur
+    // place (spec) et passent sous les pastilles, qui restent cliquables.
+    let l = layout_title_bar(60, &style());
+    let close = l
+        .buttons
+        .iter()
+        .find(|(b, _)| *b == TitleButton::Close)
+        .map(|(_, r)| *r)
+        .unwrap();
+    assert!(
+        l.buttons.iter().any(|(b, r)| !b.is_window_control()
+            && r.x < close.x + close.width
+            && close.x < r.x + r.width),
+        "le cas suppose un chevauchement"
+    );
+    assert_eq!(
+        l.hit_test(close.x + close.width / 2, close.y + close.height / 2),
+        TitleTarget::Button(TitleButton::Close)
+    );
+}
+
+#[test]
 fn hidden_window_control_is_left_out() {
     let mut cfg = rustty_config::TitleBar::default();
     cfg.buttons.minimize.visible = false;

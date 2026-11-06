@@ -41,8 +41,12 @@ impl Model {
 
     pub fn request_close(&mut self, req: CloseRequest, needs_confirm: bool) -> Vec<Effect> {
         if needs_confirm {
+            // La confirmation prend le clavier : une saisie de nom en cours
+            // (alt+F4 pendant un renommage) est abandonnée.
+            let mut effects = self.cancel_rename();
             self.pending_close = Some(req);
-            return vec![Effect::Redraw];
+            effects.push(Effect::Redraw);
+            return effects;
         }
         self.execute_close(req)
     }

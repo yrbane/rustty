@@ -10,7 +10,9 @@ pub fn opener() -> Vec<String> {
     let parts: &[&str] = if cfg!(target_os = "macos") {
         &["open"]
     } else if cfg!(windows) {
-        &["cmd", "/C", "start", ""]
+        // ShellExecute sur la cible, sans console qui clignote ni
+        // échappement de cmd (`&`, `^` dans un chemin).
+        &["rundll32", "url.dll,FileProtocolHandler"]
     } else {
         &["xdg-open"]
     };
@@ -55,27 +57,33 @@ pub fn file_manager_command(configured: &str) -> Vec<String> {
 }
 
 /// Découpe sur les blancs ; des guillemets doubles groupent un mot avec ses
-/// espaces (`"C:\Program Files\Code\code.exe" --wait`) et sont retirés.
-/// `None` pour une valeur blanche.
+/// espaces (`"C:\Program Files\Code\code.exe" --wait`) et sont retirés ;
+/// `""` est un argument vide. `None` pour une valeur blanche ou un
+/// programme vide.
 fn split_command(value: &str) -> Option<Vec<String>> {
     let mut parts = Vec::new();
     let mut word = String::new();
     let mut quoted = false;
+    let mut had_quotes = false;
     for ch in value.chars() {
         match ch {
-            '"' => quoted = !quoted,
+            '"' => {
+                quoted = !quoted;
+                had_quotes = true;
+            }
             c if c.is_whitespace() && !quoted => {
-                if !word.is_empty() {
+                if !word.is_empty() || had_quotes {
                     parts.push(std::mem::take(&mut word));
                 }
+                had_quotes = false;
             }
             c => word.push(c),
         }
     }
-    if !word.is_empty() {
+    if !word.is_empty() || had_quotes {
         parts.push(word);
     }
-    (!parts.is_empty()).then_some(parts)
+    (!parts.first().is_none_or(String::is_empty)).then_some(parts)
 }
 
 /// Le fichier de configuration existe ensuite : créé depuis le modèle s'il
