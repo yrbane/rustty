@@ -33,9 +33,9 @@ fn instances_of_one_frame_stay_consistent_after_an_atlas_rebuild() {
     );
     let first: Vec<_> = "abcdefghijklmnopqrstuvwxyz".chars().map(request).collect();
     let second: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().map(request).collect();
-    let (a, _) = r.build_glyphs(&ctx, &first, &[]);
+    let (a, _) = r.build_glyphs(&ctx, &first, &[], &[]);
     assert_eq!(a.len(), 26);
-    let (b, _) = r.build_glyphs(&ctx, &second, &[]);
+    let (b, _) = r.build_glyphs(&ctx, &second, &[], &[]);
     assert!(r.rebuilds >= 1, "un atlas de 80 px ne tient pas 52 glyphes");
     let rebuilds = r.rebuilds;
     for (req, inst) in second.iter().zip(&b) {
@@ -45,6 +45,39 @@ fn instances_of_one_frame_stay_consistent_after_an_atlas_rebuild() {
         r.rebuilds, rebuilds,
         "toutes les instances de l'image pointaient dans l'atlas final"
     );
+}
+
+#[test]
+fn an_icon_is_centered_on_its_point_whatever_its_ink_box() {
+    let Ok(ctx) = GpuContext::headless() else {
+        eprintln!("test GPU ignoré");
+        return;
+    };
+    let mut r = Renderer::with_atlas_size(
+        &ctx,
+        OFFSCREEN_FORMAT,
+        FontSet::embedded(16.0),
+        Palette::from_config(&Colors::default(), false),
+        0,
+        256,
+    );
+    for ch in ['✕', '□', '–', '❐'] {
+        let icon = crate::frame::ChromeIcon {
+            x: 100,
+            y: 50,
+            ch,
+            color: Rgba::new(1.0, 1.0, 1.0, 1.0),
+        };
+        let inst = r.icon_instance(&ctx, &icon).expect("glyphe présent");
+        let (cx, cy) = (
+            inst.pos[0] + inst.size[0] / 2.0,
+            inst.pos[1] + inst.size[1] / 2.0,
+        );
+        assert!(
+            (cx - 100.0).abs() <= 0.5 && (cy - 50.0).abs() <= 0.5,
+            "{ch} : centre de l'encre ({cx}, {cy}) ≠ (100, 50)"
+        );
+    }
 }
 
 #[test]
@@ -118,7 +151,7 @@ fn full_atlas_doubles_and_keeps_every_glyph_of_the_frame() {
             })
         })
         .collect();
-    let (instances, _) = r.build_glyphs(&ctx, &page, &[]);
+    let (instances, _) = r.build_glyphs(&ctx, &page, &[], &[]);
     assert_eq!(r.packer.size(), 1024, "l'atlas de 512 déborde : il double");
     assert_eq!(r.atlas.size(), 1024);
     let rebuilds = r.rebuilds;

@@ -4,7 +4,9 @@
 use super::Renderer;
 use crate::atlas::{AtlasPacker, AtlasRegion, DEFAULT_ATLAS_SIZE};
 use crate::builtin::builtin_glyph;
+use crate::color::Rgba;
 use crate::font::Variant;
+use crate::frame::ChromeIcon;
 use crate::gpu::GpuContext;
 use crate::grid::GlyphRequest;
 use crate::pipeline::glyph::{AtlasTexture, GlyphInstance};
@@ -40,6 +42,7 @@ impl Renderer {
         ctx: &GpuContext,
         pane: &[GlyphRequest],
         chrome: &[GlyphRequest],
+        icons: &[ChromeIcon],
     ) -> (Vec<GlyphInstance>, Vec<GlyphInstance>) {
         let mut result = (Vec::new(), Vec::new());
         for _pass in 0..MAX_GLYPH_PASSES {
@@ -52,6 +55,9 @@ impl Renderer {
                 .iter()
                 .filter_map(|r| self.glyph_instance(ctx, r))
                 .collect();
+            result
+                .1
+                .extend(icons.iter().filter_map(|i| self.icon_instance(ctx, i)));
             if self.rebuilds == before {
                 break;
             }
@@ -66,30 +72,53 @@ impl Renderer {
         ctx: &GpuContext,
         req: &GlyphRequest,
     ) -> Option<GlyphInstance> {
-        let key = GlyphKey {
-            ch: req.ch,
-            variant: req.variant,
-        };
-        let cached = match self.cache.get(&key) {
+        let cached = self.cached_glyph(ctx, req.ch, req.variant)?;
+        let metrics = self.metrics();
+        let x = req.x + cached.left as f32;
+        let y = req.y + metrics.baseline as f32 - cached.top as f32;
+        Some(self.instance(cached, x, y, req.color))
+    }
+
+    /// L'instance d'une icône : l'encre du glyphe est centrée sur le point
+    /// demandé, quels que soient son débord et sa ligne de base.
+    pub(crate) fn icon_instance(
+        &mut self,
+        ctx: &GpuContext,
+        icon: &ChromeIcon,
+    ) -> Option<GlyphInstance> {
+        let cached = self.cached_glyph(ctx, icon.ch, Variant::Regular)?;
+        let x = icon.x as f32 - cached.region.width as f32 / 2.0;
+        let y = icon.y as f32 - cached.region.height as f32 / 2.0;
+        Some(self.instance(cached, x, y, icon.color))
+    }
+
+    fn cached_glyph(
+        &mut self,
+        ctx: &GpuContext,
+        ch: char,
+        variant: Variant,
+    ) -> Option<CachedGlyph> {
+        let key = GlyphKey { ch, variant };
+        match self.cache.get(&key) {
             Some(c) => *c,
             None => {
                 let c = self.load_glyph(ctx, key);
                 self.cache.insert(key, c);
                 c
             }
-        }?;
-        let metrics = self.metrics();
-        let x = req.x + cached.left as f32;
-        let y = req.y + metrics.baseline as f32 - cached.top as f32;
-        Some(GlyphInstance::new(
+        }
+    }
+
+    fn instance(&self, cached: CachedGlyph, x: f32, y: f32, color: Rgba) -> GlyphInstance {
+        GlyphInstance::new(
             x,
             y,
             cached.region.width as f32,
             cached.region.height as f32,
             cached.region.uv(self.packer.size()),
-            req.color,
+            color,
             cached.is_color,
-        ))
+        )
     }
 
     /// Atlas plein : il double jusqu'à `DEFAULT_ATLAS_SIZE`, puis, à cette

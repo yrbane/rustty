@@ -93,6 +93,7 @@ impl OsWindow {
         if let Some(title_bar) = self.title_bar_chrome() {
             chrome.shapes.extend(title_bar.shapes);
             chrome.texts.extend(title_bar.texts);
+            chrome.icons.extend(title_bar.icons);
         }
         let mut overlay = Chrome::default();
         overlay.quads.extend(self.drag_preview_quads());

@@ -7,17 +7,17 @@ use rustty_config::{ButtonStyle, TitleBar, TitleButton};
 use super::title_fit::{fit_title, title_cells};
 use crate::color::{Rgba, readable_on};
 use crate::font::CellMetrics;
-use crate::frame::{Chrome, ChromeShape, ChromeText, PixelRect};
+use crate::frame::{Chrome, ChromeIcon, ChromeShape, ChromeText, PixelRect};
 use crate::pipeline::quad::QuadStyle;
 
 /// Couleur du titre sur un fond clair.
 const DARK_TITLE: Rgba = Rgba::new(0.07, 0.07, 0.07, 1.0);
 
 /// Glyphes des boutons de fenêtre en attendant les icônes Material.
-const MINIMIZE_GLYPH: &str = "–";
-const MAXIMIZE_GLYPH: &str = "□";
-const RESTORE_GLYPH: &str = "❐";
-const CLOSE_GLYPH: &str = "✕";
+const MINIMIZE_GLYPH: char = '–';
+const MAXIMIZE_GLYPH: char = '□';
+const RESTORE_GLYPH: char = '❐';
+const CLOSE_GLYPH: char = '✕';
 
 /// Aspect d'un bouton, en pixels physiques.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -247,10 +247,10 @@ pub fn title_bar_chrome(
             TitleButton::Close => CLOSE_GLYPH,
             _ => continue,
         };
-        chrome.texts.push(ChromeText {
-            x: center(rect.x, rect.width, metrics.width),
-            y: center(rect.y, rect.height, metrics.height),
-            text: glyph.to_string(),
+        chrome.icons.push(ChromeIcon {
+            x: rect.x + rect.width / 2,
+            y: rect.y + rect.height / 2,
+            ch: glyph,
             color: if hovered { look.hover_icon } else { look.icon },
         });
     }

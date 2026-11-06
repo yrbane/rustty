@@ -46,6 +46,17 @@ pub struct ChromeText {
     pub color: Rgba,
 }
 
+/// Un glyphe seul, centré sur un point par le centre de son encre (et non posé
+/// sur une cellule) : les symboles d'une pastille tombent au milieu du cercle.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChromeIcon {
+    /// Centre voulu, en pixels.
+    pub x: u32,
+    pub y: u32,
+    pub ch: char,
+    pub color: Rgba,
+}
+
 /// Rectangle stylé (coins arrondis, bordure, dégradé), dessiné après les quads.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChromeShape {
@@ -58,6 +69,7 @@ pub struct Chrome {
     pub quads: Vec<ChromeQuad>,
     pub shapes: Vec<ChromeShape>,
     pub texts: Vec<ChromeText>,
+    pub icons: Vec<ChromeIcon>,
 }
 
 pub struct Frame<'a> {

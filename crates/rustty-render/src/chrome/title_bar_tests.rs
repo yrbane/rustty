@@ -117,14 +117,14 @@ fn chrome_has_gloss_hover_and_centered_title() {
     assert_eq!(title.y, (28 - 16) / 2);
     assert_eq!(title.color, s.title_color);
     assert!(
-        c.texts
+        c.icons
             .iter()
-            .any(|t| t.text == "✕" && t.color == s.buttons[2].1.hover_icon)
+            .any(|i| i.ch == '✕' && i.color == s.buttons[2].1.hover_icon)
     );
     assert!(
-        c.texts
+        c.icons
             .iter()
-            .any(|t| t.text == "□" && t.color == s.buttons[1].1.icon)
+            .any(|i| i.ch == '□' && i.color == s.buttons[1].1.icon)
     );
 }
 
@@ -188,11 +188,36 @@ fn zero_gloss_gives_a_flat_bar() {
         "pas de liseré : la deuxième forme est le séparateur"
     );
     assert!(
-        c.texts.iter().any(|t| t.text == "❐"),
+        c.icons.iter().any(|i| i.ch == '❐'),
         "agrandi : icône restaurer"
     );
     assert!(
         c.texts.iter().all(|t| !t.text.is_empty()),
         "pas de titre vide"
     );
+}
+
+#[test]
+fn icons_are_centered_on_their_button() {
+    let s = TitleBarStyle::from_config(&TitleBar::default(), 1.0);
+    let l = layout_title_bar(400, &s);
+    let c = title_bar_chrome(
+        &l,
+        &s,
+        TitleBarState {
+            title: "x",
+            hover: None,
+            maximized: false,
+        },
+        metrics(),
+    );
+    assert_eq!(c.icons.len(), l.buttons.len(), "une icône par pastille");
+    for ((_, rect), icon) in l.buttons.iter().zip(&c.icons) {
+        assert_eq!(
+            (icon.x, icon.y),
+            (rect.x + rect.width / 2, rect.y + rect.height / 2),
+            "l'icône {} est centrée sur sa pastille, pas posée sur une cellule",
+            icon.ch
+        );
+    }
 }

@@ -154,7 +154,8 @@ impl Renderer {
                 col += ch.width().unwrap_or(1) as u32;
             }
         }
-        let (pane_glyphs, chrome_glyphs) = self.build_glyphs(ctx, &requests, &chrome_requests);
+        let (pane_glyphs, chrome_glyphs) =
+            self.build_glyphs(ctx, &requests, &chrome_requests, &frame.chrome.icons);
         let viewport = frame.viewport;
         let bg_batch = self.quads.prepare(&ctx.device, &backgrounds, viewport);
         let overlay_batch = self.quads.prepare(&ctx.device, &overlay, viewport);

@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.149 — 2026-11-06 · « Icônes centrées dans les pastilles »
+
+- Les symboles des boutons de la barre de titre (réduire, agrandir, restaurer, fermer) sont centrés dans leur pastille : ils étaient posés comme un caractère sur une cellule (bord gauche, ligne de base), d'où un décalage visible vers le haut. Nouveau `ChromeIcon` dans `rustty-render` : un glyphe seul centré sur un point par le centre de son encre, placé par le renderer d'après les bornes réelles du bitmap ; image de référence `title_bar.png` régénérée.
+
 ## 0.1.0-alpha.148 — 2026-11-05 · « Mineurs de la revue du jalon 1 »
 
 - Le seuil de déplacement de la fenêtre par la barre (4 px) est en pixels logiques, mis à l'échelle de l'écran (8 px physiques à 200 %).
