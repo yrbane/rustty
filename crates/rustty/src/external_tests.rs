@@ -49,9 +49,22 @@ fn quoted_programs_keep_their_spaces() {
 fn terminal_editors_yield_to_the_desktop_opener() {
     assert!(is_terminal_editor("/usr/bin/vim"));
     assert!(is_terminal_editor("nvim.exe"));
+    assert!(is_terminal_editor("VIM.EXE"), "casse de Windows");
     assert!(!is_terminal_editor("code"));
+    assert!(
+        !is_terminal_editor("emacs"),
+        "emacs ouvre une fenêtre par défaut"
+    );
     assert_eq!(editor_command("", Some("vim"), Some("nano -w")), opener());
     assert_eq!(editor_command("", Some("vim"), Some("gedit")), ["gedit"]);
+}
+
+#[test]
+fn the_editor_key_is_always_respected() {
+    // La clé est un choix explicite : un éditeur de terminal y est lancé tel
+    // quel (à l'utilisateur de le vouloir), seul l'environnement est filtré.
+    assert_eq!(editor_command("vim", Some("gedit"), None), ["vim"]);
+    assert_eq!(editor_command("nano -w", None, None), ["nano", "-w"]);
 }
 
 #[test]

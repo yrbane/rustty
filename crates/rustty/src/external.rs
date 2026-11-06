@@ -17,31 +17,35 @@ pub fn opener() -> Vec<String> {
     parts.iter().map(|s| s.to_string()).collect()
 }
 
-/// Première valeur non blanche parmi la clé `editor`, `$VISUAL` et
-/// `$EDITOR`, découpée en mots ; sinon l'ouvreur du bureau. Un éditeur de
-/// terminal (`vim`, `nano`…) lancé détaché sans console ne ferait rien : il
-/// est ignoré au profit de la valeur suivante.
+/// La clé `editor` si elle n'est pas blanche, telle quelle (un éditeur de
+/// terminal y est un choix explicite) ; sinon `$VISUAL` puis `$EDITOR`, en
+/// sautant les éditeurs de terminal (`vim`, `nano`…) qui, lancés détachés
+/// sans console, ne s'ouvriraient jamais ; sinon l'ouvreur du bureau.
+/// Les valeurs sont découpées en mots, guillemets doubles compris.
 pub fn editor_command(configured: &str, visual: Option<&str>, editor: Option<&str>) -> Vec<String> {
-    [Some(configured), visual, editor]
-        .into_iter()
-        .flatten()
-        .filter_map(split_command)
-        .find(|cmd| !is_terminal_editor(&cmd[0]))
+    split_command(configured)
+        .or_else(|| {
+            [visual, editor]
+                .into_iter()
+                .flatten()
+                .filter_map(split_command)
+                .find(|cmd| !is_terminal_editor(&cmd[0]))
+        })
         .unwrap_or_else(opener)
 }
 
 /// Éditeurs qui vivent dans le terminal : sans console, ils ne s'ouvrent pas.
-const TERMINAL_EDITORS: [&str; 9] = [
-    "vi", "vim", "nvim", "nano", "micro", "hx", "helix", "emacs", "ed",
-];
+/// `emacs` n'y est pas : il ouvre une fenêtre par défaut.
+const TERMINAL_EDITORS: [&str; 8] = ["vi", "vim", "nvim", "nano", "micro", "hx", "helix", "ed"];
 
-/// Le programme (chemin et `.exe` ignorés) est-il un éditeur de terminal ?
+/// Le programme (chemin, casse et `.exe` ignorés) est-il un éditeur de terminal ?
 pub fn is_terminal_editor(program: &str) -> bool {
     let name = Path::new(program)
         .file_name()
         .and_then(|n| n.to_str())
-        .unwrap_or(program);
-    let name = name.strip_suffix(".exe").unwrap_or(name);
+        .unwrap_or(program)
+        .to_ascii_lowercase();
+    let name = name.strip_suffix(".exe").unwrap_or(&name);
     TERMINAL_EDITORS.contains(&name)
 }
 

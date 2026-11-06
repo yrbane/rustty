@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.170 — 2026-11-06 · « Correctifs de la revue du jalon 4 »
+
+- La clé `editor` est toujours respectée telle quelle, éditeur de terminal compris (choix explicite) ; seuls `$VISUAL` et `$EDITOR` sautent les éditeurs de terminal. `emacs` n'en est plus un (il ouvre une fenêtre), la casse est ignorée (`VIM.EXE`).
+- La règle (guillemets, éditeurs de terminal ignorés dans l'environnement) est documentée dans le README, le modèle de configuration et la doc de la clé.
+
 ## 0.1.0-alpha.169 — 2026-11-06 · « Barre de titre : documentation finale »
 
 - README : le statut alpha mentionne la barre de titre maison et le nombre de tests ; `docs/e2e.md` : la section « Barre de titre » sans numéros de plan ni de jalon ; spec : les quatre jalons sont livrés.

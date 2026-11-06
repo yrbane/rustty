@@ -184,9 +184,11 @@ basculé à chaud au rechargement), `height` (28 px logiques), `background`,
 `spacing`, `resize_border` (marge de redimensionnement, 6 px, 0 pour aucune),
 `icon_size` (corps des icônes Material, 14 px logiques, 8 à 32 ; une icône ne
 dépasse jamais les quatre cinquièmes de son bouton), `editor` (éditeur du
-bouton réglages, `"code"` par défaut ; vide : `$VISUAL`, puis `$EDITOR`, puis
-l'ouvreur du bureau), `file_manager` (explorateur du bouton dossier ; vide :
-l'ouvreur du bureau), style commun des boutons `[titlebar.button]` (`size`,
+bouton réglages, `"code"` par défaut, guillemets doubles autour d'un chemin
+avec espaces ; vide : `$VISUAL`, puis `$EDITOR`, en sautant les éditeurs de
+terminal comme `vim` ou `nano` qui ne s'ouvriraient pas détachés, puis
+l'ouvreur du bureau), `file_manager` (explorateur du bouton dossier, même
+découpage ; vide : l'ouvreur du bureau), style commun des boutons `[titlebar.button]` (`size`,
 fond, bordure, rayon, couleur d'icône et leurs variantes au survol) et
 surcharges par bouton `[titlebar.buttons.<nom>]` avec `visible` : à gauche
 `settings`, `color`, `folder` (icônes plates, assombries comme le titre sur un
