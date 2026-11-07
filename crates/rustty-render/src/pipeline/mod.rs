@@ -1,5 +1,6 @@
 //! Les pipelines wgpu : quads colorés, quads texturés par l'atlas et images.
 
+pub mod common;
 pub mod glyph;
 pub mod image;
 pub mod quad;

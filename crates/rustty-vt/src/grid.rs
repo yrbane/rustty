@@ -71,11 +71,13 @@ impl Grid {
         if n == 0 {
             return Vec::new();
         }
-        let evicted: Vec<Line> = self.lines[top..top + n].to_vec();
+        // Les lignes évincées partent telles quelles (pas de clone) et des
+        // lignes vierges prennent leur place avant de descendre en bas.
+        let cols = self.cols();
+        let evicted: Vec<Line> = (top..top + n)
+            .map(|i| std::mem::replace(&mut self.lines[i], Line::filled(cols, template)))
+            .collect();
         self.lines[top..=bottom].rotate_left(n);
-        for line in &mut self.lines[bottom + 1 - n..=bottom] {
-            line.reset(template);
-        }
         evicted
     }
 
@@ -126,6 +128,16 @@ impl Grid {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scroll_up_returns_the_evicted_lines_and_blanks_the_bottom() {
+        let mut g = grid_with_letters(3);
+        let evicted = g.scroll_up(0, 2, 1, Cell::default());
+        assert_eq!(evicted.len(), 1);
+        assert_eq!(evicted[0].text(), "a  ");
+        assert_eq!(g.line(0).text(), "b  ");
+        assert_eq!(g.line(2).text(), "   ");
+    }
 
     fn grid_with_letters(rows: usize) -> Grid {
         let mut g = Grid::new(3, rows);

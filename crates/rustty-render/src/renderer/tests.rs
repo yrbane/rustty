@@ -206,3 +206,85 @@ fn full_atlas_doubles_and_keeps_every_glyph_of_the_frame() {
     }
     assert_eq!(r.rebuilds, rebuilds, "aucune reconstruction de plus");
 }
+
+/// Contexte, renderer, cible et instantané d'un terminal `cols × rows`
+/// rempli de texte ; `None` sans GPU.
+fn fixture(
+    cols: usize,
+    rows: usize,
+) -> Option<(
+    GpuContext,
+    Renderer,
+    crate::gpu::Offscreen,
+    rustty_vt::Snapshot,
+)> {
+    let Ok(ctx) = GpuContext::headless() else {
+        eprintln!("test GPU ignoré");
+        return None;
+    };
+    let r = Renderer::new(
+        &ctx,
+        OFFSCREEN_FORMAT,
+        FontSet::embedded(16.0),
+        Palette::from_config(&Colors::default(), false),
+        0,
+    );
+    let m = r.metrics();
+    let target = crate::gpu::Offscreen::new(&ctx, cols as u32 * m.width, rows as u32 * m.height);
+    let mut t = rustty_vt::Term::new(cols, rows, 0);
+    t.input(&vec![b'x'; cols * rows]);
+    Some((ctx, r, target, t.snapshot()))
+}
+
+fn render_once(
+    ctx: &GpuContext,
+    r: &mut Renderer,
+    target: &crate::gpu::Offscreen,
+    snap: &rustty_vt::Snapshot,
+) {
+    let (w, h) = target.size();
+    let frame = Frame {
+        viewport: (w, h),
+        background: Rgba::new(0.0, 0.0, 0.0, 1.0),
+        panes: vec![crate::frame::PaneFrame {
+            rect: crate::frame::PixelRect::new(0, 0, w, h),
+            snapshot: snap,
+            focused: true,
+            link_hover: None,
+        }],
+        chrome: Default::default(),
+    };
+    r.render(ctx, target.view(), &frame);
+}
+
+#[test]
+fn a_second_identical_frame_creates_no_gpu_objects() {
+    let Some((ctx, mut r, target, snap)) = fixture(40, 10) else {
+        return;
+    };
+    render_once(&ctx, &mut r, &target, &snap);
+    render_once(&ctx, &mut r, &target, &snap);
+    let after_two = r.gpu_objects();
+    render_once(&ctx, &mut r, &target, &snap);
+    assert_eq!(r.gpu_objects(), after_two);
+}
+
+#[test]
+fn buffers_grow_once_for_a_larger_frame_then_stay() {
+    let Some((ctx, mut r, target, small)) = fixture(10, 2) else {
+        return;
+    };
+    render_once(&ctx, &mut r, &target, &small);
+    render_once(&ctx, &mut r, &target, &small);
+    let before = r.gpu_objects();
+    let mut t = rustty_vt::Term::new(120, 40, 0);
+    t.input(&vec![b'x'; 120 * 40]);
+    let big = t.snapshot();
+    let m = r.metrics();
+    let big_target = crate::gpu::Offscreen::new(&ctx, 120 * m.width, 40 * m.height);
+    render_once(&ctx, &mut r, &big_target, &big);
+    let grown = r.gpu_objects();
+    assert!(grown > before, "croissance");
+    render_once(&ctx, &mut r, &big_target, &big);
+    assert_eq!(r.gpu_objects(), grown, "stable ensuite");
+}

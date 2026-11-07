@@ -57,7 +57,7 @@ impl OsWindow {
                 }
                 Effect::ReloadConfig => self.reload_config(),
                 Effect::Relayout => {
-                    self.relayout();
+                    self.layout_dirty = true;
                     self.window.request_redraw();
                 }
                 Effect::Minimize => self.window.set_minimized(true),

@@ -1,11 +1,12 @@
 //! Quads texturés par l'atlas : les glyphes de la grille et du chrome.
 
-use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt as _;
-
-use super::{Globals, alpha_target, globals_layout};
+use super::common::{
+    GlobalsBinding, InstanceBuffer, InstancedPipelineSpec, instanced_pipeline, sampler, shader,
+    texture_layout,
+};
 use crate::atlas::AtlasRegion;
 use crate::color::Rgba;
+use bytemuck::{Pod, Zeroable};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
@@ -113,132 +114,45 @@ impl AtlasTexture {
 
 pub struct GlyphPipeline {
     pipeline: wgpu::RenderPipeline,
-    globals_layout: wgpu::BindGroupLayout,
     atlas_layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
 }
 
-pub struct GlyphBatch {
-    instances: wgpu::Buffer,
-    count: u32,
-    globals_group: wgpu::BindGroup,
-    atlas_group: wgpu::BindGroup,
-    _globals: wgpu::Buffer,
-}
-
-impl GlyphBatch {
-    pub fn len(&self) -> usize {
-        self.count as usize
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.count == 0
-    }
-}
-
 impl GlyphPipeline {
-    pub fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rustty-glyph"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/glyph.wgsl").into()),
-        });
-        let globals_layout = globals_layout(device);
-        let atlas_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("rustty-atlas"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        });
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("rustty-atlas"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rustty-glyph"),
-            bind_group_layouts: &[Some(&globals_layout), Some(&atlas_layout)],
-            ..Default::default()
-        });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("rustty-glyph"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[Some(wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<GlyphInstance>() as u64,
-                    step_mode: wgpu::VertexStepMode::Instance,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Uint32],
-                })],
+    pub fn new(
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+        globals_layout: &wgpu::BindGroupLayout,
+    ) -> Self {
+        let shader = shader(
+            device,
+            "rustty-glyph",
+            include_str!("../shaders/glyph.wgsl"),
+        );
+        let atlas_layout = texture_layout(device, "rustty-atlas");
+        let sampler = sampler(device, "rustty-atlas", wgpu::FilterMode::Nearest);
+        let pipeline = instanced_pipeline(
+            device,
+            &InstancedPipelineSpec {
+                label: "rustty-glyph",
+                shader: &shader,
+                bind_layouts: &[globals_layout, &atlas_layout],
+                stride: std::mem::size_of::<GlyphInstance>() as u64,
+                attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Uint32],
+                format,
             },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(alpha_target(format))],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
+        );
         Self {
             pipeline,
-            globals_layout,
             atlas_layout,
             sampler,
         }
     }
 
-    pub fn prepare(
-        &self,
-        device: &wgpu::Device,
-        atlas: &AtlasTexture,
-        instances: &[GlyphInstance],
-        viewport: (u32, u32),
-    ) -> Option<GlyphBatch> {
-        if instances.is_empty() {
-            return None;
-        }
-        let instances_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("rustty-glyph-instances"),
-            contents: bytemuck::cast_slice(instances),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let globals = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("rustty-glyph-globals"),
-            contents: bytemuck::bytes_of(&Globals::new(viewport)),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
-        let globals_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("rustty-glyph-globals"),
-            layout: &self.globals_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: globals.as_entire_binding(),
-            }],
-        });
-        let atlas_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+    /// Le bind group d'un atlas : à créer une fois par texture d'atlas, pas
+    /// par image.
+    pub fn atlas_group(&self, device: &wgpu::Device, atlas: &AtlasTexture) -> wgpu::BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("rustty-glyph-atlas"),
             layout: &self.atlas_layout,
             entries: &[
@@ -251,21 +165,24 @@ impl GlyphPipeline {
                     resource: wgpu::BindingResource::Sampler(&self.sampler),
                 },
             ],
-        });
-        Some(GlyphBatch {
-            instances: instances_buffer,
-            count: instances.len() as u32,
-            globals_group,
-            atlas_group,
-            _globals: globals,
         })
     }
 
-    pub fn draw<'a>(&'a self, pass: &mut wgpu::RenderPass<'a>, batch: &'a GlyphBatch) {
+    /// Dessine `instances` texturées par l'atlas de `atlas_group`.
+    pub fn draw<'a>(
+        &'a self,
+        pass: &mut wgpu::RenderPass<'a>,
+        globals: &'a GlobalsBinding,
+        atlas_group: &'a wgpu::BindGroup,
+        instances: &'a InstanceBuffer,
+    ) {
+        if instances.is_empty() {
+            return;
+        }
         pass.set_pipeline(&self.pipeline);
-        pass.set_bind_group(0, &batch.globals_group, &[]);
-        pass.set_bind_group(1, &batch.atlas_group, &[]);
-        pass.set_vertex_buffer(0, batch.instances.slice(..));
-        pass.draw(0..6, 0..batch.count);
+        pass.set_bind_group(0, globals.group(), &[]);
+        pass.set_bind_group(1, atlas_group, &[]);
+        pass.set_vertex_buffer(0, instances.slice());
+        pass.draw(0..6, 0..instances.count());
     }
 }

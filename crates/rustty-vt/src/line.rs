@@ -23,6 +23,16 @@ impl Line {
         Self::filled(cols, Cell::default())
     }
 
+    /// Une ligne à partir de ses cellules (la largeur est leur nombre).
+    pub fn from_cells(cells: Vec<Cell>) -> Self {
+        Self {
+            cells,
+            zerowidth: BTreeMap::new(),
+            wrapped: false,
+            images: Vec::new(),
+        }
+    }
+
     pub fn filled(cols: usize, template: Cell) -> Self {
         Self {
             cells: vec![template; cols],
@@ -53,17 +63,31 @@ impl Line {
     }
 
     pub fn get_mut(&mut self, col: usize) -> &mut Cell {
-        self.zerowidth.remove(&col);
+        self.drop_zerowidth(col);
         &mut self.cells[col]
     }
 
     pub fn set(&mut self, col: usize, cell: Cell) {
-        self.zerowidth.remove(&col);
+        self.drop_zerowidth(col);
         self.cells[col] = cell;
+    }
+
+    /// Les combinants d'une cellule réécrite partent avec elle ; la table
+    /// est presque toujours vide, d'où le test avant la recherche.
+    #[inline]
+    fn drop_zerowidth(&mut self, col: usize) {
+        if !self.zerowidth.is_empty() {
+            self.zerowidth.remove(&col);
+        }
     }
 
     pub fn push_zerowidth(&mut self, col: usize, ch: char) {
         self.zerowidth.entry(col).or_default().push(ch);
+    }
+
+    /// La ligne porte au moins un combinant.
+    pub fn has_zerowidth(&self) -> bool {
+        !self.zerowidth.is_empty()
     }
 
     pub fn zerowidth(&self, col: usize) -> Option<&str> {

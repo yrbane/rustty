@@ -26,8 +26,33 @@ fn reflowing_ten_thousand_short_lines_is_fast() {
         out[9_999].text().trim_end(),
         "ligne 9999 avec un peu de texte"
     );
+    // 20 ms en release ; le code non optimisé, sous une suite parallèle,
+    // a droit à la borne d'origine.
+    let bound = if cfg!(debug_assertions) { 100 } else { 20 };
     assert!(
-        elapsed < std::time::Duration::from_millis(100),
+        elapsed < std::time::Duration::from_millis(bound),
         "reflow de 10 000 lignes : {elapsed:?}"
+    );
+}
+
+/// 10 000 lignes de 157 caractères, 200 → 120 colonnes : tout se replie.
+#[test]
+fn reflowing_ten_thousand_long_lines_stays_bounded() {
+    let lines: Vec<Line> = (0..10_000)
+        .map(|i| {
+            let mut l = Line::new(200);
+            for (c, ch) in format!("{i:06} {}", "x".repeat(150)).chars().enumerate() {
+                l.set(c, Cell::new(ch, Default::default()));
+            }
+            l
+        })
+        .collect();
+    let start = std::time::Instant::now();
+    let (out, _) = reflow(lines, &[], 120);
+    let elapsed = start.elapsed();
+    assert_eq!(out.len(), 20_000);
+    assert!(
+        elapsed < std::time::Duration::from_millis(1_000),
+        "reflow de 10 000 lignes longues : {elapsed:?}"
     );
 }

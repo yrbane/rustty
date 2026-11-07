@@ -7,21 +7,9 @@ use crate::cell::{Attrs, Cell};
 use crate::graphics::ImageStrip;
 use crate::line::Line;
 
-/// Une cellule visible (jamais une seconde moitié de caractère large) et les
-/// caractères de largeur nulle qui l'accompagnent.
-struct Entry {
-    cell: Cell,
-    zerowidth: Option<String>,
-}
-
-impl Entry {
-    fn width(&self) -> usize {
-        if self.cell.is_wide() { 2 } else { 1 }
-    }
-
-    fn is_blank(&self) -> bool {
-        is_blank(&self.cell) && self.zerowidth.is_none()
-    }
+/// Largeur en colonnes d'une entrée (jamais une seconde moitié de large).
+fn width_of(cell: &Cell) -> usize {
+    if cell.is_wide() { 2 } else { 1 }
 }
 
 /// Une espace sans attribut est un blanc, quelles que soient ses couleurs : le
@@ -33,9 +21,12 @@ pub(crate) fn is_blank(cell: &Cell) -> bool {
 
 /// Une ligne logique : ce que l'application a écrit entre deux retours à la
 /// ligne explicites, la position de chaque curseur en entrées, s'il y est, et
-/// les bandes d'image de toutes ses lignes source.
+/// les bandes d'image de toutes ses lignes source. Les combinants sont à part,
+/// indexés par entrée et croissants : presque toujours vides, ils laissent
+/// les entrées à 16 octets.
 struct Logical {
-    entries: Vec<Entry>,
+    entries: Vec<Cell>,
+    zerowidth: Vec<(usize, String)>,
     cursors: Vec<Option<usize>>,
     images: Vec<ImageStrip>,
 }
@@ -44,9 +35,15 @@ impl Logical {
     fn new(cursors: usize) -> Self {
         Self {
             entries: Vec::new(),
+            zerowidth: Vec::new(),
             cursors: vec![None; cursors],
             images: Vec::new(),
         }
+    }
+
+    /// Une entrée est un blanc si sa cellule l'est et qu'aucun combinant n'y tient.
+    fn is_blank_at(&self, k: usize) -> bool {
+        is_blank(&self.entries[k]) && self.zerowidth.last().is_none_or(|&(i, _)| i != k)
     }
 }
 
@@ -101,6 +98,15 @@ fn used_width(line: &Line) -> usize {
 
 fn append(logical: &mut Logical, line: &mut Line, row: usize, cursors: &[(usize, usize)]) {
     logical.images.append(&mut line.images);
+    if logical.entries.is_empty() {
+        logical.entries.reserve(line.len());
+    }
+    let has_marks = line.has_zerowidth();
+    let on_row = cursors.iter().any(|&(r, _)| r == row);
+    if !on_row && !has_marks && !has_wide(line.cells()) {
+        logical.entries.extend_from_slice(line.cells());
+        return;
+    }
     for (col, cell) in line.cells().iter().enumerate() {
         for (slot, &cursor) in logical.cursors.iter_mut().zip(cursors) {
             if cursor == (row, col) {
@@ -110,10 +116,12 @@ fn append(logical: &mut Logical, line: &mut Line, row: usize, cursors: &[(usize,
             }
         }
         if !cell.is_wide_continuation() {
-            logical.entries.push(Entry {
-                cell: *cell,
-                zerowidth: line.zerowidth(col).map(str::to_owned),
-            });
+            if has_marks && let Some(marks) = line.zerowidth(col) {
+                logical
+                    .zerowidth
+                    .push((logical.entries.len(), marks.to_owned()));
+            }
+            logical.entries.push(*cell);
         }
     }
     for (slot, &(r, c)) in logical.cursors.iter_mut().zip(cursors) {
@@ -123,11 +131,17 @@ fn append(logical: &mut Logical, line: &mut Line, row: usize, cursors: &[(usize,
     }
 }
 
+/// Une cellule large (ou sa moitié droite) dans la tranche.
+fn has_wide(cells: &[Cell]) -> bool {
+    let halves = Attrs::WIDE | Attrs::WIDE_CONTINUATION;
+    cells.iter().any(|c| c.style.attrs.intersects(halves))
+}
+
 /// Retire les blancs de fin, sauf ceux qui précèdent le premier curseur (le
 /// curseur vivant) ; les suivants, au-delà du texte, s'y posent en fin.
 fn trimmed(mut logical: Logical) -> Logical {
     let keep = logical.cursors.first().copied().flatten().unwrap_or(0);
-    while logical.entries.len() > keep && logical.entries.last().is_some_and(Entry::is_blank) {
+    while logical.entries.len() > keep && logical.is_blank_at(logical.entries.len() - 1) {
         logical.entries.pop();
     }
     logical
@@ -139,14 +153,18 @@ fn layout(
     out: &mut Vec<Line>,
     moved: &mut [Option<(usize, usize)>],
 ) {
+    if logical.zerowidth.is_empty() && !has_wide(&logical.entries) {
+        return layout_narrow(logical, cols, out, moved);
+    }
     let mut line = Line::new(cols);
     // Les bandes vont à la première ligne produite, colonne inchangée.
     line.images = logical.images;
     let mut col = 0;
     let count = logical.entries.len();
-    for (k, entry) in logical.entries.into_iter().enumerate() {
+    let mut marks = logical.zerowidth.into_iter().peekable();
+    for (k, mut cell) in logical.entries.into_iter().enumerate() {
         // Un caractère large ne tient pas dans une colonne : il y est réduit.
-        let width = entry.width().min(cols);
+        let width = width_of(&cell).min(cols);
         if col + width > cols {
             line.wrapped = true;
             out.push(std::mem::replace(&mut line, Line::new(cols)));
@@ -157,19 +175,22 @@ fn layout(
                 *target = Some((out.len(), col));
             }
         }
-        let mut cell = entry.cell;
         if width == 1 {
             cell.style.attrs.remove(Attrs::WIDE);
         }
-        line.set(col, cell);
-        for ch in entry.zerowidth.iter().flat_map(|s| s.chars()) {
-            line.push_zerowidth(col, ch);
+        line.cells_mut()[col] = cell;
+        if marks.peek().is_some_and(|&(i, _)| i == k)
+            && let Some((_, s)) = marks.next()
+        {
+            for ch in s.chars() {
+                line.push_zerowidth(col, ch);
+            }
         }
         if width == 2 {
             let mut half = Cell::new(' ', cell.style);
             half.style.attrs.remove(Attrs::WIDE);
             half.style.attrs.insert(Attrs::WIDE_CONTINUATION);
-            line.set(col + 1, half);
+            line.cells_mut()[col + 1] = half;
         }
         col += width;
     }
@@ -179,6 +200,44 @@ fn layout(
         }
     }
     out.push(line);
+}
+
+/// Même découpage que `layout` pour une ligne logique sans caractère large ni
+/// combinant (presque toutes) : les cellules sont copiées par tranche de
+/// `cols` et les curseurs placés par arithmétique.
+fn layout_narrow(
+    logical: Logical,
+    cols: usize,
+    out: &mut Vec<Line>,
+    moved: &mut [Option<(usize, usize)>],
+) {
+    let first = out.len();
+    let count = logical.entries.len();
+    let mut chunks = logical.entries.chunks(cols).peekable();
+    if chunks.peek().is_none() {
+        out.push(Line::new(cols));
+    }
+    while let Some(chunk) = chunks.next() {
+        let mut cells = Vec::with_capacity(cols);
+        cells.extend_from_slice(chunk);
+        cells.resize(cols, Cell::default());
+        let mut line = Line::from_cells(cells);
+        line.wrapped = chunks.peek().is_some();
+        out.push(line);
+    }
+    // Les bandes vont à la première ligne produite, colonne inchangée.
+    out[first].images = logical.images;
+    let last = out.len() - 1;
+    let end_col = count - (last - first) * cols;
+    for (target, cursor) in moved.iter_mut().zip(&logical.cursors) {
+        if let Some(k) = *cursor {
+            *target = Some(if k < count {
+                (first + k / cols, k % cols)
+            } else {
+                (last, end_col)
+            });
+        }
+    }
 }
 
 #[cfg(test)]

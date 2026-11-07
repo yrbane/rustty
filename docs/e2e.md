@@ -44,6 +44,7 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 ## Splits
 - [ ] `ctrl+shift+e` divise verticalement (nouveau panneau à droite, focalisé), `ctrl+shift+o` horizontalement (en dessous).
 - [ ] `shift+flèches` déplacent le focus ; `ctrl+flèches` redimensionnent ; les raccourcis de rotation et de zoom de la config fonctionnent.
+- [ ] Glisser la barre entre deux panneaux avec un gros historique (`seq 1 20000`) : le texte se replie en direct, sans à-coup, et la barre suit la souris.
 - [ ] Un clic dans un panneau le focalise ; le curseur du panneau non focalisé est creux.
 - [ ] `exit` dans un panneau ne ferme que ce panneau.
 

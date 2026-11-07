@@ -37,11 +37,7 @@ impl MenuLayout {
     /// La décision pour un clic (`left` : bouton gauche) au point `(x, y)`.
     /// Le point est dans le cadre du menu.
     pub fn contains(&self, x: f64, y: f64) -> bool {
-        let r = self.rect;
-        x >= f64::from(r.x)
-            && x < f64::from(r.x + r.width)
-            && y >= f64::from(r.y)
-            && y < f64::from(r.y + r.height)
+        self.rect.contains_point(x, y)
     }
 
     pub fn click(&self, menu: &ContextMenu, left: bool, x: f64, y: f64) -> MenuClick {

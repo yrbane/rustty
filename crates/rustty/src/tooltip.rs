@@ -30,21 +30,34 @@ pub struct PopupLayout {
     pub rows: Vec<PixelRect>,
 }
 
-fn inside(r: PixelRect, x: f64, y: f64) -> bool {
-    x >= f64::from(r.x)
-        && x < f64::from(r.x + r.width)
-        && y >= f64::from(r.y)
-        && y < f64::from(r.y + r.height)
-}
-
 impl PopupLayout {
     pub fn contains(&self, x: f64, y: f64) -> bool {
-        inside(self.rect, x, y)
+        self.rect.contains_point(x, y)
     }
 
     pub fn hit(&self, x: f64, y: f64) -> Option<usize> {
-        self.rows.iter().position(|r| inside(*r, x, y))
+        self.rows.iter().position(|r| r.contains_point(x, y))
     }
+}
+
+/// Le panneau commun à l'infobulle et au menu du clic droit : un cadre gris
+/// d'un pixel puis le fond de la fenêtre en retrait.
+pub fn panel_quads(rect: PixelRect, palette: &Palette) -> [ChromeQuad; 2] {
+    [
+        ChromeQuad {
+            rect,
+            color: palette.ansi[8],
+        },
+        ChromeQuad {
+            rect: PixelRect::new(
+                rect.x + 1,
+                rect.y + 1,
+                rect.width.saturating_sub(2),
+                rect.height.saturating_sub(2),
+            ),
+            color: palette.background,
+        },
+    ]
 }
 
 /// Place l'infobulle au-dessus de l'ancre, alignée sur son bord gauche, ou
@@ -90,19 +103,7 @@ pub fn chrome(
     let r = layout.rect;
     let avail = (r.width / cw).saturating_sub(2) as usize;
     let mut chrome = Chrome::default();
-    chrome.quads.push(ChromeQuad {
-        rect: r,
-        color: palette.ansi[8],
-    });
-    chrome.quads.push(ChromeQuad {
-        rect: PixelRect::new(
-            r.x + 1,
-            r.y + 1,
-            r.width.saturating_sub(2),
-            r.height.saturating_sub(2),
-        ),
-        color: palette.background,
-    });
+    chrome.quads.extend(panel_quads(r, palette));
     chrome.texts.push(ChromeText {
         x: layout.message.x + cw,
         y: layout.message.y + ROW_PADDING,
@@ -118,6 +119,20 @@ mod tests {
     use rustty_config::Colors;
     use rustty_render::Palette;
     use unicode_width::UnicodeWidthStr;
+
+    #[test]
+    fn panel_quads_are_a_frame_and_an_inset_fill() {
+        let p = Palette::from_config(&Colors::default(), false);
+        let [frame, fill] = panel_quads(PixelRect::new(10, 10, 100, 50), &p);
+        assert_eq!(
+            (frame.rect, frame.color),
+            (PixelRect::new(10, 10, 100, 50), p.ansi[8])
+        );
+        assert_eq!(
+            (fill.rect, fill.color),
+            (PixelRect::new(11, 11, 98, 48), p.background)
+        );
+    }
 
     fn metrics() -> CellMetrics {
         CellMetrics {

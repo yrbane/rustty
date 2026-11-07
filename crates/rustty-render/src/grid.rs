@@ -81,55 +81,31 @@ pub fn pane_instances(
         for (col, cell) in line.cells().iter().enumerate().take(cols) {
             let x = geometry.origin_x as f32 + col as f32 * cw;
             let (fg, bg) = palette.cell_colors(&cell.style);
-            // Fonds : fusion des cellules contiguës de même couleur, fond par défaut omis.
-            match run {
-                Some((start, len, color)) if color == bg => run = Some((start, len + 1, color)),
-                _ => {
-                    flush_run(
-                        &mut out.backgrounds,
-                        run,
-                        geometry.origin_x,
-                        y,
-                        cw,
-                        ch,
-                        palette.background,
-                    );
-                    run = Some((col, 1, bg));
-                }
+            if !extend_run(&mut run, bg) {
+                flush_run(
+                    &mut out.backgrounds,
+                    run,
+                    geometry.origin_x,
+                    y,
+                    cw,
+                    ch,
+                    palette.background,
+                );
+                run = Some((col, 1, bg));
             }
             let under_cursor = solid_cursor && cursor == Some((col, row));
-            if !is_blank(cell) {
-                out.glyphs.push(GlyphRequest {
-                    x,
-                    y,
-                    ch: cell.c,
-                    variant: Variant::from_attrs(cell.style.attrs),
-                    color: if under_cursor { palette.background } else { fg },
-                    wide: cell.is_wide(),
-                });
-            }
-            if cell.is_wide_continuation() {
-                continue;
-            }
-            let span = if cell.is_wide() { cw * 2.0 } else { cw };
-            let hovered_link = pane.link_hover.is_some_and(|r| r.contains(row, col));
-            if cell.style.attrs.contains(Attrs::UNDERLINE) || hovered_link {
-                out.decorations.push(QuadInstance::new(
-                    x,
-                    y + metrics.underline_y as f32,
-                    span,
-                    metrics.underline_thickness as f32,
+            let color = if under_cursor { palette.background } else { fg };
+            out.glyphs.extend(cell_glyph(cell, x, y, color));
+            if !cell.is_wide_continuation() {
+                let hovered_link = pane.link_hover.is_some_and(|r| r.contains(row, col));
+                cell_decorations(
+                    &mut out.decorations,
+                    cell,
+                    hovered_link,
+                    (x, y),
+                    metrics,
                     fg,
-                ));
-            }
-            if cell.style.attrs.contains(Attrs::STRIKETHROUGH) {
-                out.decorations.push(QuadInstance::new(
-                    x,
-                    y + metrics.strike_y as f32,
-                    span,
-                    1.0,
-                    fg,
-                ));
+                );
             }
         }
         flush_run(
@@ -142,27 +118,96 @@ pub fn pane_instances(
             palette.background,
         );
     }
-
     if let Some((col, row)) = cursor {
-        let wide = snapshot
-            .lines
-            .get(row)
-            .is_some_and(|l| col < l.len() && l.get(col).is_wide());
-        let w = if wide { cw * 2.0 } else { cw };
-        let x = geometry.origin_x as f32 + col as f32 * cw;
-        let y = geometry.origin_y as f32 + row as f32 * ch;
-        push_cursor(
-            &mut out,
-            pane.focused,
-            snapshot.cursor_shape,
-            x,
-            y,
-            w,
-            ch,
-            palette.cursor,
-        );
+        cursor_quads(&mut out, pane, &geometry, metrics, palette, (col, row));
     }
     out
+}
+
+/// Prolonge la plage de fond courante si `bg` est sa couleur ; sinon rend
+/// faux et laisse l'appelant la vider et en ouvrir une autre.
+fn extend_run(run: &mut Option<(usize, usize, Rgba)>, bg: Rgba) -> bool {
+    match run {
+        Some((_, len, color)) if *color == bg => {
+            *len += 1;
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Le glyphe d'une cellule non vide, dans `color`.
+fn cell_glyph(cell: &Cell, x: f32, y: f32, color: Rgba) -> Option<GlyphRequest> {
+    (!is_blank(cell)).then(|| GlyphRequest {
+        x,
+        y,
+        ch: cell.c,
+        variant: Variant::from_attrs(cell.style.attrs),
+        color,
+        wide: cell.is_wide(),
+    })
+}
+
+/// Soulignement (attribut ou lien survolé) et barré d'une cellule, sur
+/// toute sa largeur.
+fn cell_decorations(
+    out: &mut Vec<QuadInstance>,
+    cell: &Cell,
+    hovered_link: bool,
+    (x, y): (f32, f32),
+    metrics: CellMetrics,
+    fg: Rgba,
+) {
+    let cw = metrics.width as f32;
+    let span = if cell.is_wide() { cw * 2.0 } else { cw };
+    if cell.style.attrs.contains(Attrs::UNDERLINE) || hovered_link {
+        out.push(QuadInstance::new(
+            x,
+            y + metrics.underline_y as f32,
+            span,
+            metrics.underline_thickness as f32,
+            fg,
+        ));
+    }
+    if cell.style.attrs.contains(Attrs::STRIKETHROUGH) {
+        out.push(QuadInstance::new(
+            x,
+            y + metrics.strike_y as f32,
+            span,
+            1.0,
+            fg,
+        ));
+    }
+}
+
+/// Le curseur à `(col, row)`, large si le caractère dessous l'est.
+fn cursor_quads(
+    out: &mut PaneInstances,
+    pane: &PaneFrame,
+    geometry: &GridGeometry,
+    metrics: CellMetrics,
+    palette: &Palette,
+    (col, row): (usize, usize),
+) {
+    let (cw, ch) = (metrics.width as f32, metrics.height as f32);
+    let wide = pane
+        .snapshot
+        .lines
+        .get(row)
+        .is_some_and(|l| col < l.len() && l.get(col).is_wide());
+    let w = if wide { cw * 2.0 } else { cw };
+    let x = geometry.origin_x as f32 + col as f32 * cw;
+    let y = geometry.origin_y as f32 + row as f32 * ch;
+    push_cursor(
+        out,
+        pane.focused,
+        pane.snapshot.cursor_shape,
+        x,
+        y,
+        w,
+        ch,
+        palette.cursor,
+    );
 }
 
 #[allow(clippy::too_many_arguments)]

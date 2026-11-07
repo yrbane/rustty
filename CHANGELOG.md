@@ -4,6 +4,59 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.191 — 2026-11-07 · « Revue : instantané pris seulement quand le survol en a besoin »
+
+- `on_cursor_moved` : l'instantané du terminal n'est plus pris qu'au premier besoin (`cached_snapshot`), et partagé entre correcteur et liens ; correcteur désactivé, même cellule ou capture souris sans geste armé n'en prennent aucun, comme avant alpha.190.
+- Commentaire sur `layout_dirty` (géométrie périmée jusqu'au prochain rendu) ; bloc orphelin retiré du découpeur APC.
+
+## 0.1.0-alpha.190 — 2026-11-07 · « base64 unifié, un instantané par mouvement, bilan perf »
+
+- `base64` 0.23 (plus qu'une version dans l'arbre des dépendances).
+- Un seul `snapshot()` par mouvement de souris, partagé par le survol du correcteur et celui des liens (`spell_hover` et `link_hover` reçoivent l'instantané).
+- `docs/perf.md` : colonne finale et bilan (binaire −34 %, parsing ×1,8 à ×2,3, resize ×4,4, rendu ×1,8, zéro objet GPU par image, zéro fonction de plus de 100 lignes).
+
+## 0.1.0-alpha.189 — 2026-11-07 · « Assemblage de l'image séparé de la présentation, garde de taille »
+
+- `render()` = `assemble()` (pur : groupes par taille, chrome de base, overlay, surgissants) puis `present()` (passes et présentation) ; `open()` délègue à `create_window` et `build_renderers`.
+- `tooltip::panel_quads` partagé par l'infobulle et le menu du clic droit ; les cinq tests « point dans un rectangle » remplacés par `PixelRect::contains_point`.
+- `crates/rustty/tests/code_shape.rs` : plus aucune fonction de plus de 100 lignes dans les sources (vérifié à chaque `cargo test`).
+
+## 0.1.0-alpha.188 — 2026-11-07 · « Pipelines factorisés, pane_instances et draw découpés »
+
+- `pipeline/common.rs` : `shader`, `instanced_pipeline`, `texture_layout`, `sampler` partagés par les trois pipelines (plus aucune fenêtre dupliquée).
+- `pane_instances` découpé en `extend_run`, `cell_glyph`, `cell_decorations`, `cursor_quads` ; `Renderer::draw` en `collect` (CPU), `upload` (atlas, textures, tampons) et `pass` (rendu).
+- `PixelRect::contains_point` / `contains_px` ; la barre de titre les utilise.
+- Test de perf du reflow : 20 ms en release, 100 ms en debug (suite parallèle).
+
+## 0.1.0-alpha.187 — 2026-11-07 · « Tampons et bind groups GPU persistants »
+
+- `pipeline/common.rs` : `InstanceBuffer` (tampon de vertex persistant, doublé à la demande) et `GlobalsBinding` (uniforme du viewport et bind group partagés par les trois pipelines, réécrits sur place).
+- Les pipelines ne construisent plus de lot par image : `draw` prend l'uniforme et le tampon ; le bind group de l'atlas n'est refait qu'avec l'atlas.
+- Zéro objet GPU créé par image en régime établi (compteur `Renderer::gpu_objects`, testé) ; rendu hors écran 768 → 477 µs ; images de référence inchangées.
+
+## 0.1.0-alpha.186 — 2026-11-07 · « Reflow allégé et relayout une fois par image »
+
+- Reflow : entrées de 16 octets (combinants à part), lignes logiques sans caractère large ni curseur copiées par tranche. Redimensionnement 200→120→200 colonnes avec 10 000 lignes d'historique : 29,6 → 7 ms.
+- Fenêtre : un glisser de barre de split ne redimensionne plus les terminaux qu'une fois par image (relayout différé au rendu), pas à chaque mouvement de souris.
+- Tests : combinants suivis au reflow, borne de perf resserrée à 20 ms, lignes longues bornées ; e2e « Splits » complétée.
+
+## 0.1.0-alpha.185 — 2026-11-07 · « Chemin d'impression rapide »
+
+- `put_char` : chemin rapide pour un caractère étroit sur une cellule ordinaire (une lecture, une écriture, pas de gabarit d'effacement).
+- `Line::set` n'interroge la table des combinants que si elle n'est pas vide ; `Grid::scroll_up` rend les lignes évincées sans les cloner.
+- Jeu de caractères ASCII et largeur de l'ASCII imprimable court-circuités ; le découpeur APC saute d'un bloc jusqu'au prochain ESC.
+- Texte brut 90 → 175 MiB/s, SGR dense 67 → 165 MiB/s, coût par caractère 7,7 → 4,2 ns. Benchmarks : meilleur de 5 répétitions.
+
+## 0.1.0-alpha.184 — 2026-11-07 · « Profil release : LTO, une unité de codegen, symboles retirés »
+
+- `[profile.release]` : `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Binaire 21,9 → 14,4 MiB ; parsing 90 → 117 MiB/s sans toucher au code.
+- `docs/perf.md` : tableau des benchmarks chantier par chantier ; plan d'exécution `docs/superpowers/plans/2026-11-07-optimisation.md`.
+
+## 0.1.0-alpha.183 — 2026-11-07 · « Audit chiffré et conception de l'optimisation »
+
+- `docs/superpowers/specs/2026-11-07-optimisation-design.md` : mesures (parsing 90 MiB/s contre 811 pour vte seul, resize 15 ms avec 10 000 lignes, 5 tampons GPU recréés par image, binaire 21,9 MiB sans profil release, fonctions de plus de 100 lignes, duplications) et chantiers ordonnés avec cibles chiffrées.
+- Benchmarks reproductibles : `cargo run --release -p rustty-vt --example audit` et `-p rustty-render --example audit`.
+
 ## 0.1.0-alpha.182 — 2026-11-07 · « Clippy : is_multiple_of »
 
 - Correctif : avertissement clippy (`manual_is_multiple_of`) dans la borne de rebalayage des liens.

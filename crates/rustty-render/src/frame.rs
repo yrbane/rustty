@@ -24,6 +24,19 @@ impl PixelRect {
             height,
         }
     }
+
+    /// Le point `(x, y)` en pixels est dans le rectangle (bornes hautes exclues).
+    pub fn contains_point(&self, x: f64, y: f64) -> bool {
+        x >= f64::from(self.x)
+            && x < f64::from(self.x + self.width)
+            && y >= f64::from(self.y)
+            && y < f64::from(self.y + self.height)
+    }
+
+    /// Le pixel `(x, y)` est dans le rectangle (bornes hautes exclues).
+    pub fn contains_px(&self, x: u32, y: u32) -> bool {
+        x >= self.x && x < self.x + self.width && y >= self.y && y < self.y + self.height
+    }
 }
 
 /// Plage de cellules `(ligne, colonne)` bornes incluses, en ordre de
@@ -97,4 +110,17 @@ pub struct Frame<'a> {
     pub background: Rgba,
     pub panes: Vec<PaneFrame<'a>>,
     pub chrome: Chrome,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PixelRect;
+
+    #[test]
+    fn contains_point_is_half_open() {
+        let r = PixelRect::new(10, 20, 5, 5);
+        assert!(r.contains_point(10.0, 20.0) && r.contains_point(14.9, 24.9));
+        assert!(!r.contains_point(15.0, 20.0) && !r.contains_point(9.9, 20.0));
+        assert!(r.contains_px(14, 24) && !r.contains_px(15, 24));
+    }
 }

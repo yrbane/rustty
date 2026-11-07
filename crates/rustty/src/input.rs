@@ -184,10 +184,13 @@ impl OsWindow {
             return effects;
         };
         let cell = self.cell_under(term, rect, x, y);
-        if self.spell_hover(term, cell) {
+        // Au plus un instantané par mouvement, pris au premier besoin et
+        // partagé par le correcteur et les liens.
+        let mut snapshot = None;
+        if self.spell_hover(term, cell, &mut snapshot) {
             effects.push(Effect::Redraw);
         }
-        if self.link_hover(term, cell) {
+        if self.link_hover(term, cell, &mut snapshot) {
             effects.push(Effect::Redraw);
             self.update_cursor_icon(x, y);
         }

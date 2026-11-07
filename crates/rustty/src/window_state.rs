@@ -105,12 +105,53 @@ pub struct OsWindow {
     pub spell: SpellState,
     /// Hyperlien sous la souris.
     pub link_hover: Option<LinkHover>,
+    /// Un relayout est dû : il est fait une fois, au prochain rendu, quel
+    /// que soit le nombre d'événements (glisser de barre) qui l'ont demandé.
+    pub layout_dirty: bool,
     /// Appui en cours sur un hyperlien.
     pub link_click: links::LinkClick,
     pub focused: bool,
     pub clipboard: Option<arboard::Clipboard>,
     pub shell: Shell,
     pub waker: Waker,
+}
+
+/// La fenêtre système : titre, taille, transparence, thème, décorations, icône.
+fn create_window(event_loop: &ActiveEventLoop, config: &Config) -> anyhow::Result<Arc<Window>> {
+    let attrs = Window::default_attributes()
+        .with_title(title::window_title(None, "", crate::VERSION))
+        .with_inner_size(DEFAULT_SIZE)
+        .with_transparent(true)
+        .with_theme(winit_theme(config.window.decorations_theme))
+        .with_decorations(crate::title_bar::decorations_wanted(&config.titlebar))
+        .with_window_icon(load_icon());
+    let attrs = with_app_id(attrs);
+    Ok(Arc::new(
+        event_loop
+            .create_window(attrs)
+            .context("création de la fenêtre")?,
+    ))
+}
+
+/// Le renderer de la taille de police configurée.
+fn build_renderers(
+    ctx: &GpuContext,
+    surface: &Surface,
+    config: &Config,
+    window: &Window,
+    palette: &Palette,
+) -> Renderers {
+    Renderers::new(
+        &RendererSpec {
+            ctx,
+            format: surface.view_format(),
+            family: &config.font.family,
+            scale_factor: window.scale_factor(),
+            palette,
+            padding: config.window.padding,
+        },
+        config.font.size,
+    )
 }
 
 impl OsWindow {
@@ -122,34 +163,12 @@ impl OsWindow {
         config_path: Option<PathBuf>,
         waker: Waker,
     ) -> anyhow::Result<Self> {
-        let attrs = Window::default_attributes()
-            .with_title(title::window_title(None, "", crate::VERSION))
-            .with_inner_size(DEFAULT_SIZE)
-            .with_transparent(true)
-            .with_theme(winit_theme(config.window.decorations_theme))
-            .with_decorations(crate::title_bar::decorations_wanted(&config.titlebar))
-            .with_window_icon(load_icon());
-        let attrs = with_app_id(attrs);
-        let window = Arc::new(
-            event_loop
-                .create_window(attrs)
-                .context("création de la fenêtre")?,
-        );
+        let window = create_window(event_loop, &config)?;
         let (ctx, raw_surface) = gpu_surface::init_gpu(Arc::clone(&window))?;
         let size = window.inner_size();
         let surface = Surface::new(raw_surface, &ctx, size.width, size.height)?;
         let palette = Palette::from_config(&config.colors, config.font.bold_is_bright);
-        let renderers = Renderers::new(
-            &RendererSpec {
-                ctx: &ctx,
-                format: surface.view_format(),
-                family: &config.font.family,
-                scale_factor: window.scale_factor(),
-                palette: &palette,
-                padding: config.window.padding,
-            },
-            config.font.size,
-        );
+        let renderers = build_renderers(&ctx, &surface, &config, &window, &palette);
         let pane_fonts = PaneFonts::new(config.font.size);
         let tab_style = TabBarStyle::from_config(&palette, &config.tabs);
         let title_style = TitleBarStyle::from_config(&config.titlebar, window.scale_factor());
@@ -204,6 +223,7 @@ impl OsWindow {
             menu: None,
             spell: SpellState::default(),
             link_hover: None,
+            layout_dirty: false,
             link_click: links::LinkClick::default(),
             focused: true,
             clipboard,

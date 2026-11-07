@@ -6,9 +6,11 @@ use std::collections::{HashMap, HashSet};
 
 use bytemuck::{Pod, Zeroable};
 use rustty_vt::graphics::ImageData;
-use wgpu::util::DeviceExt as _;
 
-use super::{Globals, alpha_target, globals_layout};
+use super::common::{
+    GlobalsBinding, InstanceBuffer, InstancedPipelineSpec, instanced_pipeline, sampler, shader,
+    texture_layout,
+};
 use crate::images::ImageDraw;
 
 #[repr(C)]
@@ -52,103 +54,58 @@ impl ImageTextures {
 
 pub struct ImagePipeline {
     pipeline: wgpu::RenderPipeline,
-    globals_layout: wgpu::BindGroupLayout,
     texture_layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
 }
 
-/// Les bandes d'une image prêtes à dessiner : une instance par bande, avec
-/// l'identifiant de l'image dont elle prend la texture.
-pub struct ImageBatch {
-    instances: wgpu::Buffer,
-    ids: Vec<u64>,
-    globals_group: wgpu::BindGroup,
-    _globals: wgpu::Buffer,
+/// Les bandes prêtes à dessiner : une instance par bande et, dans le même
+/// ordre, l'identifiant de l'image dont elle prend la texture.
+#[derive(Default)]
+pub struct ImageStaging {
+    pub instances: Vec<ImageInstance>,
+    pub ids: Vec<u64>,
 }
 
 impl ImagePipeline {
-    pub fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rustty-image"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/image.wgsl").into()),
-        });
-        let globals_layout = globals_layout(device);
-        let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("rustty-image-texture"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        });
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("rustty-image"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            ..Default::default()
-        });
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rustty-image"),
-            bind_group_layouts: &[Some(&globals_layout), Some(&texture_layout)],
-            ..Default::default()
-        });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("rustty-image"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[Some(wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<ImageInstance>() as u64,
-                    step_mode: wgpu::VertexStepMode::Instance,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4],
-                })],
+    pub fn new(
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+        globals_layout: &wgpu::BindGroupLayout,
+    ) -> Self {
+        let shader = shader(
+            device,
+            "rustty-image",
+            include_str!("../shaders/image.wgsl"),
+        );
+        let texture_layout = texture_layout(device, "rustty-image-texture");
+        let sampler = sampler(device, "rustty-image", wgpu::FilterMode::Linear);
+        let pipeline = instanced_pipeline(
+            device,
+            &InstancedPipelineSpec {
+                label: "rustty-image",
+                shader: &shader,
+                bind_layouts: &[globals_layout, &texture_layout],
+                stride: std::mem::size_of::<ImageInstance>() as u64,
+                attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4],
+                format,
             },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(alpha_target(format))],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
+        );
         Self {
             pipeline,
-            globals_layout,
             texture_layout,
             sampler,
         }
     }
 
-    /// Envoie les textures manquantes et prépare les instances de `draws`.
-    pub fn prepare(
+    /// Envoie les textures manquantes et prépare les instances de `draws`
+    /// (vides si aucune bande n'est dessinable).
+    pub fn stage(
         &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         textures: &mut ImageTextures,
         draws: &[ImageDraw],
-        viewport: (u32, u32),
-    ) -> Option<ImageBatch> {
+    ) -> ImageStaging {
         // Une image plus grande que ce que le GPU accepte (GL/GLES descend
         // sous 8192) ferait paniquer wgpu : elle n'est pas dessinée.
         let max_side = device.limits().max_texture_dimension_2d;
@@ -165,9 +122,6 @@ impl ImagePipeline {
                 fits
             })
             .collect();
-        if draws.is_empty() {
-            return None;
-        }
         for d in &draws {
             if let Entry::Vacant(slot) = textures.entries.entry(d.image.id) {
                 slot.insert(self.upload(device, queue, &d.image));
@@ -180,43 +134,28 @@ impl ImagePipeline {
                 uv: d.uv,
             })
             .collect();
-        let instances = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("rustty-image-instances"),
-            contents: bytemuck::cast_slice(&instances),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let globals = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("rustty-image-globals"),
-            contents: bytemuck::bytes_of(&Globals::new(viewport)),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
-        let globals_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("rustty-image-globals"),
-            layout: &self.globals_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: globals.as_entire_binding(),
-            }],
-        });
-        Some(ImageBatch {
+        ImageStaging {
             instances,
             ids: draws.iter().map(|d| d.image.id).collect(),
-            globals_group,
-            _globals: globals,
-        })
+        }
     }
 
     /// Dessine chaque bande avec la texture de son image.
     pub fn draw<'a>(
         &'a self,
         pass: &mut wgpu::RenderPass<'a>,
-        batch: &'a ImageBatch,
+        globals: &'a GlobalsBinding,
         textures: &'a ImageTextures,
+        instances: &'a InstanceBuffer,
+        ids: &[u64],
     ) {
+        if instances.is_empty() {
+            return;
+        }
         pass.set_pipeline(&self.pipeline);
-        pass.set_bind_group(0, &batch.globals_group, &[]);
-        pass.set_vertex_buffer(0, batch.instances.slice(..));
-        for (i, id) in (0u32..).zip(&batch.ids) {
+        pass.set_bind_group(0, globals.group(), &[]);
+        pass.set_vertex_buffer(0, instances.slice());
+        for (i, id) in (0u32..).zip(ids) {
             let Some((_, group)) = textures.entries.get(id) else {
                 continue;
             };
