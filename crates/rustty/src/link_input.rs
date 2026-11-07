@@ -85,19 +85,23 @@ impl OsWindow {
             .then(|| (id, range, uri.to_string()))
     }
 
-    /// Mouvement de souris sur la cellule `cell` du panneau `term`, dont
-    /// `snapshot` est l'instantané : entretient le lien survolé. Sous
-    /// capture, seul un geste armé (shift) survole. Vrai s'il faut redessiner.
+    /// Mouvement de souris sur la cellule `cell` du panneau `term` : entretient
+    /// le lien survolé. Sous capture, seul un geste armé (shift) survole, et
+    /// l'instantané (`cache`, partagé avec le correcteur) n'est pris qu'alors.
+    /// Vrai s'il faut redessiner.
     pub(crate) fn link_hover(
         &mut self,
         term: TermId,
         cell: Option<(usize, usize)>,
-        snapshot: &Snapshot,
+        cache: &mut Option<Snapshot>,
     ) -> bool {
         let gesture = self.link_gesture(term);
         if gesture.captured && !gesture_armed(gesture, self.modifiers) {
             return self.leave_link();
         }
+        let Some(snapshot) = self.cached_snapshot(term, cache) else {
+            return self.leave_link();
+        };
         let Some((id, range, uri)) = self.link_in(snapshot, cell) else {
             return self.leave_link();
         };
@@ -237,11 +241,7 @@ impl OsWindow {
         let (x, y) = self.cursor;
         if let Some((term, rect)) = self.pane_under(x, y) {
             let cell = self.cell_under(term, rect, x, y);
-            let changed = match self.terms.get(&term).map(|tw| tw.snapshot()) {
-                Some(snapshot) => self.link_hover(term, cell, &snapshot),
-                None => self.leave_link(),
-            };
-            if changed {
+            if self.link_hover(term, cell, &mut None) {
                 self.window.request_redraw();
             }
         }

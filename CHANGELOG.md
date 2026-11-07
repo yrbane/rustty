@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.191 — 2026-11-07 · « Revue : instantané pris seulement quand le survol en a besoin »
+
+- `on_cursor_moved` : l'instantané du terminal n'est plus pris qu'au premier besoin (`cached_snapshot`), et partagé entre correcteur et liens ; correcteur désactivé, même cellule ou capture souris sans geste armé n'en prennent aucun, comme avant alpha.190.
+- Commentaire sur `layout_dirty` (géométrie périmée jusqu'au prochain rendu) ; bloc orphelin retiré du découpeur APC.
+
 ## 0.1.0-alpha.190 — 2026-11-07 · « base64 unifié, un instantané par mouvement, bilan perf »
 
 - `base64` 0.23 (plus qu'une version dans l'arbre des dépendances).

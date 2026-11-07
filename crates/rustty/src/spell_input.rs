@@ -41,14 +41,28 @@ impl OsWindow {
         Some(changed)
     }
 
-    /// Mouvement de souris sur la cellule `cell` du panneau `term`, dont
-    /// `snapshot` est l'instantané : entretient le survol du mot souligné
-    /// (requête, infobulle). Vrai s'il faut redessiner.
+    /// L'instantané de `term`, pris au premier besoin et gardé dans `cache`
+    /// pour les autres survols du même mouvement ; `None` si le terminal
+    /// manque.
+    pub(crate) fn cached_snapshot<'a>(
+        &self,
+        term: TermId,
+        cache: &'a mut Option<Snapshot>,
+    ) -> Option<&'a Snapshot> {
+        if cache.is_none() {
+            *cache = Some(self.terms.get(&term)?.snapshot());
+        }
+        cache.as_ref()
+    }
+
+    /// Mouvement de souris sur la cellule `cell` du panneau `term` : entretient
+    /// le survol du mot souligné (requête, infobulle). L'instantané n'est pris
+    /// (dans `cache`) que si le mot change. Vrai s'il faut redessiner.
     pub(crate) fn spell_hover(
         &mut self,
         term: TermId,
         cell: Option<(usize, usize)>,
-        snapshot: &Snapshot,
+        cache: &mut Option<Snapshot>,
     ) -> bool {
         if !self.config.spellcheck.enabled {
             return false;
@@ -69,6 +83,9 @@ impl OsWindow {
             return false;
         }
         self.spell.last_cell = Some((term, col, row));
+        let Some(snapshot) = self.cached_snapshot(term, cache) else {
+            return self.leave_spell_word();
+        };
         let Some(run) = underlined_run(&snapshot.lines, row, col) else {
             return self.leave_spell_word();
         };
