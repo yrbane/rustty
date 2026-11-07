@@ -76,6 +76,12 @@ impl Charsets {
     pub fn map(&self, c: char) -> char {
         self.slots[self.active].map(c)
     }
+
+    /// Le jeu actif est l'ASCII : `map` est l'identité.
+    #[inline]
+    pub fn is_ascii(&self) -> bool {
+        self.slots[self.active] == Charset::Ascii
+    }
 }
 
 #[cfg(test)]

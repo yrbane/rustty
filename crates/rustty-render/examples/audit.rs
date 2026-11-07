@@ -8,15 +8,18 @@ use rustty_render::{
 };
 use rustty_vt::Term;
 
+/// Meilleur temps par itération sur `REPS` répétitions (le bruit ne fait que rallonger).
+const REPS: u32 = 5;
 fn timed<R>(label: &str, iters: u32, mut f: impl FnMut() -> R) {
-    let t0 = Instant::now();
-    for _ in 0..iters {
-        std::hint::black_box(f());
+    let mut best = f64::MAX;
+    for _ in 0..REPS {
+        let t0 = Instant::now();
+        for _ in 0..iters {
+            std::hint::black_box(f());
+        }
+        best = best.min(t0.elapsed().as_secs_f64() / f64::from(iters));
     }
-    println!(
-        "{label:<48} {:>10.1} µs",
-        t0.elapsed().as_secs_f64() / f64::from(iters) * 1e6
-    );
+    println!("{label:<48} {:>10.1} µs", best * 1e6);
 }
 
 fn main() {

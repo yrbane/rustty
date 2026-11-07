@@ -53,13 +53,22 @@ impl Line {
     }
 
     pub fn get_mut(&mut self, col: usize) -> &mut Cell {
-        self.zerowidth.remove(&col);
+        self.drop_zerowidth(col);
         &mut self.cells[col]
     }
 
     pub fn set(&mut self, col: usize, cell: Cell) {
-        self.zerowidth.remove(&col);
+        self.drop_zerowidth(col);
         self.cells[col] = cell;
+    }
+
+    /// Les combinants d'une cellule réécrite partent avec elle ; la table
+    /// est presque toujours vide, d'où le test avant la recherche.
+    #[inline]
+    fn drop_zerowidth(&mut self, col: usize) {
+        if !self.zerowidth.is_empty() {
+            self.zerowidth.remove(&col);
+        }
     }
 
     pub fn push_zerowidth(&mut self, col: usize, ch: char) {

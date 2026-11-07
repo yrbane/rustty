@@ -9,8 +9,18 @@ use crate::cell::{Attrs, Cell};
 impl Term {
     /// Point d'entrée depuis `Perform::print`.
     pub(crate) fn print_char(&mut self, c: char) {
-        let c = self.charsets.map(c);
-        match c.width().unwrap_or(1) {
+        let c = if self.charsets.is_ascii() {
+            c
+        } else {
+            self.charsets.map(c)
+        };
+        // L'ASCII imprimable a toujours une largeur de 1 : pas de table.
+        let width = if c.is_ascii_graphic() || c == ' ' {
+            1
+        } else {
+            c.width().unwrap_or(1)
+        };
+        match width {
             0 => self.put_zerowidth(c),
             2 => self.put_char(c, 2),
             _ => self.put_char(c, 1),
@@ -34,6 +44,20 @@ impl Term {
         // Une grille d'une colonne ne peut pas contenir un large : on le traite
         // comme étroit plutôt que d'indexer hors de la ligne.
         let width = if width == 2 && cols < 2 { 1 } else { width };
+        // Chemin rapide : caractère étroit, pas de retour en attente ni de
+        // mode insertion, sur une cellule ordinaire (le cas de presque tout
+        // le texte). Même résultat que le chemin général, une seule lecture.
+        if width == 1 && !self.cursor.pending_wrap && !self.modes.insert {
+            let (col, row) = (self.cursor.col, self.cursor.row);
+            let (style, link) = (self.cursor.style, self.current_link);
+            let line = self.active_grid_mut().line_mut(row);
+            let halves = Attrs::WIDE | Attrs::WIDE_CONTINUATION;
+            if !line.get(col).style.attrs.intersects(halves) {
+                line.set(col, Cell::with_link(c, style, link));
+                self.advance_cursor(1, cols);
+                return;
+            }
+        }
         if self.cursor.pending_wrap {
             if self.modes.autowrap {
                 self.wrap_line();
@@ -75,7 +99,13 @@ impl Term {
             cont.link = link;
             line.set(col + 1, cont);
         }
-        if col + width < cols {
+        self.advance_cursor(width, cols);
+    }
+
+    /// Avance de `width` colonnes, ou arme le retour à la ligne différé en
+    /// dernière colonne.
+    fn advance_cursor(&mut self, width: usize, cols: usize) {
+        if self.cursor.col + width < cols {
             self.cursor.col += width;
         } else {
             self.cursor.col = cols - 1;
@@ -114,6 +144,23 @@ impl Term {
 #[cfg(test)]
 mod tests {
     use crate::term::test_support::{feed, term};
+
+    #[test]
+    fn overwriting_the_left_half_of_a_wide_char_clears_the_right_half() {
+        let mut t = term(6, 1);
+        feed(&mut t, "漢\x1b[1Ga");
+        assert_eq!(t.grid().cell(0, 0).c, 'a');
+        assert_eq!(t.grid().cell(1, 0).c, ' ');
+        assert!(!t.grid().cell(1, 0).is_wide_continuation());
+    }
+
+    #[test]
+    fn overwriting_a_cell_drops_its_combining_marks() {
+        let mut t = term(6, 1);
+        feed(&mut t, "e\u{301}\x1b[1Gx");
+        assert_eq!(t.grid().line(0).zerowidth(0), None);
+        assert_eq!(t.grid().cell(0, 0).c, 'x');
+    }
 
     #[test]
     fn prints_text_and_advances_cursor() {

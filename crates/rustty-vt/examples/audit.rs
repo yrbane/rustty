@@ -3,14 +3,21 @@ use std::time::Instant;
 
 use rustty_vt::Term;
 
+/// Meilleur temps par itération sur `REPS` répétitions : le bruit de la
+/// machine (fréquence, autres processus) ne fait que rallonger, jamais
+/// raccourcir.
+const REPS: u32 = 5;
 fn timed<R>(label: &str, iters: u32, mut f: impl FnMut() -> R) -> f64 {
-    let t0 = Instant::now();
-    for _ in 0..iters {
-        std::hint::black_box(f());
+    let mut best = f64::MAX;
+    for _ in 0..REPS {
+        let t0 = Instant::now();
+        for _ in 0..iters {
+            std::hint::black_box(f());
+        }
+        best = best.min(t0.elapsed().as_secs_f64() / f64::from(iters));
     }
-    let per = t0.elapsed().as_secs_f64() / f64::from(iters);
-    println!("{label:<48} {:>10.1} µs", per * 1e6);
-    per
+    println!("{label:<48} {:>10.1} µs", best * 1e6);
+    best
 }
 
 fn main() {

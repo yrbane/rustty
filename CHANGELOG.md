@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.185 — 2026-11-07 · « Chemin d'impression rapide »
+
+- `put_char` : chemin rapide pour un caractère étroit sur une cellule ordinaire (une lecture, une écriture, pas de gabarit d'effacement).
+- `Line::set` n'interroge la table des combinants que si elle n'est pas vide ; `Grid::scroll_up` rend les lignes évincées sans les cloner.
+- Jeu de caractères ASCII et largeur de l'ASCII imprimable court-circuités ; le découpeur APC saute d'un bloc jusqu'au prochain ESC.
+- Texte brut 90 → 175 MiB/s, SGR dense 67 → 165 MiB/s, coût par caractère 7,7 → 4,2 ns. Benchmarks : meilleur de 5 répétitions.
+
 ## 0.1.0-alpha.184 — 2026-11-07 · « Profil release : LTO, une unité de codegen, symboles retirés »
 
 - `[profile.release]` : `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Binaire 21,9 → 14,4 MiB ; parsing 90 → 117 MiB/s sans toucher au code.

@@ -60,7 +60,16 @@ impl ApcSplitter {
             let b = bytes[i];
             match self.state {
                 State::Ground => {
-                    if b == ESC {
+                    // En sol, seul ESC compte : on saute d'un bloc jusqu'au
+                    // prochain au lieu d'examiner chaque octet.
+                    if b != ESC {
+                        i += bytes[i..]
+                            .iter()
+                            .position(|&x| x == ESC)
+                            .unwrap_or(bytes.len() - i);
+                        continue;
+                    }
+                    {
                         match bytes.get(i + 1) {
                             Some(b'_') => {
                                 push_bytes(out, &bytes[start..i]);
