@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.178 — 2026-11-07 · « Hyperliens : plage, geste et infobulle (logique pure) »
+
+- Module `links` : plage contiguë d'un lien à travers les lignes repliées, geste armé selon `[links] click` et la capture de la souris (shift), machine de clic (appui et relâche sur le même lien, sans glisser, une ouverture par double clic), texte d'infobulle tronqué au milieu avec l'indication du geste. Pas encore relié à la fenêtre.
+
 ## 0.1.0-alpha.177 — 2026-11-07 · « Hyperliens : soulignement de la plage survolée »
 
 - `rustty-render` : `PaneFrame.link_hover` (`CellRange`, lignes repliées comprises) souligne les cellules du lien survolé, même trait que `SGR 4`.
