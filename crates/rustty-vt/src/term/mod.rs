@@ -68,6 +68,11 @@ pub struct Term {
     pub(crate) links: Arc<LinkTable>,
     /// Lien que portent les cellules imprimées jusqu'au prochain `OSC 8 ; ;`.
     pub(crate) current_link: Option<LinkId>,
+    /// Compactages de la table des liens (tests).
+    pub(crate) link_compactions: u64,
+    /// Liens refusés de suite, table pleine : le balayage complet n'est
+    /// retenté qu'un refus sur `LINK_RESCAN_EVERY`.
+    pub(crate) link_refusals: u32,
     parser: Parser,
     apc: ApcSplitter,
 }
@@ -97,6 +102,8 @@ impl Term {
             placed_budget: image_budget::PLACED_BUDGET,
             links: Arc::default(),
             current_link: None,
+            link_compactions: 0,
+            link_refusals: 0,
             parser: Parser::new(),
             apc: ApcSplitter::default(),
         }
@@ -192,9 +199,17 @@ impl Term {
         self.current_link
     }
 
+    /// Table pleine de liens vivants : un rebalayage par autant de refus.
+    pub(crate) const LINK_RESCAN_EVERY: u32 = 1024;
+
+    pub fn link_compactions(&self) -> u64 {
+        self.link_compactions
+    }
+
     /// Réduit la table aux liens encore portés par une cellule (écrans et
     /// historique) et renumérote ces cellules.
     pub fn compact_links(&mut self) {
+        self.link_compactions += 1;
         let mut used = vec![false; self.links.len() + 1];
         let mark = |line: &crate::line::Line, used: &mut Vec<bool>| {
             for cell in line.cells() {

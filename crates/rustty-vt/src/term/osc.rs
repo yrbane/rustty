@@ -41,10 +41,21 @@ impl Term {
                     .find_map(|kv| kv.strip_prefix(b"id="))
             })
             .map(|v| String::from_utf8_lossy(v).into_owned());
-        let mut id = Arc::make_mut(&mut self.links).insert(&uri, id_param.as_deref());
-        if id.is_none() {
+        let id_param = id_param.as_deref();
+        if let Some(id) = self.links.find(&uri, id_param) {
+            // Connu : pas de copie de la table partagée avec un instantané.
+            self.current_link = Some(id);
+            return;
+        }
+        let mut id = Arc::make_mut(&mut self.links).insert(&uri, id_param);
+        if id.is_none() && self.link_refusals % Self::LINK_RESCAN_EVERY == 0 {
             self.compact_links();
-            id = Arc::make_mut(&mut self.links).insert(&uri, id_param.as_deref());
+            id = Arc::make_mut(&mut self.links).insert(&uri, id_param);
+        }
+        if id.is_none() {
+            self.link_refusals += 1;
+        } else {
+            self.link_refusals = 0;
         }
         self.current_link = id;
     }
@@ -70,6 +81,8 @@ impl Term {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use crate::links::LinkTable;
     use crate::outbox::TermEvent;
     use crate::term::Term;
@@ -198,6 +211,61 @@ mod tests {
         assert!(t.links().is_empty());
         assert_eq!(t.current_link(), None);
         assert_eq!(t.grid().cell(0, 0).link, None);
+    }
+
+    #[test]
+    fn ris_keeps_the_links_of_the_history() {
+        // L'historique survit à RIS : ses liens doivent encore désigner la
+        // bonne URI après qu'un nouveau lien a pris l'identifiant 1.
+        let mut t = Term::new(4, 1, 10);
+        t.input(b"\x1b]8;;https://old\x1b\\abcd\x1b]8;;\x1b\\\r\n");
+        t.input(b"\x1bc\x1b]8;;https://new\x1b\\x");
+        let snap = t.snapshot();
+        let old = t.scrollback().get(0).unwrap().cells()[0].link.unwrap();
+        assert_eq!(snap.link_uri(old), Some("https://old"));
+        assert_eq!(t.links().len(), 2);
+    }
+
+    #[test]
+    fn a_wide_character_carries_its_link_on_both_cells() {
+        let mut t = term(20, 4);
+        t.input("\x1b]8;;https://x\x1b\\\u{1f517}a".as_bytes());
+        let id = t.grid().cell(0, 0).link;
+        assert!(id.is_some());
+        assert_eq!(t.grid().cell(1, 0).link, id, "moitié droite");
+        assert_eq!(t.grid().cell(2, 0).link, id);
+    }
+
+    #[test]
+    fn a_known_link_does_not_copy_the_table_shared_with_a_snapshot() {
+        let mut t = term(20, 4);
+        t.input(b"\x1b]8;;https://x\x1b\\a\x1b]8;;\x1b\\");
+        let snap = t.snapshot();
+        t.input(b"\x1b]8;;https://x\x1b\\b");
+        assert!(
+            Arc::ptr_eq(&snap.links, t.links()),
+            "même lien : pas de copie"
+        );
+        t.input(b"\x1b]8;;https://y\x1b\\c");
+        assert!(!Arc::ptr_eq(&snap.links, t.links()), "nouveau lien : copie");
+    }
+
+    #[test]
+    fn a_saturated_table_is_not_rescanned_for_every_refused_link() {
+        // Tous les liens vivants : le compactage ne libère rien, un nouveau
+        // lien est refusé, et les refus suivants ne rebalaient pas tout.
+        let mut t = Term::new(4, 2, 70_000);
+        for i in 0..LinkTable::MAX_LINKS {
+            t.input(format!("\x1b]8;;https://{i}\x1b\\a\r\n").as_bytes());
+        }
+        assert_eq!(t.links().len(), LinkTable::MAX_LINKS);
+        t.input(b"\x1b]8;;https://full\x1b\\x");
+        assert_eq!(t.current_link(), None);
+        let before = t.link_compactions();
+        for i in 0..100 {
+            t.input(format!("\x1b]8;;https://more{i}\x1b\\x").as_bytes());
+        }
+        assert_eq!(t.link_compactions(), before, "pas de balayage par refus");
     }
 
     #[test]

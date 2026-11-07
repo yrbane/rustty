@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.181 — 2026-11-07 · « Hyperliens : correctifs de revue »
+
+- `RIS` (`reset`) garde les liens de l'historique : la table est compactée, plus vidée, et un lien ancien ne désigne plus la cible d'un lien nouveau.
+- Un caractère large (emoji, CJK) porte son lien sur ses deux cellules : plage entière, survol et soulignement sur la moitié droite.
+- Un lien déjà connu ne copie plus la table partagée avec un instantané en cours de rendu.
+- Table pleine de liens encore affichés : le balayage complet n'est retenté qu'un refus sur 1024, au lieu de chaque nouveau lien.
+
 ## 0.1.0-alpha.180 — 2026-11-07 · « Hyperliens : survol, infobulle et ouverture »
 
 - Les liens `OSC 8` (`ls --hyperlink`, `gcc`…) se soulignent entiers au survol, même coupés par un retour automatique ; le curseur devient une main quand le geste est tenu ; après 400 ms une infobulle montre la cible (tronquée au milieu au-delà de 60 cellules) et le geste attendu.

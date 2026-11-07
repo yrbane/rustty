@@ -72,6 +72,7 @@ impl Term {
         if width == 2 {
             let mut cont = template;
             cont.style.attrs.insert(Attrs::WIDE_CONTINUATION);
+            cont.link = link;
             line.set(col + 1, cont);
         }
         if col + width < cols {

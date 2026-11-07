@@ -29,11 +29,17 @@ impl LinkTable {
 
     /// L'identifiant du lien `(uri, id_param)`, créé s'il est nouveau ;
     /// `None` si la table est pleine et le lien inconnu.
-    pub fn insert(&mut self, uri: &str, id_param: Option<&str>) -> Option<LinkId> {
+    /// L'identifiant d'un lien déjà connu, sans rien modifier.
+    pub fn find(&self, uri: &str, id_param: Option<&str>) -> Option<LinkId> {
         let key = (uri.to_string(), id_param.map(str::to_string));
-        if let Some(id) = self.index.get(&key) {
-            return Some(*id);
+        self.index.get(&key).copied()
+    }
+
+    pub fn insert(&mut self, uri: &str, id_param: Option<&str>) -> Option<LinkId> {
+        if let Some(id) = self.find(uri, id_param) {
+            return Some(id);
         }
+        let key = (uri.to_string(), id_param.map(str::to_string));
         if self.links.len() >= Self::MAX_LINKS {
             return None;
         }
