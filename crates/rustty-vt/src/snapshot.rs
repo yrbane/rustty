@@ -1,8 +1,11 @@
 //! Copie figée de ce qui doit être dessiné. Le renderer ne touche jamais
 //! `Term` directement : il reçoit un `Snapshot` pris sous verrou.
 
+use std::sync::Arc;
+
 use crate::cursor::{Cursor, CursorShape};
 use crate::line::Line;
+use crate::links::{LinkId, LinkTable};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Snapshot {
@@ -16,4 +19,12 @@ pub struct Snapshot {
     pub display_offset: usize,
     pub scrollback_len: usize,
     pub title: String,
+    /// Table des hyperliens, partagée avec le terminal sans copie.
+    pub links: Arc<LinkTable>,
+}
+
+impl Snapshot {
+    pub fn link_uri(&self, id: LinkId) -> Option<&str> {
+        self.links.uri(id)
+    }
 }

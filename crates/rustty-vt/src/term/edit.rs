@@ -37,6 +37,7 @@ impl Term {
             3 => {
                 self.scrollback.clear();
                 self.display_offset = 0;
+                self.compact_links();
             }
             _ => {}
         }

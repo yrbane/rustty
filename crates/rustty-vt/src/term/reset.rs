@@ -1,6 +1,8 @@
 //! Remise à l'état initial (RIS) : refonte de tout l'état, taille et
 //! historique conservés.
 
+use std::sync::Arc;
+
 use super::Term;
 use crate::charset::Charsets;
 use crate::cursor::{Cursor, CursorShape, SavedCursor};
@@ -29,6 +31,8 @@ impl Term {
         self.display_offset = 0;
         self.chunks = Chunks::default();
         self.images = ImageStore::default();
+        self.links = Arc::default();
+        self.current_link = None;
         self.set_title(String::new());
         self.notify_if_host_modes_changed(before);
     }

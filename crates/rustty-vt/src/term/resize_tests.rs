@@ -275,3 +275,19 @@ fn colored_blank_rows_below_the_cursor_are_not_kept() {
         "aucune rangée blanche ne pousse l'invite"
     );
 }
+
+#[test]
+fn resize_and_reflow_keep_links() {
+    let mut t = crate::term::Term::new(6, 2, 10);
+    t.input(b"\x1b]8;;https://x\x1b\\abcdefgh\x1b]8;;\x1b\\");
+    let id = t.grid().cell(0, 0).link.unwrap();
+    t.resize(4, 2);
+    let snap = t.snapshot();
+    let linked = snap
+        .lines
+        .iter()
+        .flat_map(|l| l.cells())
+        .filter(|c| c.link == Some(id))
+        .count();
+    assert_eq!(linked, 8);
+}

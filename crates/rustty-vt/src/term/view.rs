@@ -5,6 +5,7 @@ use super::Term;
 use crate::cursor::Cursor;
 use crate::line::Line;
 use crate::snapshot::Snapshot;
+use std::sync::Arc;
 
 impl Term {
     pub fn display_offset(&self) -> usize {
@@ -53,6 +54,7 @@ impl Term {
             None
         };
         Snapshot {
+            links: Arc::clone(&self.links),
             cols: grid.cols(),
             rows,
             lines,

@@ -22,6 +22,8 @@ mod resize_tests;
 mod scroll;
 mod view;
 
+use std::sync::Arc;
+
 use vte::Parser;
 
 use crate::apc::{ApcSplitter, Chunk};
@@ -30,6 +32,7 @@ use crate::charset::Charsets;
 use crate::cursor::{Cursor, CursorShape, SavedCursor};
 use crate::graphics::{Chunks, ImageStore};
 use crate::grid::Grid;
+use crate::links::{LinkId, LinkTable};
 use crate::modes::Modes;
 use crate::outbox::{Outbox, TermEvent};
 use crate::region::ScrollRegion;
@@ -60,6 +63,11 @@ pub struct Term {
     pub(crate) cell_pixels: (u32, u32),
     /// Plafond d'octets des images posées (`PLACED_BUDGET`, réduit en test).
     pub(crate) placed_budget: usize,
+    /// Hyperliens OSC 8 déclarés, partagés avec les instantanés (copie à
+    /// l'écriture) ; une seule table pour les deux écrans.
+    pub(crate) links: Arc<LinkTable>,
+    /// Lien que portent les cellules imprimées jusqu'au prochain `OSC 8 ; ;`.
+    pub(crate) current_link: Option<LinkId>,
     parser: Parser,
     apc: ApcSplitter,
 }
@@ -87,6 +95,8 @@ impl Term {
             images: ImageStore::default(),
             cell_pixels: (10, 20),
             placed_budget: image_budget::PLACED_BUDGET,
+            links: Arc::default(),
+            current_link: None,
             parser: Parser::new(),
             apc: ApcSplitter::default(),
         }
@@ -172,6 +182,60 @@ impl Term {
     /// Cellule utilisée pour effacer : couleurs courantes, pas d'attribut.
     pub(crate) fn erase_template(&self) -> Cell {
         Cell::erased(self.cursor.style)
+    }
+
+    pub fn links(&self) -> &Arc<LinkTable> {
+        &self.links
+    }
+
+    pub fn current_link(&self) -> Option<LinkId> {
+        self.current_link
+    }
+
+    /// Réduit la table aux liens encore portés par une cellule (écrans et
+    /// historique) et renumérote ces cellules.
+    pub fn compact_links(&mut self) {
+        let mut used = vec![false; self.links.len() + 1];
+        let mark = |line: &crate::line::Line, used: &mut Vec<bool>| {
+            for cell in line.cells() {
+                if let Some(id) = cell.link {
+                    used[usize::from(id.get())] = true;
+                }
+            }
+        };
+        // L'écran alternatif inactif est vidé à sa prochaine entrée (mode
+        // 1049) : ses cellules ne retiennent aucun lien.
+        let alt_live = self.modes.alt_screen;
+        for line in self
+            .grid
+            .lines()
+            .iter()
+            .chain(self.alt_grid.lines().iter().filter(|_| alt_live))
+        {
+            mark(line, &mut used);
+        }
+        for line in self.scrollback.iter() {
+            mark(line, &mut used);
+        }
+        let (kept, map) = self.links.retain_remapped(|id| used[usize::from(id.get())]);
+        let remap = |cell: &mut Cell| {
+            if let Some(id) = cell.link {
+                cell.link = map[usize::from(id.get())];
+            }
+        };
+        for line in self
+            .grid
+            .lines_mut()
+            .iter_mut()
+            .chain(self.alt_grid.lines_mut())
+            .chain(self.scrollback.iter_mut())
+        {
+            for cell in line.cells_mut() {
+                remap(cell);
+            }
+        }
+        self.current_link = self.current_link.and_then(|id| map[usize::from(id.get())]);
+        self.links = Arc::new(kept);
     }
 }
 

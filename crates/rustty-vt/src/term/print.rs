@@ -66,8 +66,9 @@ impl Term {
         if width == 2 {
             style.attrs.insert(Attrs::WIDE);
         }
+        let link = self.current_link;
         let line = self.active_grid_mut().line_mut(row);
-        line.set(col, Cell::new(c, style));
+        line.set(col, Cell::with_link(c, style, link));
         if width == 2 {
             let mut cont = template;
             cont.style.attrs.insert(Attrs::WIDE_CONTINUATION);

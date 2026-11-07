@@ -44,6 +44,10 @@ impl Line {
         &self.cells
     }
 
+    pub fn cells_mut(&mut self) -> &mut [Cell] {
+        &mut self.cells
+    }
+
     pub fn get(&self, col: usize) -> &Cell {
         &self.cells[col]
     }
