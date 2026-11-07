@@ -7,15 +7,8 @@ use unicode_width::UnicodeWidthStr;
 use super::run::UnderlinedRun;
 use crate::context_menu::truncate_to_cells;
 use crate::tab::TermId;
-
-/// Pixels entre le cadre et la première ou dernière rangée.
-const PADDING: u32 = 4;
-/// Pixels au-dessus et au-dessous du texte d'une rangée.
-const ROW_PADDING: u32 = 3;
-/// Largeur maximale du contenu, en cellules.
-const MAX_CELLS: usize = 60;
-/// Largeur minimale du contenu, en cellules.
-const MIN_CELLS: usize = 12;
+pub use crate::tooltip::PopupLayout;
+use crate::tooltip::{ROW_PADDING, Tooltip};
 
 /// L'infobulle ouverte sur un mot d'un panneau.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -30,38 +23,18 @@ pub struct SpellPopup {
     pub anchor: PixelRect,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PopupLayout {
-    pub rect: PixelRect,
-    /// Rangée du message.
-    pub message: PixelRect,
-    /// Une rangée par remplacement, dans l'ordre.
-    pub rows: Vec<PixelRect>,
-}
-
-fn inside(r: PixelRect, x: f64, y: f64) -> bool {
-    x >= f64::from(r.x)
-        && x < f64::from(r.x + r.width)
-        && y >= f64::from(r.y)
-        && y < f64::from(r.y + r.height)
-}
-
-impl PopupLayout {
-    pub fn contains(&self, x: f64, y: f64) -> bool {
-        inside(self.rect, x, y)
-    }
-
-    /// Le remplacement sous le point.
-    pub fn hit(&self, x: f64, y: f64) -> Option<usize> {
-        self.rows.iter().position(|r| inside(*r, x, y))
+impl SpellPopup {
+    fn tooltip(&self) -> Tooltip {
+        Tooltip {
+            anchor: self.anchor,
+            message: self.message.clone(),
+        }
     }
 }
 
 /// Place l'infobulle au-dessus du mot, alignée sur sa première colonne, ou
 /// en dessous quand la place manque ; décalée pour rester dans la fenêtre.
 pub fn layout(popup: &SpellPopup, viewport: (u32, u32), metrics: CellMetrics) -> PopupLayout {
-    let cw = metrics.width.max(1);
-    let row_height = metrics.height + 2 * ROW_PADDING;
     let widest = popup
         .replacements
         .iter()
@@ -69,28 +42,18 @@ pub fn layout(popup: &SpellPopup, viewport: (u32, u32), metrics: CellMetrics) ->
         .chain(std::iter::once(popup.message.width()))
         .max()
         .unwrap_or(0);
-    let cells = widest.clamp(MIN_CELLS, MAX_CELLS) as u32;
-    let width = (cells + 2) * cw;
-    let rows = popup.replacements.len() as u32;
-    let height = 2 * PADDING + row_height * (rows + 1);
-    let (vw, vh) = viewport;
-    let x = popup.anchor.x.min(vw.saturating_sub(width));
-    let y = if popup.anchor.y >= height {
-        popup.anchor.y - height
-    } else {
-        (popup.anchor.y + popup.anchor.height).min(vh.saturating_sub(height))
-    };
-    let rect = PixelRect::new(x, y, width, height);
-    let row_at = |i: u32| PixelRect::new(x, y + PADDING + i * row_height, width, row_height);
-    PopupLayout {
-        rect,
-        message: row_at(0),
-        rows: (0..rows).map(|i| row_at(i + 1)).collect(),
-    }
+    crate::tooltip::layout(
+        &popup.tooltip(),
+        popup.replacements.len() as u32,
+        widest,
+        viewport,
+        metrics,
+    )
 }
 
-/// L'infobulle en quads et textes : cadre, fond, message grisé, remplacements
-/// (le survolé sur fond de sélection), coupés à la largeur disponible.
+/// L'infobulle en quads et textes : cadre, fond et message par `tooltip`,
+/// puis les remplacements (le survolé sur fond de sélection), coupés à la
+/// largeur disponible.
 pub fn chrome(
     popup: &SpellPopup,
     layout: &PopupLayout,
@@ -98,28 +61,8 @@ pub fn chrome(
     metrics: CellMetrics,
 ) -> Chrome {
     let cw = metrics.width.max(1);
-    let r = layout.rect;
-    let avail = (r.width / cw).saturating_sub(2) as usize;
-    let mut chrome = Chrome::default();
-    chrome.quads.push(ChromeQuad {
-        rect: r,
-        color: palette.ansi[8],
-    });
-    chrome.quads.push(ChromeQuad {
-        rect: PixelRect::new(
-            r.x + 1,
-            r.y + 1,
-            r.width.saturating_sub(2),
-            r.height.saturating_sub(2),
-        ),
-        color: palette.background,
-    });
-    chrome.texts.push(ChromeText {
-        x: layout.message.x + cw,
-        y: layout.message.y + ROW_PADDING,
-        text: truncate_to_cells(&popup.message, avail),
-        color: palette.ansi[8],
-    });
+    let avail = (layout.rect.width / cw).saturating_sub(2) as usize;
+    let mut chrome = crate::tooltip::chrome(&popup.tooltip(), layout, palette, metrics);
     for (i, (row, replacement)) in layout.rows.iter().zip(&popup.replacements).enumerate() {
         if popup.hovered == Some(i) {
             chrome.quads.push(ChromeQuad {
