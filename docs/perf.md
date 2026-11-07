@@ -50,3 +50,9 @@ quand une image ne tient plus, jamais réduits), l'uniforme du viewport et
 son bind group sont partagés par les trois pipelines et réécrits sur place,
 le bind group de l'atlas n'est refait qu'avec l'atlas. Objets GPU créés par
 image en régime établi : 10 → 0 (`Renderer::gpu_objects`, testé).
+
+T5 (structure, pas de cible de vitesse) : `pane_instances` 81 → 109 µs et
+`Renderer::render` 477 → 486 µs après découpage, dans le bruit de la
+machine ; `pipeline/common.rs` porte le shader, le pipeline instancié, le
+layout de texture et l'échantillonneur : zéro fenêtre de quatre lignes
+dupliquée entre les trois pipelines (10 avant).

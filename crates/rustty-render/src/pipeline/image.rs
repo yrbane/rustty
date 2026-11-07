@@ -7,8 +7,10 @@ use std::collections::{HashMap, HashSet};
 use bytemuck::{Pod, Zeroable};
 use rustty_vt::graphics::ImageData;
 
-use super::alpha_target;
-use super::common::{GlobalsBinding, InstanceBuffer};
+use super::common::{
+    GlobalsBinding, InstanceBuffer, InstancedPipelineSpec, instanced_pipeline, sampler, shader,
+    texture_layout,
+};
 use crate::images::ImageDraw;
 
 #[repr(C)]
@@ -70,69 +72,24 @@ impl ImagePipeline {
         format: wgpu::TextureFormat,
         globals_layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rustty-image"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/image.wgsl").into()),
-        });
-        let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("rustty-image-texture"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        });
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("rustty-image"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            ..Default::default()
-        });
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rustty-image"),
-            bind_group_layouts: &[Some(globals_layout), Some(&texture_layout)],
-            ..Default::default()
-        });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("rustty-image"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[Some(wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<ImageInstance>() as u64,
-                    step_mode: wgpu::VertexStepMode::Instance,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4],
-                })],
+        let shader = shader(
+            device,
+            "rustty-image",
+            include_str!("../shaders/image.wgsl"),
+        );
+        let texture_layout = texture_layout(device, "rustty-image-texture");
+        let sampler = sampler(device, "rustty-image", wgpu::FilterMode::Linear);
+        let pipeline = instanced_pipeline(
+            device,
+            &InstancedPipelineSpec {
+                label: "rustty-image",
+                shader: &shader,
+                bind_layouts: &[globals_layout, &texture_layout],
+                stride: std::mem::size_of::<ImageInstance>() as u64,
+                attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4],
+                format,
             },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(alpha_target(format))],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
+        );
         Self {
             pipeline,
             texture_layout,

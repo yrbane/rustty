@@ -26,8 +26,11 @@ fn reflowing_ten_thousand_short_lines_is_fast() {
         out[9_999].text().trim_end(),
         "ligne 9999 avec un peu de texte"
     );
+    // 20 ms en release ; le code non optimisé, sous une suite parallèle,
+    // a droit à la borne d'origine.
+    let bound = if cfg!(debug_assertions) { 100 } else { 20 };
     assert!(
-        elapsed < std::time::Duration::from_millis(20),
+        elapsed < std::time::Duration::from_millis(bound),
         "reflow de 10 000 lignes : {elapsed:?}"
     );
 }

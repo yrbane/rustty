@@ -1,7 +1,9 @@
 //! Quads texturés par l'atlas : les glyphes de la grille et du chrome.
 
-use super::alpha_target;
-use super::common::{GlobalsBinding, InstanceBuffer};
+use super::common::{
+    GlobalsBinding, InstanceBuffer, InstancedPipelineSpec, instanced_pipeline, sampler, shader,
+    texture_layout,
+};
 use crate::atlas::AtlasRegion;
 use crate::color::Rgba;
 use bytemuck::{Pod, Zeroable};
@@ -122,69 +124,24 @@ impl GlyphPipeline {
         format: wgpu::TextureFormat,
         globals_layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rustty-glyph"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/glyph.wgsl").into()),
-        });
-        let atlas_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("rustty-atlas"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        });
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("rustty-atlas"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rustty-glyph"),
-            bind_group_layouts: &[Some(globals_layout), Some(&atlas_layout)],
-            ..Default::default()
-        });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("rustty-glyph"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[Some(wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<GlyphInstance>() as u64,
-                    step_mode: wgpu::VertexStepMode::Instance,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Uint32],
-                })],
+        let shader = shader(
+            device,
+            "rustty-glyph",
+            include_str!("../shaders/glyph.wgsl"),
+        );
+        let atlas_layout = texture_layout(device, "rustty-atlas");
+        let sampler = sampler(device, "rustty-atlas", wgpu::FilterMode::Nearest);
+        let pipeline = instanced_pipeline(
+            device,
+            &InstancedPipelineSpec {
+                label: "rustty-glyph",
+                shader: &shader,
+                bind_layouts: &[globals_layout, &atlas_layout],
+                stride: std::mem::size_of::<GlyphInstance>() as u64,
+                attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Uint32],
+                format,
             },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(alpha_target(format))],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
+        );
         Self {
             pipeline,
             atlas_layout,

@@ -9,9 +9,10 @@ use unicode_width::UnicodeWidthChar;
 use crate::atlas::{AtlasPacker, atlas_size_for};
 use crate::color::Palette;
 use crate::font::{CellMetrics, FontSet, IconFace, Rasterizer, Variant};
-use crate::frame::Frame;
+use crate::frame::{Chrome, ChromeText, Frame};
 use crate::gpu::{GpuContext, to_wgpu_color};
 use crate::grid::{GlyphRequest, pane_instances};
+use crate::images::ImageDraw;
 use crate::images::pane_images;
 use crate::pipeline::common::{GlobalsBinding, InstanceBuffer};
 use crate::pipeline::glyph::{AtlasTexture, GlyphPipeline};
@@ -137,68 +138,66 @@ impl Renderer {
         frame: &Frame,
         load: wgpu::LoadOp<wgpu::Color>,
     ) {
+        let collected = self.collect(frame);
+        let image_ids = self.upload(ctx, frame, &collected);
+        self.pass(ctx, view, load, &image_ids);
+        // Seule une passe porteuse de panneaux dit quelles images sont encore
+        // à l'écran : la passe du bandeau, sans panneau, ne vide pas le cache.
+        if !frame.panes.is_empty() {
+            let used: HashSet<u64> = collected.images.iter().map(|d| d.image.id).collect();
+            self.image_textures.retain(&used);
+        }
+    }
+
+    /// Les instances CPU d'une image : fonds et glyphes des panneaux, bandes
+    /// d'image, décor (soulignements, chrome), textes du chrome.
+    fn collect(&self, frame: &Frame) -> Collected {
         let metrics = self.metrics();
-        let mut backgrounds = Vec::new();
-        let mut requests = Vec::new();
-        let mut overlay = Vec::new();
-        let mut images = Vec::new();
+        let mut c = Collected::default();
         for pane in &frame.panes {
-            images.extend(pane_images(pane, metrics, self.padding));
+            c.images.extend(pane_images(pane, metrics, self.padding));
             let inst = pane_instances(pane, metrics, &self.palette, self.padding);
-            backgrounds.extend(inst.backgrounds);
-            requests.extend(inst.glyphs);
-            overlay.extend(inst.decorations);
+            c.backgrounds.extend(inst.backgrounds);
+            c.requests.extend(inst.glyphs);
+            c.overlay.extend(inst.decorations);
         }
-        overlay.extend(frame.chrome.quads.iter().map(|q| {
-            QuadInstance::new(
-                q.rect.x as f32,
-                q.rect.y as f32,
-                q.rect.width as f32,
-                q.rect.height as f32,
-                q.color,
-            )
-        }));
-        overlay.extend(frame.chrome.shapes.iter().map(|s| {
-            QuadInstance::styled(
-                s.rect.x as f32,
-                s.rect.y as f32,
-                s.rect.width as f32,
-                s.rect.height as f32,
-                s.style,
-            )
-        }));
-        let mut chrome_requests = Vec::new();
-        for text in &frame.chrome.texts {
-            let mut col = 0u32;
-            for ch in text.text.chars() {
-                let x = (text.x + col * metrics.width) as f32;
-                chrome_requests.push(GlyphRequest {
-                    x,
-                    y: text.y as f32,
-                    ch,
-                    variant: Variant::Regular,
-                    color: text.color,
-                    wide: false,
-                });
-                col += ch.width().unwrap_or(1) as u32;
-            }
-        }
+        c.overlay.extend(chrome_quads(&frame.chrome));
+        c.chrome_requests = chrome_glyph_requests(&frame.chrome.texts, metrics);
+        c
+    }
+
+    /// Glyphes rasterisés dans l'atlas, textures d'image envoyées, tampons
+    /// et uniforme écrits. Rend les identifiants d'image, dans l'ordre des
+    /// instances.
+    fn upload(&mut self, ctx: &GpuContext, frame: &Frame, c: &Collected) -> Vec<u64> {
         let (pane_glyphs, chrome_glyphs) =
-            self.build_glyphs(ctx, &requests, &chrome_requests, &frame.chrome.icons);
-        let staged = self
-            .images
-            .stage(&ctx.device, &ctx.queue, &mut self.image_textures, &images);
+            self.build_glyphs(ctx, &c.requests, &c.chrome_requests, &frame.chrome.icons);
+        let staged =
+            self.images
+                .stage(&ctx.device, &ctx.queue, &mut self.image_textures, &c.images);
         self.globals.ensure(&ctx.queue, frame.viewport);
+        let (d, q) = (&ctx.device, &ctx.queue);
         let b = &mut self.buffers;
         let grown = [
-            b.backgrounds.write(&ctx.device, &ctx.queue, &backgrounds),
-            b.overlay.write(&ctx.device, &ctx.queue, &overlay),
-            b.images.write(&ctx.device, &ctx.queue, &staged.instances),
-            b.pane_glyphs.write(&ctx.device, &ctx.queue, &pane_glyphs),
-            b.chrome_glyphs
-                .write(&ctx.device, &ctx.queue, &chrome_glyphs),
+            b.backgrounds.write(d, q, &c.backgrounds),
+            b.overlay.write(d, q, &c.overlay),
+            b.images.write(d, q, &staged.instances),
+            b.pane_glyphs.write(d, q, &pane_glyphs),
+            b.chrome_glyphs.write(d, q, &chrome_glyphs),
         ];
         self.gpu_objects += grown.iter().filter(|&&g| g).count() as u32;
+        staged.ids
+    }
+
+    /// La passe de rendu, dans l'ordre : fonds, images, glyphes des
+    /// panneaux, décor, glyphes du chrome.
+    fn pass(
+        &self,
+        ctx: &GpuContext,
+        view: &wgpu::TextureView,
+        load: wgpu::LoadOp<wgpu::Color>,
+        image_ids: &[u64],
+    ) {
         let mut encoder = ctx
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -218,33 +217,70 @@ impl Renderer {
                 })],
                 ..Default::default()
             });
-            let b = &self.buffers;
-            self.quads.draw(&mut pass, &self.globals, &b.backgrounds);
-            self.images.draw(
-                &mut pass,
-                &self.globals,
-                &self.image_textures,
-                &b.images,
-                &staged.ids,
-            );
-            self.glyphs
-                .draw(&mut pass, &self.globals, &self.atlas_group, &b.pane_glyphs);
-            self.quads.draw(&mut pass, &self.globals, &b.overlay);
-            self.glyphs.draw(
-                &mut pass,
-                &self.globals,
-                &self.atlas_group,
-                &b.chrome_glyphs,
-            );
+            let (b, g, atlas) = (&self.buffers, &self.globals, &self.atlas_group);
+            self.quads.draw(&mut pass, g, &b.backgrounds);
+            self.images
+                .draw(&mut pass, g, &self.image_textures, &b.images, image_ids);
+            self.glyphs.draw(&mut pass, g, atlas, &b.pane_glyphs);
+            self.quads.draw(&mut pass, g, &b.overlay);
+            self.glyphs.draw(&mut pass, g, atlas, &b.chrome_glyphs);
         }
         ctx.queue.submit(Some(encoder.finish()));
-        // Seule une passe porteuse de panneaux dit quelles images sont encore
-        // à l'écran : la passe du bandeau, sans panneau, ne vide pas le cache.
-        if !frame.panes.is_empty() {
-            let used: HashSet<u64> = images.iter().map(|d| d.image.id).collect();
-            self.image_textures.retain(&used);
+    }
+}
+
+/// Les instances CPU d'une image, avant tout envoi au GPU.
+#[derive(Default)]
+struct Collected {
+    backgrounds: Vec<QuadInstance>,
+    requests: Vec<GlyphRequest>,
+    overlay: Vec<QuadInstance>,
+    images: Vec<ImageDraw>,
+    chrome_requests: Vec<GlyphRequest>,
+}
+
+/// Les rectangles du chrome, plats puis stylés.
+fn chrome_quads(chrome: &Chrome) -> impl Iterator<Item = QuadInstance> + '_ {
+    let flat = chrome.quads.iter().map(|q| {
+        QuadInstance::new(
+            q.rect.x as f32,
+            q.rect.y as f32,
+            q.rect.width as f32,
+            q.rect.height as f32,
+            q.color,
+        )
+    });
+    let styled = chrome.shapes.iter().map(|s| {
+        QuadInstance::styled(
+            s.rect.x as f32,
+            s.rect.y as f32,
+            s.rect.width as f32,
+            s.rect.height as f32,
+            s.style,
+        )
+    });
+    flat.chain(styled)
+}
+
+/// Les textes du chrome, un glyphe régulier par caractère, avancés de la
+/// largeur du caractère.
+fn chrome_glyph_requests(texts: &[ChromeText], metrics: CellMetrics) -> Vec<GlyphRequest> {
+    let mut out = Vec::new();
+    for text in texts {
+        let mut col = 0u32;
+        for ch in text.text.chars() {
+            out.push(GlyphRequest {
+                x: (text.x + col * metrics.width) as f32,
+                y: text.y as f32,
+                ch,
+                variant: Variant::Regular,
+                color: text.color,
+                wide: false,
+            });
+            col += ch.width().unwrap_or(1) as u32;
         }
     }
+    out
 }
 
 /// Les cinq tampons d'instances d'une image, dans l'ordre de dessin.

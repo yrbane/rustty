@@ -1,8 +1,9 @@
 //! Rectangles instanciés : pleins par défaut, ou stylés (coins arrondis,
 //! bordure, dégradé vertical) pour le chrome de la fenêtre.
 
-use super::alpha_target;
-use super::common::{GlobalsBinding, InstanceBuffer};
+use super::common::{
+    GlobalsBinding, InstanceBuffer, InstancedPipelineSpec, instanced_pipeline, shader,
+};
 use crate::color::Rgba;
 use bytemuck::{Pod, Zeroable};
 
@@ -75,40 +76,18 @@ impl QuadPipeline {
         format: wgpu::TextureFormat,
         globals_layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rustty-quad"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/quad.wgsl").into()),
-        });
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rustty-quad"),
-            bind_group_layouts: &[Some(globals_layout)],
-            ..Default::default()
-        });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("rustty-quad"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[Some(wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<QuadInstance>() as u64,
-                    step_mode: wgpu::VertexStepMode::Instance,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32, 6 => Float32],
-                })],
+        let shader = shader(device, "rustty-quad", include_str!("../shaders/quad.wgsl"));
+        let pipeline = instanced_pipeline(
+            device,
+            &InstancedPipelineSpec {
+                label: "rustty-quad",
+                shader: &shader,
+                bind_layouts: &[globals_layout],
+                stride: std::mem::size_of::<QuadInstance>() as u64,
+                attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32, 6 => Float32],
+                format,
             },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(alpha_target(format))],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
+        );
         Self { pipeline }
     }
 

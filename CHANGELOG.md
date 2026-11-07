@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.188 — 2026-11-07 · « Pipelines factorisés, pane_instances et draw découpés »
+
+- `pipeline/common.rs` : `shader`, `instanced_pipeline`, `texture_layout`, `sampler` partagés par les trois pipelines (plus aucune fenêtre dupliquée).
+- `pane_instances` découpé en `extend_run`, `cell_glyph`, `cell_decorations`, `cursor_quads` ; `Renderer::draw` en `collect` (CPU), `upload` (atlas, textures, tampons) et `pass` (rendu).
+- `PixelRect::contains_point` / `contains_px` ; la barre de titre les utilise.
+- Test de perf du reflow : 20 ms en release, 100 ms en debug (suite parallèle).
+
 ## 0.1.0-alpha.187 — 2026-11-07 · « Tampons et bind groups GPU persistants »
 
 - `pipeline/common.rs` : `InstanceBuffer` (tampon de vertex persistant, doublé à la demande) et `GlobalsBinding` (uniforme du viewport et bind group partagés par les trois pipelines, réécrits sur place).

@@ -6,7 +6,108 @@
 use bytemuck::Pod;
 use wgpu::util::DeviceExt as _;
 
-use super::{Globals, globals_layout};
+use super::{Globals, alpha_target, globals_layout};
+
+/// Un module WGSL nommé.
+pub(crate) fn shader(device: &wgpu::Device, label: &str, wgsl: &str) -> wgpu::ShaderModule {
+    device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some(label),
+        source: wgpu::ShaderSource::Wgsl(wgsl.into()),
+    })
+}
+
+/// Layout d'une texture 2D flottante filtrable (binding 0) et de son
+/// échantillonneur (binding 1), lus par le fragment shader.
+pub(crate) fn texture_layout(device: &wgpu::Device, label: &str) -> wgpu::BindGroupLayout {
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some(label),
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    multisampled: false,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
+        ],
+    })
+}
+
+/// Échantillonneur bord-à-bord, `filter` pour l'agrandissement comme la réduction.
+pub(crate) fn sampler(
+    device: &wgpu::Device,
+    label: &str,
+    filter: wgpu::FilterMode,
+) -> wgpu::Sampler {
+    device.create_sampler(&wgpu::SamplerDescriptor {
+        label: Some(label),
+        address_mode_u: wgpu::AddressMode::ClampToEdge,
+        address_mode_v: wgpu::AddressMode::ClampToEdge,
+        mag_filter: filter,
+        min_filter: filter,
+        ..Default::default()
+    })
+}
+
+/// Ce qui distingue nos trois pipelines : tout le reste (un quad de six
+/// sommets par instance, mélange alpha, pas de profondeur) est commun.
+pub(crate) struct InstancedPipelineSpec<'a> {
+    pub label: &'a str,
+    pub shader: &'a wgpu::ShaderModule,
+    pub bind_layouts: &'a [&'a wgpu::BindGroupLayout],
+    pub stride: u64,
+    pub attributes: &'a [wgpu::VertexAttribute],
+    pub format: wgpu::TextureFormat,
+}
+
+/// Pipeline instancié : `vs_main`/`fs_main`, un tampon de vertex par
+/// instance, cible avec mélange alpha.
+pub(crate) fn instanced_pipeline(
+    device: &wgpu::Device,
+    spec: &InstancedPipelineSpec,
+) -> wgpu::RenderPipeline {
+    let layouts: Vec<Option<&wgpu::BindGroupLayout>> =
+        spec.bind_layouts.iter().map(|l| Some(*l)).collect();
+    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some(spec.label),
+        bind_group_layouts: &layouts,
+        ..Default::default()
+    });
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some(spec.label),
+        layout: Some(&layout),
+        vertex: wgpu::VertexState {
+            module: spec.shader,
+            entry_point: Some("vs_main"),
+            compilation_options: Default::default(),
+            buffers: &[Some(wgpu::VertexBufferLayout {
+                array_stride: spec.stride,
+                step_mode: wgpu::VertexStepMode::Instance,
+                attributes: spec.attributes,
+            })],
+        },
+        primitive: wgpu::PrimitiveState::default(),
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState::default(),
+        fragment: Some(wgpu::FragmentState {
+            module: spec.shader,
+            entry_point: Some("fs_main"),
+            compilation_options: Default::default(),
+            targets: &[Some(alpha_target(spec.format))],
+        }),
+        multiview_mask: None,
+        cache: None,
+    })
+}
 
 /// Taille de départ d'un tampon d'instances (en octets) : assez pour une
 /// petite image, doublée ensuite à la demande.
