@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::error::ConfigError;
 use crate::keymap::KeyMap;
-use crate::sections::{Colors, Font, Spellcheck, Splits, Tabs, Window};
+use crate::sections::{Colors, Font, LinkClick, Links, Spellcheck, Splits, Tabs, Window};
 use crate::titlebar::TitleBar;
 
 /// Plafond de lignes d'historique par fenêtre : au-delà, la mémoire explose
@@ -21,6 +21,7 @@ pub struct Config {
     pub tabs: Tabs,
     pub splits: Splits,
     pub spellcheck: Spellcheck,
+    pub links: Links,
     pub colors: Colors,
     pub titlebar: TitleBar,
     pub keys: KeyMap,
@@ -88,6 +89,29 @@ impl Config {
                 format!("« {url} » doit commencer par http:// ou https://"),
             );
         }
+        if self.links.schemes.is_empty() {
+            return invalid("links.schemes", "doit contenir au moins un schéma".into());
+        }
+        for (i, scheme) in self.links.schemes.iter().enumerate() {
+            let well_formed = scheme
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_lowercase)
+                && scheme
+                    .bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"+-.".contains(&b));
+            if !well_formed {
+                return invalid(
+                    "links.schemes",
+                    format!(
+                        "« {scheme} » : lettres minuscules, chiffres, « + », « - » ou « . », en commençant par une lettre"
+                    ),
+                );
+            }
+            if self.links.schemes[..i].contains(scheme) {
+                return invalid("links.schemes", format!("« {scheme} » apparaît deux fois"));
+            }
+        }
         if self.window.scrollback_lines > MAX_SCROLLBACK_LINES {
             return invalid(
                 "window.scrollback_lines",
@@ -130,6 +154,40 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn links_section_parses_and_defaults() {
+        let c = Config::from_str("[links]\nclick = \"plain\"\nschemes = [\"https\"]\n").unwrap();
+        assert_eq!(c.links.click, LinkClick::Plain);
+        assert_eq!(c.links.schemes, ["https"]);
+        let d = Config::default().links;
+        assert_eq!(d.click, LinkClick::Ctrl);
+        assert_eq!(
+            d.schemes,
+            ["http", "https", "file", "mailto", "ftp", "ssh", "git"]
+        );
+        assert!(d.scheme_allowed("HTTPS://x"));
+        assert!(d.scheme_allowed("mailto:a@b"));
+        assert!(!d.scheme_allowed("javascript:alert(1)"));
+        assert!(!d.scheme_allowed("pas-de-schéma"));
+    }
+
+    #[test]
+    fn links_section_is_validated() {
+        let err = Config::from_str("[links]\nclick = \"double\"\n")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("double") && err.contains("ctrl"), "{err}");
+        for toml in [
+            "[links]\nschemes = []\n",
+            "[links]\nschemes = [\"Http\"]\n",
+            "[links]\nschemes = [\"1ab\"]\n",
+            "[links]\nschemes = [\"http\", \"http\"]\n",
+        ] {
+            let err = Config::from_str(toml).unwrap_err().to_string();
+            assert!(err.contains("links.schemes"), "{toml:?} → {err}");
+        }
+    }
 
     #[test]
     fn splits_and_tab_sections_parse() {

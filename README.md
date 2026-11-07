@@ -213,7 +213,10 @@ bordures que rustty dessine lui-même quand le compositeur n'en fournit pas,
 comme sous GNOME Wayland ; ne touche qu'à cette fenêtre, jamais au réglage du
 bureau ; ne sert que si `[titlebar] enabled = false`), et `[spellcheck]` (`enabled`, `url` du
 serveur LanguageTool, `http://127.0.0.1:8099` par défaut) pour l'infobulle de
-correction au survol d'un mot souligné.
+correction au survol d'un mot souligné, et `[links]` (`click` : `"ctrl"` pour
+ctrl+clic, `"plain"` pour le clic simple ; `schemes`, les schémas d'URL
+soulignés et ouverts, `http`, `https`, `file`, `mailto`, `ftp`, `ssh` et
+`git` par défaut) pour les hyperliens.
 
 Fichier TOML, `~/.config/rustty/rustty.toml` sur Linux (équivalents macOS et
 Windows). Toutes les clés sont optionnelles ; le fichier d'exemple

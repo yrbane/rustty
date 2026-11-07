@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.176 — 2026-11-07 · « Hyperliens : section [links] »
+
+- Configuration : section `[links]` avec `click` (`"ctrl"` par défaut, ou `"plain"`) et `schemes` (schémas d'URL soulignés et ouverts : `http`, `https`, `file`, `mailto`, `ftp`, `ssh`, `git`), validée (liste non vide, schémas bien formés, sans doublon), documentée dans le modèle et le README. Les liens eux-mêmes arrivent dans les versions suivantes.
+
 ## 0.1.0-alpha.175 — 2026-11-07 · « Hyperliens : OSC 8 mémorisé par cellule »
 
 - `rustty-vt` : `OSC 8 ; id=… ; URI` ouvre un lien porté par les cellules imprimées jusqu'à `OSC 8 ; ;` ; indépendant du style (`SGR 0` ne le ferme pas) ; URI vide, trop longue (> 2083 octets), non UTF-8 ou avec caractère de contrôle = fermeture ; même `(URI, id)` = même lien ; écrans principal et alternatif partagent la table ; `RIS` la vide ; `ED 3` et la table pleine la compactent (liens encore affichés seulement) ; les effacements et le reflow respectent les liens ; `Snapshot::link_uri`.
