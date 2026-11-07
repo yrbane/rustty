@@ -47,6 +47,7 @@ impl OsWindow {
                     rect: *rect,
                     snapshot: tw.snapshot(),
                     focused: self.focused && Some(*wid) == focused_window,
+                    link_hover: self.link_range_of(term),
                 });
                 if let Some((sel_term, sel)) = &self.selection
                     && *sel_term == term
@@ -120,6 +121,10 @@ impl OsWindow {
         if let Some(popup) = self.spell_chrome() {
             menu_chrome.quads.extend(popup.quads);
             menu_chrome.texts.extend(popup.texts);
+        }
+        if let Some(tip) = self.link_chrome() {
+            menu_chrome.quads.extend(tip.quads);
+            menu_chrome.texts.extend(tip.texts);
         }
         let background = render_frame::background_color(
             self.palette.background,

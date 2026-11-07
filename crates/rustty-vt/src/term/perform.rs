@@ -119,6 +119,7 @@ impl Perform for Term {
         let Some(code) = params.first() else { return };
         match *code {
             b"0" | b"2" => self.set_title_from_params(&params[1..]),
+            b"8" => self.set_hyperlink_from_params(params),
             b"52" => {
                 if let Some(data) = params.get(2) {
                     self.set_clipboard_from_base64(data);

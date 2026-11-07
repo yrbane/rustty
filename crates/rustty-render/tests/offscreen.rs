@@ -115,6 +115,7 @@ fn render_survives_tiny_viewport() {
                 rect: PixelRect::new(0, 0, vw, vh),
                 snapshot: &snap,
                 focused: true,
+                link_hover: None,
             }],
             chrome: Default::default(),
         };
@@ -164,6 +165,7 @@ fn tab_bar_with_close_buttons_matches_golden() {
             rect: PixelRect::new(0, bar_h, width, height - bar_h),
             snapshot: &snap,
             focused: true,
+            link_hover: None,
         }],
         chrome,
     };
@@ -196,6 +198,7 @@ fn render_onto_keeps_what_is_already_there() {
             rect: PixelRect::new(30, 0, 30, 30),
             snapshot: &snap,
             focused: true,
+            link_hover: None,
         }],
         chrome: Default::default(),
     };
@@ -479,11 +482,13 @@ fn window_mockup_matches_golden() {
                 rect: PixelRect::new(0, pane_top, half, h - pane_top),
                 snapshot: &left_snap,
                 focused: true,
+                link_hover: None,
             },
             PaneFrame {
                 rect: PixelRect::new(half, pane_top, w - half, h - pane_top),
                 snapshot: &right_snap,
                 focused: false,
+                link_hover: None,
             },
         ],
         chrome,

@@ -59,6 +59,7 @@ impl OsWindow {
         let grabbing = self.drag.as_ref().is_some_and(crate::drag::Drag::is_active);
         let icon = match axis {
             _ if grabbing => CursorIcon::Grabbing,
+            _ if self.link_armed() => CursorIcon::Pointer,
             Some(Axis::Vertical) => CursorIcon::ColResize,
             Some(Axis::Horizontal) => CursorIcon::RowResize,
             None if geometry::pane_at(&self.pane_rects, x, y).is_some() => CursorIcon::Text,

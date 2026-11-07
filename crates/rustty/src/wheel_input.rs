@@ -29,6 +29,9 @@ impl OsWindow {
             // Pendant un glisser, la molette n'atteint ni le terminal ni l'historique.
             return Vec::new();
         }
+        if self.leave_link() {
+            self.window.request_redraw();
+        }
         let (x, y) = self.cursor;
         let target = self
             .pane_under(x, y)
@@ -104,9 +107,10 @@ impl OsWindow {
             // Le relâchement ne nous parviendra peut-être pas : pas de dépôt.
             effects = self.cancel_drag();
             // Ni pour la barre de titre : plus de survol, d'appui ni de glisser.
-            if self.leave_title_bar() {
+            if self.leave_title_bar() | self.leave_link() {
                 effects.push(Effect::Redraw);
             }
+            self.link_click.reset();
             // Plus de souris à suivre : le glisser de barre s'arrête.
             if self.divider_drag.take().is_some() {
                 self.update_cursor_icon(self.cursor.0, self.cursor.1);

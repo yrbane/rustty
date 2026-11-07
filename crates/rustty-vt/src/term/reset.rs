@@ -29,6 +29,10 @@ impl Term {
         self.display_offset = 0;
         self.chunks = Chunks::default();
         self.images = ImageStore::default();
+        // L'historique survit : ses liens aussi, renumérotés.
+        self.current_link = None;
+        self.compact_links();
+        self.link_refusals = 0;
         self.set_title(String::new());
         self.notify_if_host_modes_changed(before);
     }

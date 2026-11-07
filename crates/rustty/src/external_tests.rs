@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use super::*;
 
@@ -125,21 +125,42 @@ fn folder_to_open_falls_back_to_home() {
 
 #[test]
 fn spawning_a_missing_program_is_an_error_not_a_panic() {
-    assert!(spawn_detached(&["rustty-programme-inexistant".to_string()], Path::new("/")).is_err());
+    assert!(
+        spawn_detached(
+            &["rustty-programme-inexistant".to_string()],
+            std::ffi::OsStr::new("/")
+        )
+        .is_err()
+    );
 }
 
 #[test]
 fn an_empty_command_is_an_error() {
-    assert!(spawn_detached(&[], Path::new("/")).is_err());
+    assert!(spawn_detached(&[], std::ffi::OsStr::new("/")).is_err());
 }
 
 #[cfg(unix)]
 #[test]
 fn spawning_an_existing_program_returns_at_once() {
     let started = std::time::Instant::now();
-    spawn_detached(&["sleep".to_string(), "2".to_string()], Path::new("/")).unwrap();
+    spawn_detached(
+        &["sleep".to_string(), "2".to_string()],
+        std::ffi::OsStr::new("/"),
+    )
+    .unwrap();
     assert!(
         started.elapsed() < std::time::Duration::from_secs(1),
         "le lancement n'attend pas la fin du programme"
     );
+}
+
+#[test]
+fn spawn_detached_takes_any_os_string_target() {
+    // Un programme qui n'existe pas : l'erreur vient du lancement, pas du type de cible.
+    let err = spawn_detached(
+        &["rustty-programme-inexistant".to_string()],
+        std::ffi::OsStr::new("https://x"),
+    )
+    .unwrap_err();
+    assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
 }

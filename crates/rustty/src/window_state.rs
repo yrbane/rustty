@@ -23,6 +23,8 @@ use crate::context_menu::ContextMenu;
 use crate::drag::Drag;
 use crate::events::Waker;
 use crate::gpu_surface::{self, Surface};
+use crate::link_input::LinkHover;
+use crate::links;
 use crate::model::Model;
 use crate::mouse::{DoubleClick, MotionFilter, MouseButton, Selection, WheelAccumulator};
 use crate::pane_fonts::{PaneFonts, SizeKey};
@@ -101,6 +103,10 @@ pub struct OsWindow {
     pub menu: Option<ContextMenu>,
     /// Survol d'un mot souligné et infobulle de correction.
     pub spell: SpellState,
+    /// Hyperlien sous la souris.
+    pub link_hover: Option<LinkHover>,
+    /// Appui en cours sur un hyperlien.
+    pub link_click: links::LinkClick,
     pub focused: bool,
     pub clipboard: Option<arboard::Clipboard>,
     pub shell: Shell,
@@ -197,6 +203,8 @@ impl OsWindow {
             cursor_icon: CursorIcon::Default,
             menu: None,
             spell: SpellState::default(),
+            link_hover: None,
+            link_click: links::LinkClick::default(),
             focused: true,
             clipboard,
             shell: Shell::default_for_platform(),

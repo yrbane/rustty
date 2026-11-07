@@ -3,7 +3,8 @@
 
 use rustty_layout::SplitId;
 use rustty_render::{
-    CellMetrics, Chrome, ChromeQuad, Frame, PaneFrame, PixelRect, Rgba, TabSpec, grid_geometry,
+    CellMetrics, CellRange, Chrome, ChromeQuad, Frame, PaneFrame, PixelRect, Rgba, TabSpec,
+    grid_geometry,
 };
 use rustty_vt::Snapshot;
 
@@ -14,6 +15,8 @@ pub struct PaneView {
     pub rect: PixelRect,
     pub snapshot: Snapshot,
     pub focused: bool,
+    /// Cellules du lien survolé, soulignées.
+    pub link_hover: Option<CellRange>,
 }
 
 /// Le fond de fenêtre avec l'opacité ; prémultiplié si le compositeur le veut.
@@ -106,6 +109,7 @@ pub fn build_frame(
                 rect: p.rect,
                 snapshot: &p.snapshot,
                 focused: p.focused,
+                link_hover: p.link_hover,
             })
             .collect(),
         chrome,
@@ -268,6 +272,7 @@ mod tests {
             rect: PixelRect::new(0, 24, 200, 100),
             snapshot: t.snapshot(),
             focused: true,
+            link_hover: None,
         }];
         let chrome = Chrome {
             quads: vec![ChromeQuad {

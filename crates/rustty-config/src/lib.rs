@@ -20,8 +20,8 @@ pub use example::DEFAULT_TOML;
 pub use keymap::KeyMap;
 pub use keys::{Key, KeyCombo, KeyParseError, Mods, NamedKey};
 pub use sections::{
-    CloseButtonStyle, Colors, DecorationsTheme, Font, Spellcheck, Splits, TabBarPosition,
-    TabColors, Tabs, Window,
+    CloseButtonStyle, Colors, DecorationsTheme, Font, LinkClick, Links, Spellcheck, Splits,
+    TabBarPosition, TabColors, Tabs, Window,
 };
 pub mod titlebar;
 pub use titlebar::{ButtonOverride, ButtonStyle, TitleBar, TitleButton, TitleButtons};

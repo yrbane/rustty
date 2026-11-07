@@ -189,6 +189,46 @@ impl Default for Spellcheck {
     }
 }
 
+/// Geste qui ouvre un hyperlien.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LinkClick {
+    /// ctrl+clic.
+    Ctrl,
+    /// Clic simple.
+    Plain,
+}
+
+/// Hyperliens OSC 8 : geste d'ouverture et schémas d'URL reconnus.
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Links {
+    pub click: LinkClick,
+    /// Schémas (`http`, `file`…) soulignés et ouverts ; tout autre lien
+    /// reste du texte.
+    pub schemes: Vec<String>,
+}
+
+impl Default for Links {
+    fn default() -> Self {
+        Self {
+            click: LinkClick::Ctrl,
+            schemes: ["http", "https", "file", "mailto", "ftp", "ssh", "git"]
+                .map(String::from)
+                .to_vec(),
+        }
+    }
+}
+
+impl Links {
+    /// Le schéma de `uri` (avant le premier `:`, casse ignorée) est-il
+    /// dans la liste ? Faux sans `:`.
+    pub fn scheme_allowed(&self, uri: &str) -> bool {
+        uri.split_once(':')
+            .is_some_and(|(scheme, _)| self.schemes.iter().any(|s| s.eq_ignore_ascii_case(scheme)))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Colors {

@@ -69,6 +69,7 @@ impl OsWindow {
                 }
                 Effect::OpenConfig => self.open_config(),
                 Effect::OpenCwd => self.open_cwd(),
+                Effect::OpenLink(uri) => self.open_link(&uri),
                 Effect::PickTitleBarColor => {
                     let effects = self.open_title_bar_palette();
                     self.run_effects(effects, event_loop);
@@ -188,7 +189,7 @@ impl OsWindow {
                     env("VISUAL").as_deref(),
                     env("EDITOR").as_deref(),
                 );
-                external::spawn_detached(&command, &path)
+                external::spawn_detached(&command, path.as_os_str())
             });
         self.report_external("ouvrir la configuration", result);
     }
@@ -207,7 +208,7 @@ impl OsWindow {
             .ok_or_else(|| std::io::Error::other("aucun dossier à ouvrir"))
             .and_then(|dir| {
                 let command = external::file_manager_command(&self.config.titlebar.file_manager);
-                external::spawn_detached(&command, &dir)
+                external::spawn_detached(&command, dir.as_os_str())
             });
         self.report_external("ouvrir le dossier", result);
     }
@@ -234,6 +235,17 @@ impl OsWindow {
             }
             Err(e) => self.report_external("enregistrer la couleur", Err(e)),
         }
+    }
+
+    /// Un hyperlien : l'ouvreur du bureau reçoit l'URI seule, après le
+    /// contrôle du schéma (`[links] schemes`).
+    fn open_link(&mut self, uri: &str) {
+        let result = if self.config.links.scheme_allowed(uri) {
+            external::spawn_detached(&external::opener(), std::ffi::OsStr::new(uri))
+        } else {
+            Err(std::io::Error::other("schéma non autorisé"))
+        };
+        self.report_external("ouvrir le lien", result);
     }
 
     fn report_external(&mut self, what: &str, result: std::io::Result<()>) {

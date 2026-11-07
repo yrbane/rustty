@@ -26,10 +26,27 @@ impl PixelRect {
     }
 }
 
+/// Plage de cellules `(ligne, colonne)` bornes incluses, en ordre de
+/// lecture : de `start` à la fin de sa ligne, les lignes entières entre
+/// les deux, puis le début de la ligne de `end`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CellRange {
+    pub start: (usize, usize),
+    pub end: (usize, usize),
+}
+
+impl CellRange {
+    pub fn contains(&self, row: usize, col: usize) -> bool {
+        (row, col) >= self.start && (row, col) <= self.end
+    }
+}
+
 pub struct PaneFrame<'a> {
     pub rect: PixelRect,
     pub snapshot: &'a Snapshot,
     pub focused: bool,
+    /// Lien survolé : ses cellules sont soulignées.
+    pub link_hover: Option<CellRange>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

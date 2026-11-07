@@ -45,6 +45,7 @@ pub fn render_term(
             rect: PixelRect::new(0, 0, width, height),
             snapshot: &snap,
             focused,
+            link_hover: None,
         }],
         chrome: Default::default(),
     };

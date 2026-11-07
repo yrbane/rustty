@@ -49,6 +49,8 @@ pub enum Effect {
     OpenConfig,
     /// Ouvrir le dossier courant du panneau actif dans l'explorateur.
     OpenCwd,
+    /// Ouvrir cette URI dans le navigateur par défaut (ouvreur du bureau).
+    OpenLink(String),
     /// Ouvrir le nuancier de la barre de titre.
     PickTitleBarColor,
     /// Écrire la couleur ANSI d'index donné dans `[titlebar] background`.

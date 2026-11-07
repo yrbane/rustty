@@ -46,6 +46,10 @@ impl Grid {
         &self.lines[row]
     }
 
+    pub fn lines_mut(&mut self) -> &mut [Line] {
+        &mut self.lines
+    }
+
     pub fn line_mut(&mut self, row: usize) -> &mut Line {
         &mut self.lines[row]
     }
