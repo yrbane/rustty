@@ -105,6 +105,9 @@ pub struct OsWindow {
     pub spell: SpellState,
     /// Hyperlien sous la souris.
     pub link_hover: Option<LinkHover>,
+    /// Un relayout est dû : il est fait une fois, au prochain rendu, quel
+    /// que soit le nombre d'événements (glisser de barre) qui l'ont demandé.
+    pub layout_dirty: bool,
     /// Appui en cours sur un hyperlien.
     pub link_click: links::LinkClick,
     pub focused: bool,
@@ -204,6 +207,7 @@ impl OsWindow {
             menu: None,
             spell: SpellState::default(),
             link_hover: None,
+            layout_dirty: false,
             link_click: links::LinkClick::default(),
             focused: true,
             clipboard,

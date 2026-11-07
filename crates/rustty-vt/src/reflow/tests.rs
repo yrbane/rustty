@@ -233,3 +233,20 @@ fn a_cursor_on_a_missing_row_maps_to_none() {
     assert_eq!(texts(&out), ["ab"]);
     assert_eq!(moved, [Some((0, 1)), None]);
 }
+
+#[test]
+fn combining_marks_follow_their_cell_through_reflow() {
+    let mut l = Line::new(6);
+    for (c, ch) in "abcde".chars().enumerate() {
+        l.set(c, Cell::new(ch, Default::default()));
+    }
+    l.push_zerowidth(3, '\u{301}');
+    let (out, _) = reflow(vec![l], &[], 3);
+    assert_eq!(out.len(), 2);
+    assert_eq!(
+        out[1].zerowidth(0),
+        Some("\u{301}"),
+        "le d et son accent passent sur la 2e ligne"
+    );
+    assert_eq!(out[0].zerowidth(3), None);
+}

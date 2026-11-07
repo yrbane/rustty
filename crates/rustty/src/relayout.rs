@@ -20,6 +20,15 @@ pub fn selection_survives(selected: Option<TermId>, resized: &[TermId]) -> bool 
 }
 
 impl OsWindow {
+    /// Fait le relayout demandé depuis le dernier rendu, s'il y en a un :
+    /// pendant un glisser de barre, un seul `Term::resize` par panneau et par
+    /// image, pas un par mouvement de souris.
+    pub(crate) fn flush_layout(&mut self) {
+        if std::mem::take(&mut self.layout_dirty) {
+            self.relayout();
+        }
+    }
+
     /// Recalcule barre d'onglets, rectangles des panneaux et tailles des terminaux.
     pub fn relayout(&mut self) {
         self.drop_vanished_drag();

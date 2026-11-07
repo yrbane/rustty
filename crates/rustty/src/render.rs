@@ -15,6 +15,7 @@ use crate::window_state::{OsWindow, SELECTION_ALPHA};
 
 impl OsWindow {
     pub fn render(&mut self) {
+        self.flush_layout();
         let texture = match self.surface.acquire(&self.ctx) {
             Acquire::Frame(texture) => texture,
             Acquire::Retry => {

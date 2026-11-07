@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.186 — 2026-11-07 · « Reflow allégé et relayout une fois par image »
+
+- Reflow : entrées de 16 octets (combinants à part), lignes logiques sans caractère large ni curseur copiées par tranche. Redimensionnement 200→120→200 colonnes avec 10 000 lignes d'historique : 29,6 → 7 ms.
+- Fenêtre : un glisser de barre de split ne redimensionne plus les terminaux qu'une fois par image (relayout différé au rendu), pas à chaque mouvement de souris.
+- Tests : combinants suivis au reflow, borne de perf resserrée à 20 ms, lignes longues bornées ; e2e « Splits » complétée.
+
 ## 0.1.0-alpha.185 — 2026-11-07 · « Chemin d'impression rapide »
 
 - `put_char` : chemin rapide pour un caractère étroit sur une cellule ordinaire (une lecture, une écriture, pas de gabarit d'effacement).
