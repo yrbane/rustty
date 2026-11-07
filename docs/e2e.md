@@ -216,6 +216,26 @@ Configuration à chaud
 - [ ] `enabled = false` puis sauvegarde : les décorations du système reviennent, la barre disparaît, onglets et panneaux remontent ; `enabled = true` : l'inverse. `height`, couleurs, `visible` des boutons : pris en compte au rechargement.
 - [ ] `[keys]` `"ctrl+shift+m" = "minimize_window"` et `"ctrl+shift+u" = "toggle_maximize"` : les raccourcis agissent comme les pastilles.
 
+## Liens (jalon 1)
+Prérequis : `[links]` par défaut (`click = "ctrl"`).
+
+Survol
+- [ ] `ls --hyperlink=always` (ou `printf '\e]8;;https://exemple.org\e\\texte\e]8;;\e\\\n'`) : le texte est ordinaire. Souris dessus : « texte » se souligne entier ; souris immobile 400 ms : une infobulle au-dessus montre `https://exemple.org · ctrl+clic`. Bouger dans le lien : rien ne clignote ; sortir : soulignement et infobulle disparaissent. Une touche, la molette ou un clic ferment l'infobulle.
+- [ ] Lien plus long que la fenêtre (`printf '\e]8;;https://exemple.org/%s\e\\%s\e]8;;\e\\\n' $(printf 'a%.0s' {1..120}) $(printf 'b%.0s' {1..120})`) : coupé par le retour automatique, les deux lignes se soulignent ensemble, depuis l'une ou l'autre moitié ; l'infobulle tronque la cible au milieu avec « … ».
+- [ ] Curseur : flèche de texte sur le lien, main dès que `ctrl` est enfoncé (sans bouger la souris), flèche de texte quand il est relâché.
+- [ ] `printf '\e]8;;javascript:alert(1)\e\\x\e]8;;\e\\\n'` : « x » est du texte ordinaire, aucun soulignement ni infobulle.
+- [ ] Infobulle de correction ouverte sur un mot souligné rouge (plan 10) : elle garde la priorité, pas d'infobulle de lien en même temps.
+
+Clic
+- [ ] `ctrl+clic` sur le lien : il s'ouvre dans un nouvel onglet du navigateur par défaut ; sans `ctrl`, le clic pose une sélection comme ailleurs. `ctrl` enfoncé après l'appui et avant la relâche : rien ne s'ouvre.
+- [ ] Appuyer sur le lien et relâcher ailleurs, ou glisser dessus (sélection non vide) : rien ne s'ouvre. Double clic rapide : une seule ouverture.
+- [ ] `[links] click = "plain"` (rechargement à chaud) : le clic simple ouvre, l'infobulle n'a plus de suffixe ; un glisser reste une sélection.
+- [ ] Ouvreur absent (`PATH=/nonexistent rustty`) : bandeau « ouvrir le lien : … ».
+
+Sous capture
+- [ ] `vim` (`set mouse=a`) sur un fichier contenant un lien `OSC 8` affiché tel quel (par `:r !printf …`) : sans `shift`, ni soulignement ni ouverture, la souris va à vim ; `shift` enfoncé (sans bouger) : le lien se souligne, l'infobulle dit `shift+ctrl+clic`, et `shift+ctrl+clic` l'ouvre ; en mode `plain`, `shift+clic`.
+- [ ] `[links] schemes = []` : erreur de configuration nommant `links.schemes` ; `["Http"]` ou doublon : idem.
+
 ## Robustesse
 - [ ] Fenêtre réduite à quelques pixels puis agrandie : pas de panique, la barre de titre seule reste visible.
 - [ ] `cargo run -p rustty` : rien sur la sortie d'erreur pendant le parcours ; `RUSTTY_LOG=rustty=debug` pour le détail.

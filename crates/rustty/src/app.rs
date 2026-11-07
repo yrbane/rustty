@@ -164,8 +164,17 @@ impl ApplicationHandler<UserEvent> for App {
         }
         let now = Instant::now();
         effects.extend(w.drag_tick(now));
+        if w.link_tick(now) {
+            w.window.request_redraw();
+        }
         w.run_effects(effects, event_loop);
-        let deadline = w.drag.as_ref().and_then(crate::drag::Drag::deadline);
+        let deadline = [
+            w.drag.as_ref().and_then(crate::drag::Drag::deadline),
+            w.link_deadline(),
+        ]
+        .into_iter()
+        .flatten()
+        .min();
         event_loop.set_control_flow(next_wake(!alive.is_empty(), now, deadline));
     }
 }

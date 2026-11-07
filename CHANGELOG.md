@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.180 — 2026-11-07 · « Hyperliens : survol, infobulle et ouverture »
+
+- Les liens `OSC 8` (`ls --hyperlink`, `gcc`…) se soulignent entiers au survol, même coupés par un retour automatique ; le curseur devient une main quand le geste est tenu ; après 400 ms une infobulle montre la cible (tronquée au milieu au-delà de 60 cellules) et le geste attendu.
+- `ctrl+clic` (ou clic simple avec `[links] click = "plain"`) ouvre le lien dans le navigateur par défaut via l'ouvreur du bureau ; un glisser reste une sélection, le modificateur compte à l'appui, un double clic n'ouvre qu'une fois. Sous capture de la souris (`vim`, `tmux`), `shift` en plus, pour le survol comme pour le clic.
+- Seuls les schémas de `[links] schemes` sont reconnus ; un schéma refusé à l'ouverture donne un bandeau. `Effect::OpenLink`, `spawn_detached` prend une cible `OsStr`.
+- Documentation : README (section « Souris », paragraphe « Liens ») et `docs/e2e.md` (section « Liens »).
+
 ## 0.1.0-alpha.179 — 2026-11-07 · « Infobulle générique extraite du correcteur »
 
 - `tooltip.rs` : message ancré, placement et dessin communs ; l'infobulle du correcteur s'y appuie et y ajoute ses rangées de remplacement, sans changement visible.

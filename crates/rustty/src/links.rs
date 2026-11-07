@@ -1,7 +1,5 @@
 //! Hyperliens : logique pure (plage d'un lien, geste d'ouverture, texte
 //! d'infobulle), sans fenêtre ni horloge.
-// Câblé dans la fenêtre à la tâche suivante.
-#![allow(dead_code)]
 
 use std::time::Instant;
 

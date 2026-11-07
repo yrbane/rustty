@@ -25,6 +25,7 @@ mod img;
 mod img_fetch;
 mod input;
 mod keyboard;
+mod link_input;
 mod links;
 mod menu_input;
 mod model;

@@ -142,6 +142,18 @@ horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+
   `/plugin install ortho --marketplace yrbane/claude-ortho`.
   Réglages `[spellcheck]` ; contrat avec le mod dans
   [`docs/superpowers/specs/2026-10-30-spell-popup-design.md`](docs/superpowers/specs/2026-10-30-spell-popup-design.md).
+- **Liens.** Les hyperliens déclarés par les programmes (`OSC 8`, comme
+  `ls --hyperlink=always` ou `gcc` récent) sont du texte ordinaire jusqu'au
+  survol : le lien entier se souligne (même coupé par un retour automatique),
+  le curseur devient une main si le geste est tenu, et au bout de 400 ms une
+  infobulle montre la cible (tronquée au milieu au-delà de 60 cellules) avec
+  le geste attendu. `ctrl+clic` ouvre le lien dans le navigateur par défaut
+  (l'ouvreur du bureau : `xdg-open`, `open`, `rundll32`) ; `[links] click =
+  "plain"` fait du clic simple le geste, un glisser reste une sélection.
+  Quand le programme suit la souris (`vim`, `tmux`), il faut `shift` en plus,
+  comme pour la sélection. Seuls les schémas de `[links] schemes` (`http`,
+  `https`, `file`, `mailto`, `ftp`, `ssh`, `git` par défaut) sont reconnus ;
+  les autres restent du texte. Un double clic n'ouvre qu'une fois.
 
 ## Afficher une image
 

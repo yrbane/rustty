@@ -21,6 +21,7 @@ use crate::window_state::OsWindow;
 impl OsWindow {
     pub fn on_modifiers(&mut self, state: ModifiersState) {
         self.modifiers = mods_from_winit(state);
+        self.link_modifiers_changed();
     }
 
     pub fn on_key(&mut self, event: &KeyEvent) -> Vec<Effect> {
@@ -30,8 +31,8 @@ impl OsWindow {
         if let Some(effects) = self.drag_key(&event.logical_key) {
             return effects;
         }
-        if self.leave_spell_word() {
-            // Une touche ferme l'infobulle de correction, puis agit.
+        if self.leave_spell_word() | self.leave_link() {
+            // Une touche ferme les infobulles, puis agit.
             self.window.request_redraw();
         }
         if self.menu.is_some() {
@@ -177,7 +178,7 @@ impl OsWindow {
             effects.push(Effect::Redraw);
         }
         let Some((term, rect)) = self.pane_under(x, y) else {
-            if self.leave_spell_word() {
+            if self.leave_spell_word() | self.leave_link() {
                 effects.push(Effect::Redraw);
             }
             return effects;
@@ -185,6 +186,10 @@ impl OsWindow {
         let cell = self.cell_under(term, rect, x, y);
         if self.spell_hover(term, cell) {
             effects.push(Effect::Redraw);
+        }
+        if self.link_hover(term, cell) {
+            effects.push(Effect::Redraw);
+            self.update_cursor_icon(x, y);
         }
         if self.dragging
             && let Some((sel_term, sel)) = &mut self.selection
@@ -201,7 +206,7 @@ impl OsWindow {
     pub fn on_cursor_left(&mut self) -> Vec<Effect> {
         self.cursor_inside = false;
         let header_changed = self.update_header_hover(self.cursor.0, self.cursor.1);
-        let spell_closed = self.leave_spell_word();
+        let spell_closed = self.leave_spell_word() | self.leave_link();
         let title_changed = self.leave_title_bar();
         if self.model.hover_changed(HoverTarget::None)
             || header_changed
@@ -266,17 +271,27 @@ impl OsWindow {
         };
         // Un clic dans un panneau ramène au terminal : l'édition de nom s'arrête.
         let mut effects = self.model.cancel_rename();
+        if self.leave_link() {
+            effects.push(Effect::Redraw);
+        }
         if self.model.workspace.focused_term() != Some(term) {
             self.model.workspace.focus_term(term);
             self.update_title();
             effects.push(Effect::Redraw);
         }
         let cell = self.cell_under(term, rect, x, y);
+        let Some(modes) = self.terms.get(&term).map(|tw| tw.modes()) else {
+            return effects;
+        };
+        let captured = modes.mouse != MouseMode::None;
+        if button == MouseButton::Left && self.link_press(term, cell, captured) {
+            // Appui armé sur un lien : ni sélection ni envoi au programme.
+            return effects;
+        }
         let Some(tw) = self.terms.get(&term) else {
             return effects;
         };
-        let modes = tw.modes();
-        if modes.mouse != MouseMode::None && !self.modifiers.contains(Mods::SHIFT) {
+        if captured && !self.modifiers.contains(Mods::SHIFT) {
             if let Some(bytes) =
                 encode_mouse(MouseKind::Press, Some(button), cell, self.modifiers, &modes)
             {
@@ -330,6 +345,15 @@ impl OsWindow {
         }
         if self.release_held(x, y) {
             return Vec::new();
+        }
+        if button == MouseButton::Left {
+            let under = self.pane_under(x, y);
+            let term = under.map(|(t, _)| t);
+            let cell = under.and_then(|(t, rect)| self.cell_under(t, rect, x, y));
+            if let Some(effect) = self.link_release(term, cell) {
+                self.dragging = false;
+                return vec![effect];
+            }
         }
         if self.dragging && button == MouseButton::Left {
             self.dragging = false;

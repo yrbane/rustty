@@ -2,6 +2,7 @@
 //! configuration et l'explorateur du dossier courant. Résolution pure de la
 //! commande, puis lancement détaché qui ne bloque jamais l'interface.
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -103,7 +104,7 @@ pub fn folder_to_open(cwd: Option<PathBuf>, home: Option<PathBuf>) -> Option<Pat
 /// Lance `command[0]` avec `command[1..]` puis `target`, sans attendre et
 /// sans partager les flux ; un thread moissonne l'enfant pour éviter un
 /// zombie. L'échec de lancement est rendu, celui du programme est ignoré.
-pub fn spawn_detached(command: &[String], target: &Path) -> std::io::Result<()> {
+pub fn spawn_detached(command: &[String], target: &OsStr) -> std::io::Result<()> {
     let Some((program, args)) = command.split_first() else {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
