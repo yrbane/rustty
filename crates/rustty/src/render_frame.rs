@@ -106,6 +106,7 @@ pub fn build_frame(
                 rect: p.rect,
                 snapshot: &p.snapshot,
                 focused: p.focused,
+                link_hover: None,
             })
             .collect(),
         chrome,

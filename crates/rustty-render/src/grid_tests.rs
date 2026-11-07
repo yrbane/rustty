@@ -1,6 +1,7 @@
 //! Tests de la grille de cellules.
 
 use super::*;
+use crate::frame::CellRange;
 use rustty_config::Colors;
 use rustty_vt::Term;
 
@@ -24,7 +25,51 @@ fn pane_of<'a>(snapshot: &'a rustty_vt::Snapshot, focused: bool) -> PaneFrame<'a
         rect: PixelRect::new(100, 50, 200, 100),
         snapshot,
         focused,
+        link_hover: None,
     }
+}
+
+#[test]
+fn a_hovered_link_range_is_underlined_across_rows() {
+    let mut term = Term::new(4, 2, 0);
+    term.input(b"abcdef");
+    let snapshot = term.snapshot();
+    let plain = pane_instances(&pane_of(&snapshot, false), metrics(), &palette(), 0);
+    let hovered = pane_instances(
+        &PaneFrame {
+            link_hover: Some(CellRange {
+                start: (0, 2),
+                end: (1, 1),
+            }),
+            ..pane_of(&snapshot, false)
+        },
+        metrics(),
+        &palette(),
+        0,
+    );
+    let underlines = |out: &PaneInstances, row: u32| {
+        out.decorations
+            .iter()
+            .filter(|q| q.size == [10.0, 1.0] && q.pos[1] == (50 + row * 20 + 18) as f32)
+            .count()
+    };
+    assert_eq!((underlines(&plain, 0), underlines(&plain, 1)), (0, 0));
+    assert_eq!(
+        (underlines(&hovered, 0), underlines(&hovered, 1)),
+        (2, 2),
+        "c d / e f"
+    );
+    assert_eq!(hovered.decorations.len(), plain.decorations.len() + 4);
+    let range = CellRange {
+        start: (0, 2),
+        end: (1, 1),
+    };
+    assert!(
+        range.contains(0, 3)
+            && range.contains(1, 0)
+            && !range.contains(1, 2)
+            && !range.contains(0, 1)
+    );
 }
 
 #[test]
@@ -191,6 +236,7 @@ fn cells_outside_the_geometry_are_clipped() {
         rect: PixelRect::new(0, 0, 50, 40),
         snapshot: &snap,
         focused: false,
+        link_hover: None,
     };
     let out = pane_instances(&pane, metrics(), &palette(), 0);
     assert_eq!(

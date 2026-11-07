@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::error::ConfigError;
 use crate::keymap::KeyMap;
-use crate::sections::{Colors, Font, LinkClick, Links, Spellcheck, Splits, Tabs, Window};
+use crate::sections::{Colors, Font, Links, Spellcheck, Splits, Tabs, Window};
 use crate::titlebar::TitleBar;
 
 /// Plafond de lignes d'historique par fenêtre : au-delà, la mémoire explose
@@ -154,6 +154,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sections::LinkClick;
 
     #[test]
     fn links_section_parses_and_defaults() {

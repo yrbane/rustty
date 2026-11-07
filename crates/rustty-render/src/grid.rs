@@ -112,7 +112,8 @@ pub fn pane_instances(
                 continue;
             }
             let span = if cell.is_wide() { cw * 2.0 } else { cw };
-            if cell.style.attrs.contains(Attrs::UNDERLINE) {
+            let hovered_link = pane.link_hover.is_some_and(|r| r.contains(row, col));
+            if cell.style.attrs.contains(Attrs::UNDERLINE) || hovered_link {
                 out.decorations.push(QuadInstance::new(
                     x,
                     y + metrics.underline_y as f32,

@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.177 — 2026-11-07 · « Hyperliens : soulignement de la plage survolée »
+
+- `rustty-render` : `PaneFrame.link_hover` (`CellRange`, lignes repliées comprises) souligne les cellules du lien survolé, même trait que `SGR 4`.
+- Correctif : import inutilisé dans `rustty-config` (alpha.176).
+
 ## 0.1.0-alpha.176 — 2026-11-07 · « Hyperliens : section [links] »
 
 - Configuration : section `[links]` avec `click` (`"ctrl"` par défaut, ou `"plain"`) et `schemes` (schémas d'URL soulignés et ouverts : `http`, `https`, `file`, `mailto`, `ftp`, `ssh`, `git`), validée (liste non vide, schémas bien formés, sans doublon), documentée dans le modèle et le README. Les liens eux-mêmes arrivent dans les versions suivantes.

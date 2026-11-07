@@ -98,6 +98,7 @@ mod tests {
             rect,
             snapshot,
             focused: true,
+            link_hover: None,
         };
         pane_images(&pane, metrics(), 0)
     }
