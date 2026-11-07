@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use rustty_config::LinkClick as ClickMode;
 use rustty_render::{CellRange, Chrome, PixelRect, grid_geometry};
-use rustty_vt::{LinkId, MouseMode};
+use rustty_vt::{LinkId, MouseMode, Snapshot};
 use unicode_width::UnicodeWidthStr;
 
 use crate::links::{
@@ -66,8 +66,17 @@ impl OsWindow {
         term: TermId,
         cell: Option<(usize, usize)>,
     ) -> Option<(LinkId, CellRange, String)> {
-        let (col, row) = cell?;
         let snapshot = self.terms.get(&term)?.snapshot();
+        self.link_in(&snapshot, cell)
+    }
+
+    /// Le lien d'un schéma autorisé sous `cell` dans `snapshot`.
+    fn link_in(
+        &self,
+        snapshot: &Snapshot,
+        cell: Option<(usize, usize)>,
+    ) -> Option<(LinkId, CellRange, String)> {
+        let (col, row) = cell?;
         let (id, range) = link_run(&snapshot.lines, row, col)?;
         let uri = snapshot.link_uri(id)?;
         self.config
@@ -76,15 +85,20 @@ impl OsWindow {
             .then(|| (id, range, uri.to_string()))
     }
 
-    /// Mouvement de souris sur la cellule `cell` du panneau `term` : entretient
-    /// le lien survolé. Sous capture, seul un geste armé (shift) survole.
-    /// Vrai s'il faut redessiner.
-    pub(crate) fn link_hover(&mut self, term: TermId, cell: Option<(usize, usize)>) -> bool {
+    /// Mouvement de souris sur la cellule `cell` du panneau `term`, dont
+    /// `snapshot` est l'instantané : entretient le lien survolé. Sous
+    /// capture, seul un geste armé (shift) survole. Vrai s'il faut redessiner.
+    pub(crate) fn link_hover(
+        &mut self,
+        term: TermId,
+        cell: Option<(usize, usize)>,
+        snapshot: &Snapshot,
+    ) -> bool {
         let gesture = self.link_gesture(term);
         if gesture.captured && !gesture_armed(gesture, self.modifiers) {
             return self.leave_link();
         }
-        let Some((id, range, uri)) = self.link_under(term, cell) else {
+        let Some((id, range, uri)) = self.link_in(snapshot, cell) else {
             return self.leave_link();
         };
         if self
@@ -223,7 +237,11 @@ impl OsWindow {
         let (x, y) = self.cursor;
         if let Some((term, rect)) = self.pane_under(x, y) {
             let cell = self.cell_under(term, rect, x, y);
-            if self.link_hover(term, cell) {
+            let changed = match self.terms.get(&term).map(|tw| tw.snapshot()) {
+                Some(snapshot) => self.link_hover(term, cell, &snapshot),
+                None => self.leave_link(),
+            };
+            if changed {
                 self.window.request_redraw();
             }
         }

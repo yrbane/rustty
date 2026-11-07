@@ -184,10 +184,19 @@ impl OsWindow {
             return effects;
         };
         let cell = self.cell_under(term, rect, x, y);
-        if self.spell_hover(term, cell) {
+        // Un seul instantané par mouvement, partagé par le correcteur et les liens.
+        let snapshot = self.terms.get(&term).map(|tw| tw.snapshot());
+        let (spell, link) = match &snapshot {
+            Some(s) => (
+                self.spell_hover(term, cell, s),
+                self.link_hover(term, cell, s),
+            ),
+            None => (self.leave_spell_word(), self.leave_link()),
+        };
+        if spell {
             effects.push(Effect::Redraw);
         }
-        if self.link_hover(term, cell) {
+        if link {
             effects.push(Effect::Redraw);
             self.update_cursor_icon(x, y);
         }

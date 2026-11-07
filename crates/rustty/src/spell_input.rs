@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use rustty_render::{Chrome, PixelRect, grid_geometry};
+use rustty_vt::Snapshot;
 
 use crate::model::Effect;
 use crate::mouse::MouseButton;
@@ -40,9 +41,15 @@ impl OsWindow {
         Some(changed)
     }
 
-    /// Mouvement de souris sur la cellule `cell` du panneau `term` : entretient
-    /// le survol du mot souligné (requête, infobulle). Vrai s'il faut redessiner.
-    pub(crate) fn spell_hover(&mut self, term: TermId, cell: Option<(usize, usize)>) -> bool {
+    /// Mouvement de souris sur la cellule `cell` du panneau `term`, dont
+    /// `snapshot` est l'instantané : entretient le survol du mot souligné
+    /// (requête, infobulle). Vrai s'il faut redessiner.
+    pub(crate) fn spell_hover(
+        &mut self,
+        term: TermId,
+        cell: Option<(usize, usize)>,
+        snapshot: &Snapshot,
+    ) -> bool {
         if !self.config.spellcheck.enabled {
             return false;
         }
@@ -62,10 +69,6 @@ impl OsWindow {
             return false;
         }
         self.spell.last_cell = Some((term, col, row));
-        let Some(tw) = self.terms.get(&term) else {
-            return self.leave_spell_word();
-        };
-        let snapshot = tw.snapshot();
         let Some(run) = underlined_run(&snapshot.lines, row, col) else {
             return self.leave_spell_word();
         };

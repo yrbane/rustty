@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.190 — 2026-11-07 · « base64 unifié, un instantané par mouvement, bilan perf »
+
+- `base64` 0.23 (plus qu'une version dans l'arbre des dépendances).
+- Un seul `snapshot()` par mouvement de souris, partagé par le survol du correcteur et celui des liens (`spell_hover` et `link_hover` reçoivent l'instantané).
+- `docs/perf.md` : colonne finale et bilan (binaire −34 %, parsing ×1,8 à ×2,3, resize ×4,4, rendu ×1,8, zéro objet GPU par image, zéro fonction de plus de 100 lignes).
+
 ## 0.1.0-alpha.189 — 2026-11-07 · « Assemblage de l'image séparé de la présentation, garde de taille »
 
 - `render()` = `assemble()` (pur : groupes par taille, chrome de base, overlay, surgissants) puis `present()` (passes et présentation) ; `open()` délègue à `create_window` et `build_renderers`.
