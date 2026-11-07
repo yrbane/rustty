@@ -4,6 +4,11 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.184 — 2026-11-07 · « Profil release : LTO, une unité de codegen, symboles retirés »
+
+- `[profile.release]` : `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Binaire 21,9 → 14,4 MiB ; parsing 90 → 117 MiB/s sans toucher au code.
+- `docs/perf.md` : tableau des benchmarks chantier par chantier ; plan d'exécution `docs/superpowers/plans/2026-11-07-optimisation.md`.
+
 ## 0.1.0-alpha.183 — 2026-11-07 · « Audit chiffré et conception de l'optimisation »
 
 - `docs/superpowers/specs/2026-11-07-optimisation-design.md` : mesures (parsing 90 MiB/s contre 811 pour vte seul, resize 15 ms avec 10 000 lignes, 5 tampons GPU recréés par image, binaire 21,9 MiB sans profil release, fonctions de plus de 100 lignes, duplications) et chantiers ordonnés avec cibles chiffrées.

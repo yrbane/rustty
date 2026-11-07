@@ -31,6 +31,10 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo insta review                           # accepter les snapshots de grille modifiés
 ```
 
+Les benchmarks (`cargo run --release -p rustty-vt --example audit`, idem
+`-p rustty-render`) et leurs résultats chantier par chantier sont dans
+`docs/perf.md`.
+
 Les tests de rendu comparent des images de référence (`crates/rustty-render/tests/golden/`)
 produites avec la police embarquée DejaVu Sans Mono. Pour les régénérer après un
 changement voulu du rendu : `UPDATE_GOLDEN=1 cargo test -p rustty-render --test offscreen`,

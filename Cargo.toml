@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0-alpha.183"
+version = "0.1.0-alpha.184"
 edition = "2024"
 license = "GPL-3.0-only"
 repository = "https://github.com/yrbane/rustty"
@@ -42,3 +42,11 @@ libc = "0.2"
 
 [workspace.lints.clippy]
 all = "warn"
+
+# Binaire final : LTO complet, une seule unité de codegen, symboles retirés.
+# `panic` reste « unwind » : rustty-pty isole les lecteurs avec catch_unwind.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+strip = "symbols"
