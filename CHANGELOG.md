@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.182 — 2026-11-07 · « Clippy : is_multiple_of »
+
+- Correctif : avertissement clippy (`manual_is_multiple_of`) dans la borne de rebalayage des liens.
+
 ## 0.1.0-alpha.181 — 2026-11-07 · « Hyperliens : correctifs de revue »
 
 - `RIS` (`reset`) garde les liens de l'historique : la table est compactée, plus vidée, et un lien ancien ne désigne plus la cible d'un lien nouveau.

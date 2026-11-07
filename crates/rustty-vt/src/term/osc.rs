@@ -48,7 +48,7 @@ impl Term {
             return;
         }
         let mut id = Arc::make_mut(&mut self.links).insert(&uri, id_param);
-        if id.is_none() && self.link_refusals % Self::LINK_RESCAN_EVERY == 0 {
+        if id.is_none() && self.link_refusals.is_multiple_of(Self::LINK_RESCAN_EVERY) {
             self.compact_links();
             id = Arc::make_mut(&mut self.links).insert(&uri, id_param);
         }
