@@ -136,6 +136,8 @@ impl Renderer {
         if size < DEFAULT_ATLAS_SIZE {
             let grown = (size * 2).min(DEFAULT_ATLAS_SIZE);
             self.atlas = AtlasTexture::new(&ctx.device, grown);
+            self.atlas_group = self.glyphs.atlas_group(&ctx.device, &self.atlas);
+            self.gpu_objects += 1;
             self.packer = AtlasPacker::new(grown);
         } else {
             self.packer.clear();

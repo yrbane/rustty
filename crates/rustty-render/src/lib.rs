@@ -21,9 +21,10 @@ pub mod gpu;
 pub use gpu::{GpuContext, GpuError, OFFSCREEN_FORMAT, Offscreen, clear};
 pub mod pipeline;
 
-pub use pipeline::glyph::{AtlasTexture, GlyphBatch, GlyphInstance, GlyphPipeline};
-pub use pipeline::image::{ImageBatch, ImageInstance, ImagePipeline, ImageTextures};
-pub use pipeline::quad::{QuadBatch, QuadInstance, QuadPipeline, QuadStyle};
+pub use pipeline::common::{GlobalsBinding, InstanceBuffer};
+pub use pipeline::glyph::{AtlasTexture, GlyphInstance, GlyphPipeline};
+pub use pipeline::image::{ImageInstance, ImagePipeline, ImageStaging, ImageTextures};
+pub use pipeline::quad::{QuadInstance, QuadPipeline, QuadStyle};
 pub mod frame;
 pub mod grid;
 pub mod images;

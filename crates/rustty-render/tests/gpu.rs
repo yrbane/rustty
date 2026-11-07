@@ -44,7 +44,7 @@ fn zero_size_is_clamped_to_one_pixel() {
     assert_eq!(px, vec![0, 0, 255, 128]);
 }
 
-use rustty_render::{QuadInstance, QuadPipeline};
+use rustty_render::{GlobalsBinding, InstanceBuffer, QuadInstance, QuadPipeline};
 
 fn pixel(px: &[u8], width: u32, x: u32, y: u32) -> [u8; 4] {
     let i = ((y * width + x) * 4) as usize;
@@ -77,19 +77,20 @@ fn quads_are_drawn_in_pixel_coordinates_with_alpha_blending() {
     };
     let target = Offscreen::new(&ctx, 8, 4);
     clear(&ctx, target.view(), Rgba::new(0.0, 0.0, 0.0, 1.0));
-    let pipeline = QuadPipeline::new(&ctx.device, rustty_render::OFFSCREEN_FORMAT);
+    let layout = GlobalsBinding::layout(&ctx.device);
+    let pipeline = QuadPipeline::new(&ctx.device, rustty_render::OFFSCREEN_FORMAT, &layout);
     let instances = [
         QuadInstance::new(2.0, 1.0, 4.0, 2.0, Rgba::new(1.0, 0.0, 0.0, 1.0)),
         QuadInstance::new(0.0, 0.0, 2.0, 1.0, Rgba::new(0.0, 0.0, 1.0, 0.5)),
     ];
-    let batch = pipeline
-        .prepare(&ctx.device, &instances, target.size())
-        .unwrap();
-    assert_eq!(batch.len(), 2);
+    let globals = GlobalsBinding::new(&ctx.device, &layout, target.size());
+    let mut buffer = InstanceBuffer::new(&ctx.device, "test-quads");
+    buffer.write(&ctx.device, &ctx.queue, &instances);
+    assert_eq!(buffer.count(), 2);
     let mut encoder = ctx.device.create_command_encoder(&Default::default());
     {
         let mut pass = load_pass(&mut encoder, target.view());
-        pipeline.draw(&mut pass, &batch);
+        pipeline.draw(&mut pass, &globals, &buffer);
     }
     ctx.queue.submit(Some(encoder.finish()));
     let px = target.read_rgba(&ctx).unwrap();
@@ -113,12 +114,32 @@ fn quads_are_drawn_in_pixel_coordinates_with_alpha_blending() {
 }
 
 #[test]
-fn empty_batch_is_none() {
+fn an_instance_buffer_grows_by_doubling_and_never_shrinks() {
     let Some(ctx) = common::gpu_or_skip() else {
         return;
     };
-    let pipeline = QuadPipeline::new(&ctx.device, rustty_render::OFFSCREEN_FORMAT);
-    assert!(pipeline.prepare(&ctx.device, &[], (8, 8)).is_none());
+    let mut buffer = InstanceBuffer::new(&ctx.device, "test-growth");
+    let one = [QuadInstance::new(
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        Rgba::new(1.0, 1.0, 1.0, 1.0),
+    )];
+    assert!(
+        !buffer.write(&ctx.device, &ctx.queue, &one),
+        "tient d'emblée"
+    );
+    let many = vec![one[0]; 1000];
+    assert!(buffer.write(&ctx.device, &ctx.queue, &many), "grandit");
+    assert!(!buffer.write(&ctx.device, &ctx.queue, &many), "puis reste");
+    assert!(
+        !buffer.write(&ctx.device, &ctx.queue, &one),
+        "ne rétrécit pas"
+    );
+    assert_eq!(buffer.count(), 1);
+    assert!(!buffer.write::<QuadInstance>(&ctx.device, &ctx.queue, &[]));
+    assert!(buffer.is_empty());
 }
 
 use rustty_render::{AtlasRegion, AtlasTexture, GlyphInstance, GlyphPipeline};
@@ -129,14 +150,16 @@ fn draw_glyphs(
     atlas: &AtlasTexture,
     instances: &[GlyphInstance],
 ) -> Vec<u8> {
-    let pipeline = GlyphPipeline::new(&ctx.device, rustty_render::OFFSCREEN_FORMAT);
-    let batch = pipeline
-        .prepare(&ctx.device, atlas, instances, target.size())
-        .unwrap();
+    let layout = GlobalsBinding::layout(&ctx.device);
+    let pipeline = GlyphPipeline::new(&ctx.device, rustty_render::OFFSCREEN_FORMAT, &layout);
+    let globals = GlobalsBinding::new(&ctx.device, &layout, target.size());
+    let atlas_group = pipeline.atlas_group(&ctx.device, atlas);
+    let mut buffer = InstanceBuffer::new(&ctx.device, "test-glyphs");
+    buffer.write(&ctx.device, &ctx.queue, instances);
     let mut encoder = ctx.device.create_command_encoder(&Default::default());
     {
         let mut pass = load_pass(&mut encoder, target.view());
-        pipeline.draw(&mut pass, &batch);
+        pipeline.draw(&mut pass, &globals, &atlas_group, &buffer);
     }
     ctx.queue.submit(Some(encoder.finish()));
     target.read_rgba(ctx).unwrap()

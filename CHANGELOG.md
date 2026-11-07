@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.187 — 2026-11-07 · « Tampons et bind groups GPU persistants »
+
+- `pipeline/common.rs` : `InstanceBuffer` (tampon de vertex persistant, doublé à la demande) et `GlobalsBinding` (uniforme du viewport et bind group partagés par les trois pipelines, réécrits sur place).
+- Les pipelines ne construisent plus de lot par image : `draw` prend l'uniforme et le tampon ; le bind group de l'atlas n'est refait qu'avec l'atlas.
+- Zéro objet GPU créé par image en régime établi (compteur `Renderer::gpu_objects`, testé) ; rendu hors écran 768 → 477 µs ; images de référence inchangées.
+
 ## 0.1.0-alpha.186 — 2026-11-07 · « Reflow allégé et relayout une fois par image »
 
 - Reflow : entrées de 16 octets (combinants à part), lignes logiques sans caractère large ni curseur copiées par tranche. Redimensionnement 200→120→200 colonnes avec 10 000 lignes d'historique : 29,6 → 7 ms.

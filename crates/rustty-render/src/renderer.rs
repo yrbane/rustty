@@ -13,8 +13,8 @@ use crate::frame::Frame;
 use crate::gpu::{GpuContext, to_wgpu_color};
 use crate::grid::{GlyphRequest, pane_instances};
 use crate::images::pane_images;
+use crate::pipeline::common::{GlobalsBinding, InstanceBuffer};
 use crate::pipeline::glyph::{AtlasTexture, GlyphPipeline};
-
 use crate::pipeline::image::{ImagePipeline, ImageTextures};
 use crate::pipeline::quad::{QuadInstance, QuadPipeline};
 use glyph_cache::{CachedGlyph, GlyphKey};
@@ -25,6 +25,15 @@ pub struct Renderer {
     images: ImagePipeline,
     image_textures: ImageTextures,
     atlas: AtlasTexture,
+    /// Bind group de l'atlas, refait seulement quand l'atlas l'est.
+    atlas_group: wgpu::BindGroup,
+    /// Uniforme du viewport, partagé par les trois pipelines.
+    globals: GlobalsBinding,
+    /// Tampons d'instances persistants, un par usage.
+    buffers: Buffers,
+    /// Objets GPU (tampons, bind groups) créés depuis la construction, hors
+    /// textures d'image : en régime établi, une image n'en crée aucun.
+    gpu_objects: u32,
     packer: AtlasPacker,
     cache: HashMap<GlyphKey, Option<CachedGlyph>>,
     fonts: FontSet,
@@ -57,12 +66,23 @@ impl Renderer {
         padding: u32,
         atlas_size: u32,
     ) -> Self {
+        let device = &ctx.device;
+        let globals_layout = GlobalsBinding::layout(device);
+        let glyphs = GlyphPipeline::new(device, format, &globals_layout);
+        let atlas = AtlasTexture::new(device, atlas_size);
+        let atlas_group = glyphs.atlas_group(device, &atlas);
+        let buffers = Buffers::new(device);
         Self {
-            quads: QuadPipeline::new(&ctx.device, format),
-            glyphs: GlyphPipeline::new(&ctx.device, format),
-            images: ImagePipeline::new(&ctx.device, format),
+            quads: QuadPipeline::new(device, format, &globals_layout),
+            glyphs,
+            images: ImagePipeline::new(device, format, &globals_layout),
             image_textures: ImageTextures::default(),
-            atlas: AtlasTexture::new(&ctx.device, atlas_size),
+            atlas,
+            atlas_group,
+            globals: GlobalsBinding::new(device, &globals_layout, (1, 1)),
+            buffers,
+            // Cinq tampons, l'uniforme et ses deux objets, le bind group de l'atlas.
+            gpu_objects: 5 + 2 + 1,
             packer: AtlasPacker::new(atlas_size),
             cache: HashMap::new(),
             fonts,
@@ -90,6 +110,12 @@ impl Renderer {
 
     pub fn set_palette(&mut self, palette: Palette) {
         self.palette = palette;
+    }
+
+    /// Objets GPU créés depuis la construction, hors textures d'image (tests).
+    #[doc(hidden)]
+    pub fn gpu_objects(&self) -> u32 {
+        self.gpu_objects
     }
 
     /// Efface la cible avec `frame.background` puis dessine l'image.
@@ -159,22 +185,20 @@ impl Renderer {
         }
         let (pane_glyphs, chrome_glyphs) =
             self.build_glyphs(ctx, &requests, &chrome_requests, &frame.chrome.icons);
-        let viewport = frame.viewport;
-        let bg_batch = self.quads.prepare(&ctx.device, &backgrounds, viewport);
-        let overlay_batch = self.quads.prepare(&ctx.device, &overlay, viewport);
-        let image_batch = self.images.prepare(
-            &ctx.device,
-            &ctx.queue,
-            &mut self.image_textures,
-            &images,
-            viewport,
-        );
-        let pane_batch = self
-            .glyphs
-            .prepare(&ctx.device, &self.atlas, &pane_glyphs, viewport);
-        let chrome_batch = self
-            .glyphs
-            .prepare(&ctx.device, &self.atlas, &chrome_glyphs, viewport);
+        let staged = self
+            .images
+            .stage(&ctx.device, &ctx.queue, &mut self.image_textures, &images);
+        self.globals.ensure(&ctx.queue, frame.viewport);
+        let b = &mut self.buffers;
+        let grown = [
+            b.backgrounds.write(&ctx.device, &ctx.queue, &backgrounds),
+            b.overlay.write(&ctx.device, &ctx.queue, &overlay),
+            b.images.write(&ctx.device, &ctx.queue, &staged.instances),
+            b.pane_glyphs.write(&ctx.device, &ctx.queue, &pane_glyphs),
+            b.chrome_glyphs
+                .write(&ctx.device, &ctx.queue, &chrome_glyphs),
+        ];
+        self.gpu_objects += grown.iter().filter(|&&g| g).count() as u32;
         let mut encoder = ctx
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -194,21 +218,24 @@ impl Renderer {
                 })],
                 ..Default::default()
             });
-            if let Some(b) = &bg_batch {
-                self.quads.draw(&mut pass, b);
-            }
-            if let Some(b) = &image_batch {
-                self.images.draw(&mut pass, b, &self.image_textures);
-            }
-            if let Some(b) = &pane_batch {
-                self.glyphs.draw(&mut pass, b);
-            }
-            if let Some(b) = &overlay_batch {
-                self.quads.draw(&mut pass, b);
-            }
-            if let Some(b) = &chrome_batch {
-                self.glyphs.draw(&mut pass, b);
-            }
+            let b = &self.buffers;
+            self.quads.draw(&mut pass, &self.globals, &b.backgrounds);
+            self.images.draw(
+                &mut pass,
+                &self.globals,
+                &self.image_textures,
+                &b.images,
+                &staged.ids,
+            );
+            self.glyphs
+                .draw(&mut pass, &self.globals, &self.atlas_group, &b.pane_glyphs);
+            self.quads.draw(&mut pass, &self.globals, &b.overlay);
+            self.glyphs.draw(
+                &mut pass,
+                &self.globals,
+                &self.atlas_group,
+                &b.chrome_glyphs,
+            );
         }
         ctx.queue.submit(Some(encoder.finish()));
         // Seule une passe porteuse de panneaux dit quelles images sont encore
@@ -216,6 +243,27 @@ impl Renderer {
         if !frame.panes.is_empty() {
             let used: HashSet<u64> = images.iter().map(|d| d.image.id).collect();
             self.image_textures.retain(&used);
+        }
+    }
+}
+
+/// Les cinq tampons d'instances d'une image, dans l'ordre de dessin.
+struct Buffers {
+    backgrounds: InstanceBuffer,
+    images: InstanceBuffer,
+    pane_glyphs: InstanceBuffer,
+    overlay: InstanceBuffer,
+    chrome_glyphs: InstanceBuffer,
+}
+
+impl Buffers {
+    fn new(device: &wgpu::Device) -> Self {
+        Self {
+            backgrounds: InstanceBuffer::new(device, "rustty-backgrounds"),
+            images: InstanceBuffer::new(device, "rustty-images"),
+            pane_glyphs: InstanceBuffer::new(device, "rustty-pane-glyphs"),
+            overlay: InstanceBuffer::new(device, "rustty-overlay"),
+            chrome_glyphs: InstanceBuffer::new(device, "rustty-chrome-glyphs"),
         }
     }
 }
