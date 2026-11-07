@@ -4,6 +4,7 @@
 use bitflags::bitflags;
 
 use crate::color::Color;
+use crate::links::LinkId;
 
 bitflags! {
     /// Attributs de rendu et drapeaux de largeur d'une cellule.
@@ -37,6 +38,8 @@ pub struct Style {
 pub struct Cell {
     pub c: char,
     pub style: Style,
+    /// Hyperlien OSC 8 porté par la cellule, indépendant du style.
+    pub link: Option<LinkId>,
 }
 
 impl Default for Cell {
@@ -47,7 +50,15 @@ impl Default for Cell {
 
 impl Cell {
     pub const fn new(c: char, style: Style) -> Self {
-        Self { c, style }
+        Self {
+            c,
+            style,
+            link: None,
+        }
+    }
+
+    pub const fn with_link(c: char, style: Style, link: Option<LinkId>) -> Self {
+        Self { c, style, link }
     }
 
     /// Cellule effacée : conserve les couleurs courantes (comportement « bce »
@@ -76,6 +87,15 @@ impl Cell {
 mod tests {
     use super::*;
     use crate::color::Color;
+
+    #[test]
+    fn cell_stays_compact_with_its_link() {
+        assert_eq!(std::mem::size_of::<Cell>(), 16);
+        let c = Cell::with_link('a', Style::default(), LinkId::new(7));
+        assert_eq!(c.link, LinkId::new(7));
+        assert_eq!(Cell::new('a', Style::default()).link, None);
+        assert_eq!(Cell::erased(Style::default()).link, None);
+    }
 
     #[test]
     fn default_cell_is_a_blank_space_with_default_style() {

@@ -11,6 +11,8 @@ pub use cell::{Attrs, Cell, Style};
 pub use color::Color;
 
 pub mod line;
+pub mod links;
+pub use links::{Link, LinkId, LinkTable};
 mod line_images;
 
 pub use line::Line;

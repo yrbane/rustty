@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.174 — 2026-11-07 · « Hyperliens : identifiant de lien par cellule et table partagée »
+
+- `rustty-vt` : chaque `Cell` porte un `link: Option<LinkId>` (deux octets dans le bourrage, la cellule reste à 16 octets) ; `LinkTable` déduplique les liens par `(uri, id)`, se borne à 65 535 entrées et se compacte (`retain_remapped`).
+
 ## 0.1.0-alpha.173 — 2026-11-07 · « Hyperliens : plan du jalon 1 »
 
 - `docs/superpowers/plans/2026-11-07-links-1-liens-declares.md` : plan en sept tâches du jalon « Liens déclarés » (OSC 8 par cellule, `[links]`, soulignement, infobulle, clic configurable, ouverture).
