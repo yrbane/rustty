@@ -10,7 +10,6 @@ use crate::drag::{Drag, DragSource, DropTarget, PaneDrop, drop_side, tab_slot};
 use crate::drag_preview::drop_preview;
 use crate::model::Effect;
 use crate::mouse::MouseButton;
-use crate::pane_header::contains;
 use crate::tab::TermId;
 use crate::window_state::OsWindow;
 use crate::workspace::Workspace;
@@ -25,20 +24,20 @@ pub fn pick_target(
     panes: &[(TermId, PixelRect)],
     tab_bar: Option<&TabBarLayout>,
 ) -> DropTarget {
-    if let Some(bar) = tab_bar.filter(|b| contains(b.bar, x, y)) {
+    if let Some(bar) = tab_bar.filter(|b| b.bar.contains_point(x, y)) {
         return match source {
             DragSource::Tab(_) => DropTarget::TabSlot(tab_slot(&bar.tabs, x)),
             DragSource::Pane(_) => bar
                 .tabs
                 .iter()
-                .position(|t| contains(t.rect, x, y))
+                .position(|t| t.rect.contains_point(x, y))
                 .map_or(DropTarget::None, DropTarget::OnTab),
         };
     }
     let DragSource::Pane(dragged) = source else {
         return DropTarget::None;
     };
-    match panes.iter().find(|(_, r)| contains(*r, x, y)) {
+    match panes.iter().find(|(_, r)| r.contains_point(x, y)) {
         Some((term, rect)) if *term != dragged => DropTarget::Pane {
             term: *term,
             side: drop_side(*rect, x, y),

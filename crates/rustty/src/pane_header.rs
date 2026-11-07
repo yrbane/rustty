@@ -57,20 +57,15 @@ pub fn header_for(term: TermId, rect: PixelRect, metrics: CellMetrics) -> PaneHe
     PaneHeader { term, rect, close }
 }
 
-pub(crate) fn contains(r: PixelRect, x: f64, y: f64) -> bool {
-    x >= f64::from(r.x)
-        && x < f64::from(r.x + r.width)
-        && y >= f64::from(r.y)
-        && y < f64::from(r.y + r.height)
-}
-
 /// Le bandeau sous le point ; le ✕ prime sur le titre.
 pub fn header_at(headers: &[PaneHeader], x: f64, y: f64) -> Option<HeaderHit> {
     headers.iter().find_map(|h| {
-        if contains(h.close, x, y) {
+        if h.close.contains_point(x, y) {
             Some(HeaderHit::Close(h.term))
         } else {
-            contains(h.rect, x, y).then_some(HeaderHit::Title(h.term))
+            h.rect
+                .contains_point(x, y)
+                .then_some(HeaderHit::Title(h.term))
         }
     })
 }

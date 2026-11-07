@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.189 — 2026-11-07 · « Assemblage de l'image séparé de la présentation, garde de taille »
+
+- `render()` = `assemble()` (pur : groupes par taille, chrome de base, overlay, surgissants) puis `present()` (passes et présentation) ; `open()` délègue à `create_window` et `build_renderers`.
+- `tooltip::panel_quads` partagé par l'infobulle et le menu du clic droit ; les cinq tests « point dans un rectangle » remplacés par `PixelRect::contains_point`.
+- `crates/rustty/tests/code_shape.rs` : plus aucune fonction de plus de 100 lignes dans les sources (vérifié à chaque `cargo test`).
+
 ## 0.1.0-alpha.188 — 2026-11-07 · « Pipelines factorisés, pane_instances et draw découpés »
 
 - `pipeline/common.rs` : `shader`, `instanced_pipeline`, `texture_layout`, `sampler` partagés par les trois pipelines (plus aucune fenêtre dupliquée).

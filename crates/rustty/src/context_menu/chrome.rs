@@ -6,6 +6,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use super::layout::{ITEM_PADDING, MenuLayout, SWATCH_CELLS};
 use super::{ContextMenu, MenuEntry};
+use crate::tooltip::panel_quads;
 
 /// Coupe `text` à `cells` cellules, avec `…` quand il faut couper.
 pub fn truncate_to_cells(text: &str, cells: usize) -> String {
@@ -40,19 +41,7 @@ pub fn menu_chrome(
     let cw = metrics.width.max(1);
     let r = layout.rect;
     let mut chrome = Chrome::default();
-    chrome.quads.push(ChromeQuad {
-        rect: r,
-        color: palette.ansi[8],
-    });
-    chrome.quads.push(ChromeQuad {
-        rect: PixelRect::new(
-            r.x + 1,
-            r.y + 1,
-            r.width.saturating_sub(2),
-            r.height.saturating_sub(2),
-        ),
-        color: palette.background,
-    });
+    chrome.quads.extend(panel_quads(r, palette));
     for (i, row) in &layout.rows {
         match menu.entries[*i] {
             MenuEntry::Separator => chrome.quads.push(ChromeQuad {
