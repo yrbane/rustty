@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.173 — 2026-11-07 · « Hyperliens : plan du jalon 1 »
+
+- `docs/superpowers/plans/2026-11-07-links-1-liens-declares.md` : plan en sept tâches du jalon « Liens déclarés » (OSC 8 par cellule, `[links]`, soulignement, infobulle, clic configurable, ouverture).
+
 ## 0.1.0-alpha.172 — 2026-11-06 · « Hyperliens : spécification »
 
 - `docs/superpowers/specs/2026-11-06-links-design.md` : conception des hyperliens (OSC 8 mémorisé par cellule, URL en clair détectées au survol, soulignement, infobulle de cible, geste d'ouverture et schémas configurables dans `[links]`), en deux jalons.
