@@ -227,7 +227,7 @@ impl OsWindow {
             link_click: links::LinkClick::default(),
             focused: true,
             clipboard,
-            shell: Shell::default_for_platform(),
+            shell: default_shell(),
             waker,
         };
         this.spawn_term(first, None)?;
@@ -367,6 +367,18 @@ fn load_icon() -> Option<Icon> {
     Icon::from_rgba(image.into_raw(), w, h)
         .map_err(|e| tracing::warn!("icône : {e}"))
         .ok()
+}
+
+/// Le shell de l'utilisateur. Lancé depuis le bundle macOS, rustty n'hérite
+/// que de l'environnement minimal du Finder : un shell de connexion relit le
+/// profil (`PATH` de Homebrew, de Cargo…), comme dans les autres terminaux.
+fn default_shell() -> Shell {
+    let shell = Shell::default_for_platform();
+    if crate::macos_app::launched_from_bundle() {
+        shell.login()
+    } else {
+        shell
+    }
 }
 
 /// Annonce `rustty` comme identifiant d'application, pour que le bureau

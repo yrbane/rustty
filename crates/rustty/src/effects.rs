@@ -184,12 +184,12 @@ impl OsWindow {
             .and_then(|path| {
                 external::ensure_config_file(&path)?;
                 self.waker.wake(UserEvent::ConfigFileCreated);
-                let command = external::editor_command(
+                let editors = external::editor_candidates(
                     &self.config.titlebar.editor,
                     env("VISUAL").as_deref(),
                     env("EDITOR").as_deref(),
                 );
-                external::spawn_detached(&command, path.as_os_str())
+                external::spawn_first(&editors, path.as_os_str())
             });
         self.report_external("ouvrir la configuration", result);
     }

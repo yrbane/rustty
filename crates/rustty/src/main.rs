@@ -27,6 +27,7 @@ mod input;
 mod keyboard;
 mod link_input;
 mod links;
+mod macos_app;
 mod menu_input;
 mod model;
 mod mouse;
@@ -81,6 +82,7 @@ fn main() -> ExitCode {
         None => {}
     }
     init_tracing();
+    macos_app::warm_login_path();
     let (config, error) = match config_watch::reload(args.config.as_deref()) {
         config_watch::ReloadOutcome::Applied(c) => (*c, None),
         config_watch::ReloadOutcome::Rejected(e) => (Config::default(), Some(e)),
@@ -140,14 +142,21 @@ fn show_image(source: &str) -> ExitCode {
 
 /// Installe le lanceur et les icônes pour l'utilisateur courant.
 fn install_desktop() -> ExitCode {
-    if !cfg!(target_os = "linux") {
-        if cfg!(windows) {
-            println!("Rien à installer : l'icône est déjà embarquée dans l'exécutable.");
-        } else {
-            println!("Rien à installer hors de Linux (bundle .app non fourni).");
-        }
-        return ExitCode::SUCCESS;
+    if cfg!(target_os = "linux") {
+        install_linux_launcher()
+    } else if cfg!(target_os = "macos") {
+        install_macos_app()
+    } else if cfg!(windows) {
+        println!("Rien à installer : l'icône est déjà embarquée dans l'exécutable.");
+        ExitCode::SUCCESS
+    } else {
+        println!("Rien à installer sur ce système.");
+        ExitCode::SUCCESS
     }
+}
+
+/// Linux : fichier `.desktop` et icônes hicolor sous `~/.local/share`.
+fn install_linux_launcher() -> ExitCode {
     let (Some(home), Ok(exec)) = (desktop::data_home(), std::env::current_exe()) else {
         eprintln!("rustty : impossible de déterminer ~/.local/share ou le chemin de l'exécutable");
         return ExitCode::from(1);
@@ -158,6 +167,35 @@ fn install_desktop() -> ExitCode {
                 println!("{}", f.display());
             }
             println!("Lanceur installé : rustty apparaît dans les menus avec son icône.");
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("rustty : installation impossible : {e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// macOS : bundle `rustty.app` dans `~/Applications`.
+fn install_macos_app() -> ExitCode {
+    let (Some(apps), Ok(exec)) = (macos_app::applications_dir(), std::env::current_exe()) else {
+        eprintln!("rustty : impossible de déterminer ~/Applications ou le chemin de l'exécutable");
+        return ExitCode::from(1);
+    };
+    match macos_app::install(&apps, &exec, VERSION) {
+        Ok(files) => {
+            for f in files {
+                println!("{}", f.display());
+            }
+            let bundle = apps.join(macos_app::BUNDLE_NAME);
+            if let Err(e) = macos_app::sign(&bundle) {
+                eprintln!("rustty : bundle non signé, macOS redemandera les autorisations : {e}");
+            }
+            macos_app::register(&bundle);
+            println!(
+                "Application installée : rustty apparaît dans le Launchpad et Spotlight avec son icône."
+            );
+            println!("Elle contient une copie de l'exécutable : à relancer après une mise à jour.");
             ExitCode::SUCCESS
         }
         Err(e) => {

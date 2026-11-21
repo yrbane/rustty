@@ -101,7 +101,7 @@ pub fn install(data_home: &Path, exec: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(written)
 }
 
-fn write_file(path: &Path, bytes: &[u8]) -> io::Result<()> {
+pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let with_path = |e: io::Error| io::Error::new(e.kind(), format!("{} : {e}", path.display()));
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(with_path)?;

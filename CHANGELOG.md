@@ -4,6 +4,13 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.192 — 2026-11-21 · « Lanceur macOS : rustty.app »
+
+- `--install-desktop` sous macOS écrit `~/Applications/rustty.app` (`Info.plist`, icône `.icns`, copie de l'exécutable posée par renommage atomique) le signe localement (signature ad hoc, pour que macOS retienne les autorisations) et le signale à LaunchServices : rustty apparaît dans le Launchpad, Spotlight et le Dock. À relancer après une mise à jour.
+- Lancé depuis le bundle, rustty ouvre un shell de connexion (`-l`) et fixe `LANG` d'après `AppleLocale` (repli `en_US.UTF-8`) quand l'environnement n'a ni `LANG`, ni `LC_ALL`, ni `LC_CTYPE` : le Finder ne transmet ni le `PATH` du profil ni la locale. Lancé depuis un terminal, rien ne change.
+- Bouton réglages : un éditeur introuvable (le `code` du modèle sans VS Code) cède la place au suivant (`$VISUAL`, `$EDITOR`, puis l'ouvreur) au lieu d'afficher « No such file or directory » ; sous macOS le repli est `open -t`, l'éditeur de texte par défaut, car aucune application n'est associée à `.toml`.
+- Lancé depuis le bundle, rustty cherche l'éditeur et l'explorateur avec le `PATH` du shell de connexion (demandé en arrière-plan au démarrage).
+
 ## 0.1.0-alpha.191 — 2026-11-07 · « Revue : instantané pris seulement quand le survol en a besoin »
 
 - `on_cursor_moved` : l'instantané du terminal n'est plus pris qu'au premier besoin (`cached_snapshot`), et partagé entre correcteur et liens ; correcteur désactivé, même cellule ou capture souris sans geste armé n'en prennent aucun, comme avant alpha.190.
