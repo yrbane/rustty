@@ -13,7 +13,8 @@ Options :
   --config <chemin>   fichier de configuration TOML (défaut : ~/.config/rustty/rustty.toml)
   --hold              garder le panneau ouvert quand le shell se termine
   --init-config       écrire la configuration d'exemple (raccourcis compris) pour l'éditer
-  --install-desktop   installer le lanceur et l'icône (Linux, ~/.local/share)
+  --install-desktop   installer le lanceur et l'icône (Linux : ~/.local/share ;
+                      macOS : ~/Applications/rustty.app)
   -V, --version       afficher la version
   -h, --help          afficher cette aide
 ";

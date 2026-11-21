@@ -20,21 +20,37 @@ pub fn opener() -> Vec<String> {
     parts.iter().map(|s| s.to_string()).collect()
 }
 
-/// La clé `editor` si elle n'est pas blanche, telle quelle (un éditeur de
-/// terminal y est un choix explicite) ; sinon `$VISUAL` puis `$EDITOR`, en
-/// sautant les éditeurs de terminal (`vim`, `nano`…) qui, lancés détachés
-/// sans console, ne s'ouvriraient jamais ; sinon l'ouvreur du bureau.
-/// Les valeurs sont découpées en mots, guillemets doubles compris.
-pub fn editor_command(configured: &str, visual: Option<&str>, editor: Option<&str>) -> Vec<String> {
-    split_command(configured)
-        .or_else(|| {
-            [visual, editor]
-                .into_iter()
-                .flatten()
-                .filter_map(split_command)
-                .find(|cmd| !is_terminal_editor(&cmd[0]))
-        })
-        .unwrap_or_else(opener)
+/// L'ouvreur du bureau pour un fichier texte. Sous macOS, `open -t` : aucune
+/// application n'est associée à `.toml`, l'éditeur de texte par défaut l'ouvre.
+pub fn text_opener() -> Vec<String> {
+    let mut command = opener();
+    if cfg!(target_os = "macos") {
+        command.push("-t".into());
+    }
+    command
+}
+
+/// Les éditeurs à essayer, dans l'ordre : la clé `editor`, `$VISUAL` et
+/// `$EDITOR` s'ils ne vivent pas dans le terminal, puis l'ouvreur du bureau.
+/// Un éditeur absent de la machine (le `code` du modèle sans VS Code) cède
+/// ainsi la place au suivant au lieu d'une erreur.
+pub fn editor_candidates(
+    configured: &str,
+    visual: Option<&str>,
+    editor: Option<&str>,
+) -> Vec<Vec<String>> {
+    let from_env = [visual, editor]
+        .into_iter()
+        .flatten()
+        .filter_map(split_command)
+        .filter(|cmd| !is_terminal_editor(&cmd[0]));
+    let mut candidates: Vec<Vec<String>> = split_command(configured)
+        .into_iter()
+        .chain(from_env)
+        .chain([text_opener()])
+        .collect();
+    candidates.dedup();
+    candidates
 }
 
 /// Éditeurs qui vivent dans le terminal : sans console, ils ne s'ouvrent pas.
@@ -101,6 +117,25 @@ pub fn folder_to_open(cwd: Option<PathBuf>, home: Option<PathBuf>) -> Option<Pat
     cwd.or(home)
 }
 
+/// Lance la première commande dont le programme existe ; l'erreur rendue est
+/// celle de la dernière essayée.
+pub fn spawn_first(commands: &[Vec<String>], target: &OsStr) -> std::io::Result<()> {
+    let mut last = Err(std::io::Error::new(
+        std::io::ErrorKind::InvalidInput,
+        "commande vide",
+    ));
+    for command in commands {
+        last = spawn_detached(command, target);
+        match &last {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                tracing::warn!("{} introuvable, essai suivant", command[0]);
+            }
+            _ => break,
+        }
+    }
+    last
+}
+
 /// Lance `command[0]` avec `command[1..]` puis `target`, sans attendre et
 /// sans partager les flux ; un thread moissonne l'enfant pour éviter un
 /// zombie. L'échec de lancement est rendu, celui du programme est ignoré.
@@ -111,7 +146,13 @@ pub fn spawn_detached(command: &[String], target: &OsStr) -> std::io::Result<()>
             "commande vide",
         ));
     };
-    let mut child = Command::new(program)
+    let mut launch = Command::new(program);
+    // Depuis le bundle macOS, le `PATH` hérité du Finder ignore Homebrew et
+    // consorts : on cherche le programme avec celui du shell de connexion.
+    if let Some(path) = crate::macos_app::login_path() {
+        launch.env("PATH", path);
+    }
+    let mut child = launch
         .args(args)
         .arg(target)
         .stdin(Stdio::null())

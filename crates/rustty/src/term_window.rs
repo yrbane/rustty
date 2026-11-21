@@ -23,6 +23,17 @@ pub struct Launch<'a> {
     pub cwd: Option<&'a Path>,
 }
 
+/// L'environnement ajouté à chaque shell : celui du terminal, plus `LANG`
+/// quand rustty vient du bundle macOS sans locale. Calculé une fois.
+fn pty_env() -> &'static [(String, String)] {
+    static ENV: std::sync::OnceLock<Vec<(String, String)>> = std::sync::OnceLock::new();
+    ENV.get_or_init(|| {
+        let mut env = default_env();
+        env.extend(crate::macos_app::bundle_locale().map(|l| ("LANG".into(), l)));
+        env
+    })
+}
+
 pub struct TermWindow {
     pub term: Arc<Mutex<Term>>,
     pub writer: PtyWriter,
@@ -45,7 +56,7 @@ impl TermWindow {
         waker: Waker,
     ) -> Result<Self, PtyError> {
         let size = PtySize::with_pixels(cols as u16, rows as u16, pixels.0 as u16, pixels.1 as u16);
-        let mut pty = Pty::spawn(launch.shell, size, &default_env(), launch.cwd)?;
+        let mut pty = Pty::spawn(launch.shell, size, pty_env(), launch.cwd)?;
         let reader = pty.reader()?;
         let sink = pty
             .take_writer()

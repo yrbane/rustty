@@ -2,6 +2,11 @@ use std::path::PathBuf;
 
 use super::*;
 
+/// Le premier éditeur essayé.
+fn editor_command(configured: &str, visual: Option<&str>, editor: Option<&str>) -> Vec<String> {
+    editor_candidates(configured, visual, editor).swap_remove(0)
+}
+
 /// Dossier temporaire unique, supprimé à la fin du test.
 struct TempDir(PathBuf);
 
@@ -29,7 +34,7 @@ fn editor_falls_back_from_key_to_env_to_opener() {
     );
     assert_eq!(editor_command("", Some("gedit"), Some("kate")), ["gedit"]);
     assert_eq!(editor_command("", None, Some("subl -w")), ["subl", "-w"]);
-    assert_eq!(editor_command("", None, None), opener());
+    assert_eq!(editor_command("", None, None), text_opener());
 }
 
 #[test]
@@ -40,7 +45,7 @@ fn quoted_programs_keep_their_spaces() {
     );
     assert_eq!(
         editor_command("\"\"", None, None),
-        opener(),
+        text_opener(),
         "guillemets vides = blanc"
     );
 }
@@ -55,7 +60,10 @@ fn terminal_editors_yield_to_the_desktop_opener() {
         !is_terminal_editor("emacs"),
         "emacs ouvre une fenêtre par défaut"
     );
-    assert_eq!(editor_command("", Some("vim"), Some("nano -w")), opener());
+    assert_eq!(
+        editor_command("", Some("vim"), Some("nano -w")),
+        text_opener()
+    );
     assert_eq!(editor_command("", Some("vim"), Some("gedit")), ["gedit"]);
 }
 
@@ -69,7 +77,7 @@ fn the_editor_key_is_always_respected() {
 
 #[test]
 fn blank_values_are_skipped() {
-    assert_eq!(editor_command("  ", Some(" "), Some("")), opener());
+    assert_eq!(editor_command("  ", Some(" "), Some("")), text_opener());
     assert_eq!(file_manager_command(" \t"), opener());
     assert_eq!(
         file_manager_command("nautilus --new-window"),
@@ -92,7 +100,7 @@ fn opener_matches_the_platform() {
 #[test]
 fn empty_quoted_arguments_are_kept_but_a_lone_one_is_blank() {
     assert_eq!(editor_command("code \"\"", None, None), ["code", ""]);
-    assert_eq!(editor_command("\"\"", None, None), opener());
+    assert_eq!(editor_command("\"\"", None, None), text_opener());
 }
 
 #[test]
@@ -163,4 +171,42 @@ fn spawn_detached_takes_any_os_string_target() {
     )
     .unwrap_err();
     assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
+}
+
+#[test]
+fn candidates_go_from_the_key_to_the_env_to_the_text_opener() {
+    assert_eq!(
+        editor_candidates("code", Some("vim"), Some("subl -w")),
+        [
+            vec!["code".to_string()],
+            vec!["subl".to_string(), "-w".to_string()],
+            text_opener(),
+        ]
+    );
+    assert_eq!(editor_candidates("", None, None), [text_opener()]);
+    assert_eq!(
+        editor_candidates("code", Some("code"), None),
+        [vec!["code".to_string()], text_opener()]
+    );
+}
+
+#[test]
+fn text_opener_asks_macos_for_the_text_editor() {
+    if cfg!(target_os = "macos") {
+        assert_eq!(text_opener(), ["open", "-t"]);
+    } else {
+        assert_eq!(text_opener(), opener());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_missing_editor_yields_to_the_next_one() {
+    let missing = vec!["rustty-editeur-absent".to_string()];
+    let present = vec!["true".to_string()];
+    let target = std::ffi::OsStr::new("x");
+    spawn_first(&[missing.clone(), present], target).unwrap();
+    let err = spawn_first(&[missing], target).unwrap_err();
+    assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
+    assert!(spawn_first(&[], target).is_err());
 }

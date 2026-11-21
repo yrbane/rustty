@@ -20,6 +20,13 @@ impl Shell {
         Self::from_env_or_default(from_env.as_deref())
     }
 
+    /// Le même shell en shell de connexion (`-l`) : il lit le profil de
+    /// l'utilisateur, d'où vient le `PATH` complet sous macOS.
+    pub fn login(mut self) -> Self {
+        self.args.insert(0, "-l".into());
+        self
+    }
+
     /// Même logique que `default_for_platform`, mais testable.
     pub fn from_env_or_default(shell_env: Option<&str>) -> Self {
         match shell_env.map(str::trim).filter(|s| !s.is_empty()) {
@@ -57,6 +64,12 @@ mod tests {
         let s = Shell::from_env_or_default(Some("/usr/bin/fish"));
         assert_eq!(s.program, "/usr/bin/fish");
         assert!(s.args.is_empty());
+    }
+
+    #[test]
+    fn login_puts_the_flag_first() {
+        let s = Shell::new("/bin/zsh", vec!["-i".into()]).login();
+        assert_eq!(s.args, ["-l", "-i"]);
     }
 
     #[test]

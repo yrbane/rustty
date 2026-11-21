@@ -49,7 +49,7 @@ logo (`python3 -I scripts/showcase_test.py` la teste), et
 ```bash
 cargo install --path crates/rustty                          # depuis un clone du dépôt
 cargo install --git https://github.com/yrbane/rustty rustty # sans cloner
-rustty --install-desktop                                    # Linux : lanceur et icône dans les menus
+rustty --install-desktop                                    # lanceur et icône : menus Linux, rustty.app sous macOS
 rustty --init-config                                        # fichier de configuration à éditer
 ```
 
@@ -65,12 +65,18 @@ cargo run -p rustty                      # fenêtre avec le shell par défaut
 cargo run -p rustty -- --config ~/r.toml # autre fichier de configuration
 cargo run -p rustty -- --hold            # garder le panneau quand le shell sort
 RUSTTY_LOG=rustty=debug cargo run -p rustty  # journal détaillé
-cargo run -p rustty -- --install-desktop # Linux : lanceur + icône dans les menus et la barre des tâches
+cargo run -p rustty -- --install-desktop # lanceur + icône (menus Linux, ~/Applications/rustty.app sous macOS)
 ```
 
 Sous Linux, `--install-desktop` écrit `rustty.desktop` et les icônes sous
 `~/.local/share` : GNOME, KDE et les autres associent alors la fenêtre
-(identifiant `rustty`) à son icône. Sous Windows, l'icône est embarquée dans
+(identifiant `rustty`) à son icône. Sous macOS, elle crée
+`~/Applications/rustty.app` : rustty apparaît dans le Launchpad, Spotlight et
+le Dock comme les autres applications. Le bundle contient une copie de
+l'exécutable, la commande est donc à relancer après une mise à jour. Lancé
+depuis le bundle, rustty ouvre un shell de connexion (`-l`, pour retrouver le
+`PATH` du profil) et fixe `LANG` d'après les réglages du système quand
+l'environnement n'en donne pas. Sous Windows, l'icône est embarquée dans
 l'exécutable. Les icônes se régénèrent depuis `assets/icon.svg` avec
 `scripts/icons.sh`.
 

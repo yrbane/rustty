@@ -24,6 +24,7 @@ et sur chaque OS avant une release. Lancer `cargo run -p rustty`.
 - [ ] Double clic sur un onglet : édition du nom (curseur ▌), Entrée valide, Échap annule, nom vide = titre du shell ; `ctrl+shift+alt+t` fait de même sur l'onglet actif.
 - [ ] `ctrl+molette`, `ctrl+plus`, `ctrl+minus` changent la taille de police, `ctrl+0` revient à celle de la config.
 - [ ] Après `--install-desktop`, la fenêtre a l'icône du crabe dans la barre des tâches et rustty apparaît dans les menus.
+- [ ] macOS : après `--install-desktop`, rustty se trouve dans le Launchpad et Spotlight ; lancé de là, l'icône du crabe est dans le Dock, le shell démarre dans le dossier personnel, `echo $PATH` contient les dossiers du profil (Homebrew, `~/.cargo/bin`), `echo $LANG` donne la locale du système et `echo é` affiche `é`.
 
 ## Panneaux (plan 6)
 - [ ] Glisser une barre de split à la souris : curseur ↔ ou ↕ au survol, les panneaux suivent, la barre ne dépasse pas 10 % / 90 %.
