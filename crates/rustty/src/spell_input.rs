@@ -11,8 +11,8 @@ use rustty_vt::Snapshot;
 use crate::model::Effect;
 use crate::mouse::MouseButton;
 use crate::spell::{
-    LookupKey, PopupLayout, SpellPopup, Suggestion, UnderlinedRun, apply_token, occurrence_index,
-    popup_chrome, popup_layout, spawn_lookup, underlined_run,
+    LookupError, LookupKey, PopupLayout, SpellPopup, Suggestion, UnderlinedRun, apply_token,
+    occurrence_index, popup_chrome, popup_layout, silent_message, spawn_lookup, underlined_run,
 };
 use crate::tab::TermId;
 use crate::window_state::OsWindow;
@@ -98,13 +98,24 @@ impl OsWindow {
         };
         let redraw = self.close_spell_popup();
         self.spell.hover = Some(key.clone());
-        if self.spell.may_query(Instant::now()) {
+        let now = Instant::now();
+        if self.spell.may_query(now) {
             spawn_lookup(
                 self.config.spellcheck.url.clone(),
                 key,
                 run.offset,
                 run.length,
                 Arc::clone(&self.waker),
+            );
+            return redraw;
+        }
+        if self.spell.silent_recently(now) {
+            // Le serveur s'est tu il y a peu : le dire tout de suite, sans attendre
+            // le délai d'une nouvelle requête.
+            return self.open_spell_popup(
+                &key,
+                silent_message(&self.config.spellcheck.url),
+                Vec::new(),
             );
         }
         redraw
@@ -122,52 +133,74 @@ impl OsWindow {
     }
 
     /// Réponse de LanguageTool : ouvre l'infobulle si la souris est toujours
-    /// sur le mot demandé.
+    /// sur le mot demandé. Un serveur muet (il écoute sans répondre) est dit
+    /// dans l'infobulle à la place des suggestions ; un serveur injoignable
+    /// n'ouvre rien.
     pub(crate) fn spell_result(
         &mut self,
         key: LookupKey,
-        result: Result<Option<Suggestion>, String>,
+        result: Result<Option<Suggestion>, LookupError>,
     ) -> Vec<Effect> {
-        let suggestion = match result {
+        let (message, replacements) = match result {
             Ok(suggestion) => {
                 self.spell.mark_reachable();
-                suggestion
+                let Some(suggestion) = suggestion else {
+                    return Vec::new();
+                };
+                (suggestion.message, suggestion.replacements)
             }
-            Err(e) => {
+            Err(LookupError::Silent) => {
+                tracing::warn!("LanguageTool écoute sans répondre : serveur gelé ?");
+                self.spell.mark_failed(Instant::now(), LookupError::Silent);
+                (silent_message(&self.config.spellcheck.url), Vec::new())
+            }
+            Err(LookupError::Unreachable(e)) => {
                 tracing::debug!("LanguageTool injoignable : {e}");
-                self.spell.mark_unreachable(Instant::now());
+                self.spell
+                    .mark_failed(Instant::now(), LookupError::Unreachable(e));
                 return Vec::new();
             }
         };
         if self.spell.hover.as_ref() != Some(&key) {
             return Vec::new();
         }
-        let Some(suggestion) = suggestion else {
-            return Vec::new();
-        };
+        if self.open_spell_popup(&key, message, replacements) {
+            vec![Effect::Redraw]
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Ouvre l'infobulle sur le mot de `key`, s'il est toujours souligné au
+    /// même endroit (le panneau a pu se redessiner). Vrai si elle est ouverte.
+    fn open_spell_popup(
+        &mut self,
+        key: &LookupKey,
+        message: String,
+        replacements: Vec<String>,
+    ) -> bool {
         let Some(tw) = self.terms.get(&key.term) else {
-            return Vec::new();
+            return false;
         };
         let snapshot = tw.snapshot();
-        // Le panneau a pu se redessiner pendant la requête : le mot doit être encore là.
         let Some(run) = underlined_run(&snapshot.lines, key.row, key.start) else {
-            return Vec::new();
+            return false;
         };
         if run.start != key.start || run.end != key.end {
-            return Vec::new();
+            return false;
         }
         let Some(anchor) = self.word_anchor(key.term, &run) else {
-            return Vec::new();
+            return false;
         };
         self.spell.popup = Some(SpellPopup {
             term: key.term,
             run,
-            message: suggestion.message,
-            replacements: suggestion.replacements,
+            message,
+            replacements,
             hovered: None,
             anchor,
         });
-        vec![Effect::Redraw]
+        true
     }
 
     /// Rectangle du mot à l'écran, en pixels.

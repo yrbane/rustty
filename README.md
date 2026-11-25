@@ -147,7 +147,10 @@ horizontal, `shift+flèches` focus, `ctrl+flèches` redimensionner, `ctrl+shift+
   suggestions. Un **clic sur une suggestion** l'envoie au programme sous forme
   d'un jeton que le mod ortho remplace dans le brouillon ; la boîte disparaît
   dès que la souris quitte le mot, à la première touche ou si le mot n'est plus
-  là. Rien ne part si LanguageTool ne tourne pas (nouvel essai après 30 s).
+  là. Rien ne part si LanguageTool ne tourne pas (nouvel essai après 30 s) ;
+  s'il écoute **sans répondre** (serveur gelé, par exemple lancé par une
+  session Claude Code suspendue avec Ctrl+Z), la boîte le dit à la place des
+  suggestions.
   Le mod s'installe à l'invite de Claude Code :
   `/plugin install ortho --marketplace yrbane/claude-ortho`.
   Réglages `[spellcheck]` ; contrat avec le mod dans

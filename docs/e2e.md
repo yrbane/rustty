@@ -161,6 +161,7 @@ Clic
 
 Serveur
 - [ ] LanguageTool arrêté : aucune boîte, et au plus une requête par 30 s (journal `debug`) ; relancé : la boîte revient au survol suivant.
+- [ ] LanguageTool gelé (`kill -STOP $(pgrep -f languagetool-server)`, ou sa session Claude Code suspendue par Ctrl+Z) : après 5 s de survol, la boîte s'ouvre avec « LanguageTool ne répond pas sur 127.0.0.1:8099 : serveur gelé ? » et aucune suggestion ; un autre souligné survolé dans les 30 s la rouvre aussitôt, sans requête (journal `warn`). `kill -CONT` puis 30 s : les suggestions reviennent.
 - [ ] `[spellcheck] enabled = false` (rechargement à chaud) : plus aucune requête ni boîte. `url = "ftp://x"` : erreur de configuration nommant `spellcheck.url`.
 
 ## Barre de titre

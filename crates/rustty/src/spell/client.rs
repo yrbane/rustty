@@ -24,6 +24,15 @@ pub struct LookupKey {
     pub context: String,
 }
 
+/// Pourquoi une requête a échoué : rien ne répond à l'adresse (port fermé,
+/// hôte inconnu, réponse illisible…), ou quelque chose écoute mais n'a rien
+/// renvoyé dans le délai : un serveur gelé, qu'il faut dire à l'utilisateur.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LookupError {
+    Unreachable(String),
+    Silent,
+}
+
 /// Ce que LanguageTool dit du mot : son message et ses remplacements.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Suggestion {
@@ -96,17 +105,19 @@ fn url_encode(s: &str) -> String {
 
 /// Interroge `{url}/v2/check` pour `key` sur un thread et réveille l'interface
 /// avec le résultat : `Ok(None)` sans correspondance, `Err` si le serveur ne
-/// répond pas.
+/// répond pas (et pourquoi).
 pub fn spawn_lookup(url: String, key: LookupKey, offset: usize, length: usize, waker: Waker) {
     std::thread::spawn(move || {
-        let result = query(&url, &key.context).map(|json| parse_suggestion(&json, offset, length));
+        let result =
+            query(&url, &key.context, TIMEOUT).map(|json| parse_suggestion(&json, offset, length));
         waker.wake(UserEvent::SpellResult(key, result));
     });
 }
 
-fn query(url: &str, text: &str) -> Result<String, String> {
+/// La réponse brute de `{url}/v2/check` pour `text`, ou l'erreur classée.
+fn query(url: &str, text: &str, timeout: Duration) -> Result<String, LookupError> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
-        .timeout_global(Some(TIMEOUT))
+        .timeout_global(Some(timeout))
         .build()
         .into();
     let endpoint = format!("{}/v2/check", url.trim_end_matches('/'));
@@ -114,10 +125,18 @@ fn query(url: &str, text: &str) -> Result<String, String> {
         .post(&endpoint)
         .header("content-type", "application/x-www-form-urlencoded")
         .send(check_body(text).as_bytes())
-        .map_err(|e| e.to_string())?
+        .map_err(classify)?
         .body_mut()
         .read_to_string()
-        .map_err(|e| e.to_string())
+        .map_err(classify)
+}
+
+/// Un délai dépassé est un serveur muet ; tout le reste, un serveur injoignable.
+fn classify(error: ureq::Error) -> LookupError {
+    match error {
+        ureq::Error::Timeout(_) => LookupError::Silent,
+        other => LookupError::Unreachable(other.to_string()),
+    }
 }
 
 #[cfg(test)]
@@ -155,6 +174,32 @@ mod tests {
         assert_eq!(
             parse_suggestion(&json, 0, 1).unwrap().replacements.len(),
             MAX_REPLACEMENTS
+        );
+    }
+
+    #[test]
+    fn a_server_that_accepts_without_answering_is_silent_and_a_closed_port_unreachable() {
+        use std::net::TcpListener;
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        // Le serveur accepte la connexion et garde le silence tant que dure le test.
+        let hold = std::thread::spawn(move || listener.accept().map(|(s, _)| s));
+        assert_eq!(
+            query(&url, "ma poulle", Duration::from_millis(300)),
+            Err(LookupError::Silent)
+        );
+        let stream = hold.join().unwrap().unwrap();
+        let addr = stream.local_addr().unwrap();
+        drop(stream);
+        // Plus rien n'écoute à cette adresse : refus immédiat.
+        let refused = query(
+            &format!("http://{addr}"),
+            "ma poulle",
+            Duration::from_millis(300),
+        );
+        assert!(
+            matches!(refused, Err(LookupError::Unreachable(_))),
+            "{refused:?}"
         );
     }
 

@@ -23,7 +23,11 @@ leurs attributs.
    jamais bloquer l'interface. Le résultat revient par `UserEvent::SpellResult`.
    La correspondance retenue est celle qui recouvre le mot survolé (offsets en
    unités UTF-16, comme LanguageTool). Pas de correspondance : rien ne s'affiche.
-   Serveur injoignable : pas de nouvelle requête pendant 30 s.
+   Serveur injoignable (`LookupError::Unreachable`) : rien ne s'affiche, pas de
+   nouvelle requête pendant 30 s. Serveur muet (`LookupError::Silent` : il a
+   accepté la connexion sans répondre en 5 s, typiquement gelé) : l'infobulle
+   s'ouvre avec « LanguageTool ne répond pas sur <hôte> : serveur gelé ? » et
+   aucune suggestion ; pendant 30 s, survoler un souligné la rouvre sans requête.
 3. **Infobulle.** Une petite boîte à bordure, même style que le menu du clic
    droit, s'affiche au-dessus du mot (en dessous s'il n'y a pas la place) :
    le message de LanguageTool, puis jusqu'à 6 remplacements, survolables et

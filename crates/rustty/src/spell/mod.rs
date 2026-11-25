@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use crate::tab::TermId;
 
-pub use client::{LookupKey, Suggestion, spawn_lookup};
+pub use client::{LookupError, LookupKey, Suggestion, spawn_lookup};
 pub use popup::{PopupLayout, SpellPopup, chrome as popup_chrome, layout as popup_layout};
 pub use run::{UnderlinedRun, apply_token, occurrence_index, underlined_run};
 
@@ -21,7 +21,7 @@ pub use run::{UnderlinedRun, apply_token, occurrence_index, underlined_run};
 const RETRY_AFTER: Duration = Duration::from_secs(30);
 
 /// L'état du survol : le mot en cours de consultation, l'infobulle ouverte,
-/// et depuis quand le serveur ne répond pas.
+/// et le dernier échec du serveur (quand, pourquoi).
 #[derive(Default)]
 pub struct SpellState {
     /// Le mot sous la souris, requête partie ou infobulle ouverte.
@@ -30,23 +30,43 @@ pub struct SpellState {
     /// Dernière cellule examinée : la souris qui bouge dans une même cellule
     /// ne relit pas la grille.
     pub last_cell: Option<(TermId, usize, usize)>,
-    unreachable_since: Option<Instant>,
+    failure: Option<(Instant, LookupError)>,
 }
 
 impl SpellState {
     /// Le serveur peut être interrogé : pas d'échec récent.
     pub fn may_query(&self, now: Instant) -> bool {
-        self.unreachable_since
-            .is_none_or(|since| now.duration_since(since) >= RETRY_AFTER)
+        self.failure
+            .as_ref()
+            .is_none_or(|(since, _)| now.duration_since(*since) >= RETRY_AFTER)
     }
 
-    pub fn mark_unreachable(&mut self, now: Instant) {
-        self.unreachable_since = Some(now);
+    /// Le dernier échec, récent, est un serveur muet : le survol le dit sans
+    /// réinterroger (ce qui coûterait le délai entier à chaque mot).
+    pub fn silent_recently(&self, now: Instant) -> bool {
+        !self.may_query(now)
+            && self
+                .failure
+                .as_ref()
+                .is_some_and(|(_, e)| *e == LookupError::Silent)
+    }
+
+    pub fn mark_failed(&mut self, now: Instant, error: LookupError) {
+        self.failure = Some((now, error));
     }
 
     pub fn mark_reachable(&mut self) {
-        self.unreachable_since = None;
+        self.failure = None;
     }
+}
+
+/// Le message de l'infobulle quand le serveur écoute sans répondre.
+pub fn silent_message(url: &str) -> String {
+    let host = url
+        .trim_start_matches("http://")
+        .trim_start_matches("https://")
+        .trim_end_matches('/');
+    format!("LanguageTool ne répond pas sur {host} : serveur gelé ?")
 }
 
 #[cfg(test)]
@@ -58,10 +78,31 @@ mod tests {
         let mut s = SpellState::default();
         let t0 = Instant::now();
         assert!(s.may_query(t0));
-        s.mark_unreachable(t0);
+        s.mark_failed(t0, LookupError::Unreachable("refus".into()));
         assert!(!s.may_query(t0 + Duration::from_secs(10)));
+        assert!(!s.silent_recently(t0 + Duration::from_secs(10)));
         assert!(s.may_query(t0 + RETRY_AFTER));
         s.mark_reachable();
         assert!(s.may_query(t0));
+    }
+
+    #[test]
+    fn a_silent_server_is_reported_without_a_new_query_until_the_retry() {
+        let mut s = SpellState::default();
+        let t0 = Instant::now();
+        s.mark_failed(t0, LookupError::Silent);
+        assert!(!s.may_query(t0 + Duration::from_secs(10)));
+        assert!(s.silent_recently(t0 + Duration::from_secs(10)));
+        assert!(!s.silent_recently(t0 + RETRY_AFTER), "on réinterroge");
+        s.mark_reachable();
+        assert!(!s.silent_recently(t0));
+    }
+
+    #[test]
+    fn silent_message_names_the_host_without_scheme() {
+        assert_eq!(
+            silent_message("http://127.0.0.1:8099/"),
+            "LanguageTool ne répond pas sur 127.0.0.1:8099 : serveur gelé ?"
+        );
     }
 }

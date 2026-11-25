@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use crate::spell::{LookupKey, Suggestion};
+use crate::spell::{LookupError, LookupKey, Suggestion};
 use crate::tab::TermId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -22,7 +22,7 @@ pub enum UserEvent {
     ConfigFileCreated,
     /// Réponse de LanguageTool pour un mot survolé : `Ok(None)` sans
     /// correspondance, `Err` si le serveur ne répond pas.
-    SpellResult(LookupKey, Result<Option<Suggestion>, String>),
+    SpellResult(LookupKey, Result<Option<Suggestion>, LookupError>),
 }
 
 /// Ce qu'un thread tient pour réveiller l'interface.

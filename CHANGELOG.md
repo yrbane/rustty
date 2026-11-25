@@ -4,6 +4,12 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.193 — 2026-11-25 · « Infobulle : un serveur LanguageTool muet est signalé »
+
+- Le client distingue désormais un serveur injoignable (`LookupError::Unreachable`) d'un serveur muet (`LookupError::Silent`) : connexion acceptée, rien reçu en 5 s. Cas vécu : un serveur lancé par une session Claude Code suspendue avec Ctrl+Z gèle avec elle et tient le port.
+- Serveur muet : l'infobulle s'ouvre sur le mot survolé avec « LanguageTool ne répond pas sur <hôte> : serveur gelé ? » au lieu des suggestions, et un `warn` est journalisé ; pendant les 30 s qui suivent, survoler un souligné la rouvre aussitôt, sans nouvelle requête. Un serveur injoignable reste silencieux comme avant.
+- `SpellState` garde la cause du dernier échec (`mark_failed`, `silent_recently`) ; l'ouverture de l'infobulle est factorisée (`open_spell_popup`).
+- Tests : classement muet/injoignable contre un vrai socket local, état de l'échec, message ; `docs/e2e.md` (plan 10, cas « gelé »), spec et README à jour.
 ## 0.1.0-alpha.192 — 2026-11-21 · « Lanceur macOS : rustty.app »
 
 - `--install-desktop` sous macOS écrit `~/Applications/rustty.app` (`Info.plist`, icône `.icns`, copie de l'exécutable posée par renommage atomique) le signe localement (signature ad hoc, pour que macOS retienne les autorisations) et le signale à LaunchServices : rustty apparaît dans le Launchpad, Spotlight et le Dock. À relancer après une mise à jour.
