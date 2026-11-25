@@ -191,12 +191,9 @@ mod tests {
         let stream = hold.join().unwrap().unwrap();
         let addr = stream.local_addr().unwrap();
         drop(stream);
-        // Plus rien n'écoute à cette adresse : refus immédiat.
-        let refused = query(
-            &format!("http://{addr}"),
-            "ma poulle",
-            Duration::from_millis(300),
-        );
+        // Plus rien n'écoute à cette adresse : refus, bien avant le délai de
+        // production (Windows met plus de 300 ms à refuser une connexion locale).
+        let refused = query(&format!("http://{addr}"), "ma poulle", TIMEOUT);
         assert!(
             matches!(refused, Err(LookupError::Unreachable(_))),
             "{refused:?}"

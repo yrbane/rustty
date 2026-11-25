@@ -4,6 +4,10 @@ Toutes les évolutions notables de rustty sont consignées ici. Le format suit
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le projet respecte
 [SemVer](https://semver.org/lang/fr/).
 
+## 0.1.0-alpha.194 — 2026-11-25 · « Test du port fermé : délai de refus de Windows »
+
+- Le test « serveur muet / port fermé » laisse au port fermé le délai de production (5 s) : Windows met plus de 300 ms à refuser une connexion locale, et le refus était pris pour un silence. Seul le test change.
+
 ## 0.1.0-alpha.193 — 2026-11-25 · « Infobulle : un serveur LanguageTool muet est signalé »
 
 - Le client distingue désormais un serveur injoignable (`LookupError::Unreachable`) d'un serveur muet (`LookupError::Silent`) : connexion acceptée, rien reçu en 5 s. Cas vécu : un serveur lancé par une session Claude Code suspendue avec Ctrl+Z gèle avec elle et tient le port.
